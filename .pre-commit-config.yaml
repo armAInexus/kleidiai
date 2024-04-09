@@ -1,0 +1,63 @@
+#
+# SPDX-FileCopyrightText: Copyright 2024 Arm Limited and/or its affiliates <open-source-office@arm.com>
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+
+default_install_hook_types: [ pre-commit, pre-push ]
+fail_fast: false
+repos:
+  - repo: https://github.com/fsfe/reuse-tool
+    rev: v3.0.1
+    hooks:
+      - id: reuse
+        stages: [ commit ]
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: check-added-large-files
+        args: [ '--maxkb=100' ]
+        stages: [ commit ]
+      - id: check-yaml
+        stages: [ commit ]
+  - repo: https://github.com/editorconfig-checker/editorconfig-checker.python
+    rev: 2.7.3
+    hooks:
+      - id: editorconfig-checker
+        alias: ec
+  - repo: https://github.com/pre-commit/mirrors-clang-format
+    rev: v17.0.6
+    hooks:
+      - id: clang-format
+        stages: [ commit ]
+  - repo: https://github.com/cmake-lint/cmake-lint
+    rev: 1.4.2
+    hooks:
+      - id: cmakelint
+        stages: [ commit ]
+  - repo: https://github.com/executablebooks/mdformat
+    rev: 0.7.17
+    hooks:
+      - id: mdformat
+        stages: [ commit ]
+  - repo: https://github.com/asottile/reorder-python-imports
+    rev: v3.12.0
+    hooks:
+      - id: reorder-python-imports
+        stages: [ commit ]
+  - repo: https://github.com/psf/black
+    rev: 24.2.0
+    hooks:
+      - id: black
+        stages: [ commit ]
+  - repo: local
+    hooks:
+      - id: signed-off-checker
+        alias: signed-off-checker
+        name: Signed-off Checker
+        entry: python tools/pre-commit/signedoff_checker.py
+        language: python
+        language_version: python3
+        description: Ensures that latest commit has been signed-off with `--signoff`.
+        pass_filenames: false
+        stages: [ push ]
