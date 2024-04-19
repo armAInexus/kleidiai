@@ -5,12 +5,14 @@
 #
 ---
 Language: Cpp
-BasedOnStyle: LLVM
+BasedOnStyle: Google
 ColumnLimit: 120
 
 AccessModifierOffset: -4
 AlignAfterOpenBracket: AlwaysBreak
+AlignOperands: DontAlign
 AllowShortFunctionsOnASingleLine: None
+BreakConstructorInitializers: AfterColon
 DerivePointerAlignment: false
 IndentWidth: 4
 PointerAlignment: Left
