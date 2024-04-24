@@ -17,7 +17,7 @@ insert_final_newline = true
 trim_trailing_whitespace = true
 
 # Override settings.
-[*.{json,yaml}]
+[*.{json,yml,yaml}]
 indent_size = 2
 
 # Override settings.

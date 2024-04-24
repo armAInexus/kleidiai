@@ -1,0 +1,73 @@
+#
+# SPDX-FileCopyrightText: Copyright 2024 Arm Limited and/or its affiliates <open-source-office@arm.com>
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+
+stages:
+  - build
+  - test
+
+default:
+  image: registry.gitlab.arm.com/kleidi/kleidiai/image:latest
+  tags:
+    - arm64
+
+.standard-rules:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+workflow:
+  auto_cancel:
+    on_new_commit: interruptible
+
+build-clang:
+  extends:
+    - .standard-rules
+  interruptible: true
+  stage: build
+  script:
+    - cmake -G Ninja -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=Release -DKLEIDIAI_BUILD_TESTS=ON -S . -B build/
+    - cmake --build ./build
+  artifacts:
+    paths:
+      - "build/"
+
+build-gcc:
+  extends:
+    - .standard-rules
+  interruptible: true
+  stage: build
+  script:
+    - cmake -G Ninja -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++ -DCMAKE_BUILD_TYPE=Release -DKLEIDIAI_BUILD_TESTS=ON -S . -B build/
+    - cmake --build ./build
+
+clang-tidy-checks:
+  extends:
+    - .standard-rules
+  interruptible: true
+  stage: build
+  script:
+    - cmake -G Ninja -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=Release -DKLEIDIAI_BUILD_TESTS=ON -DKLEIDIAI_ENABLE_CLANG_TIDY=ON -S . -B build/
+    - cmake --build ./build
+
+pre-commit-hooks:
+  extends:
+    - .standard-rules
+  interruptible: true
+  stage: build
+  before_script:
+    - pre-commit install
+  script:
+    - pre-commit run --all-files
+
+test-linux-aarch64:
+  extends:
+    - .standard-rules
+  interruptible: true
+  stage: test
+  dependencies:
+    - build-clang
+  script:
+    - ./build/kleidiai_test

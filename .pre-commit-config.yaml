@@ -28,6 +28,7 @@ repos:
     hooks:
       - id: editorconfig-checker
         alias: ec
+        stages: [ commit ]
         name: "EditorConfig Rules"
   - repo: https://github.com/cmake-lint/cmake-lint
     rev: 251239e56ab8b88889fec16a47376c44dfa16a99
@@ -65,8 +66,9 @@ repos:
         alias: signed-off-checker
         name: "Signed-off Checker (DCO)"
         entry: python tools/pre-commit/signedoff_checker.py
+        always_run: true
         language: python
         language_version: python3
         description: Ensures that latest commit has been signed-off with `--signoff`.
         pass_filenames: false
-        stages: [ push ]
+        stages: [ commit, push ]
