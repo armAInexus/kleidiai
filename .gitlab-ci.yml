@@ -31,6 +31,7 @@ build-clang:
     - cmake -G Ninja -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=Release -DKLEIDIAI_BUILD_TESTS=ON -S . -B build/
     - cmake --build ./build
   artifacts:
+    expire_in: 1 day
     paths:
       - "build/"
 
