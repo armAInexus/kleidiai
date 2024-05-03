@@ -27,6 +27,8 @@ readability-*,
 -readability-simplify-boolean-expr,
 -bugprone-easily-swappable-parameters,
 -cppcoreguidelines-pro-bounds-pointer-arithmetic,
--performance-enum-size
+-performance-enum-size,
+-llvm-else-after-return,
+-readability-else-after-return,
 '
 ...

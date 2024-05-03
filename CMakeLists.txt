@@ -63,11 +63,16 @@ if(KLEIDIAI_BUILD_TESTS)
         test/common/compare.cpp
         test/common/matrix_portion.cpp
         test/common/rect.cpp
+
         test/reference/binary_elementwise.cpp
+        test/reference/matmul.cpp
         test/reference/fill.cpp
+        test/reference/pack.cpp
         test/reference/quantize.cpp
         test/reference/reduce.cpp
         test/reference/round.cpp
+
+        test/tests/matmul_test.cpp
     )
 
     target_include_directories(kleidiai_test
