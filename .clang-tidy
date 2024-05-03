@@ -26,6 +26,7 @@ readability-*,
 -cppcoreguidelines-avoid-magic-numbers,
 -readability-simplify-boolean-expr,
 -bugprone-easily-swappable-parameters,
--cppcoreguidelines-pro-bounds-pointer-arithmetic
+-cppcoreguidelines-pro-bounds-pointer-arithmetic,
+-performance-enum-size
 '
 ...
