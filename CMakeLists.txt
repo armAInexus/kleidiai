@@ -60,6 +60,9 @@ if(KLEIDIAI_BUILD_TESTS)
         test/common/data_format.cpp
         test/common/printer.cpp
         test/common/int4.cpp
+        test/common/compare.cpp
+        test/common/matrix_portion.cpp
+        test/common/rect.cpp
         test/reference/round.cpp
     )
 
