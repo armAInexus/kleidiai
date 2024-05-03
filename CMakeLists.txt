@@ -31,9 +31,7 @@ endif()
 
 set(KLEIDIAI_WARNING_FLAGS
     "-Wall"
-    "-Wctor-dtor-privacy"
     "-Wdisabled-optimization"
-    "-Weffc++"
     "-Werror"
     "-Wextra"
     "-Wformat-security"
@@ -42,19 +40,41 @@ set(KLEIDIAI_WARNING_FLAGS
     "-Wno-ignored-attributes"
     "-Wno-misleading-indentation"
     "-Wno-overlength-strings"
-    "-Woverloaded-virtual"
-    "-Wsign-promo"
     "-Wstrict-overflow=2"
     "-Wswitch-default"
+)
+
+set(KLEIDIAI_WARNING_FLAGS_CXX
+    "-Wctor-dtor-privacy"
+    "-Weffc++"
+    "-Woverloaded-virtual"
+    "-Wsign-promo"
 )
 
 if(KLEIDIAI_BUILD_TESTS)
     enable_testing()
     include(GoogleTest)
 
-    add_executable(kleidiai_test test/sample.cpp)
-    target_compile_options(kleidiai_test PRIVATE ${KLEIDIAI_WARNING_FLAGS})
-    target_link_libraries(kleidiai_test PRIVATE GTest::gtest_main)
+    add_executable(kleidiai_test
+        test/common/data_type.cpp
+        test/common/data_format.cpp
+        test/common/printer.cpp
+        test/common/int4.cpp
+        test/reference/round.cpp
+    )
+
+    target_include_directories(kleidiai_test
+        PRIVATE .
+    )
+
+    target_compile_options(kleidiai_test
+        PRIVATE ${KLEIDIAI_WARNING_FLAGS}
+        PRIVATE ${KLEIDIAI_WARNING_FLAGS_CXX}
+    )
+
+    target_link_libraries(kleidiai_test
+        PRIVATE GTest::gtest_main
+    )
 
     # Cross-compiling is a common use case which creates a conflict if DISCOVERY_MODE is set to POST_BUILD (by default)
     # since the host platform does not match the target. Setting the mode to PRE_TEST avoids this conflict.

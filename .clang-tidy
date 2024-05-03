@@ -22,5 +22,10 @@ readability-*,
 -readability-identifier-length,
 -readability-magic-numbers,
 -readability-function-cognitive-complexity,
+-cppcoreguidelines-pro-type-reinterpret-cast,
+-cppcoreguidelines-avoid-magic-numbers,
+-readability-simplify-boolean-expr,
+-bugprone-easily-swappable-parameters,
+-cppcoreguidelines-pro-bounds-pointer-arithmetic
 '
 ...
