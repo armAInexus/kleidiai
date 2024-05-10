@@ -29,7 +29,7 @@ if(KLEIDIAI_ENABLE_CLANG_TIDY)
     set(CMAKE_CXX_CLANG_TIDY "clang-tidy")
 endif()
 
-set(KLEIDIAI_WARNING_FLAGS
+set(KLEIDIAI_WARNING_FLAGS_C
     "-Wall"
     "-Wdisabled-optimization"
     "-Werror"
@@ -49,6 +49,11 @@ set(KLEIDIAI_WARNING_FLAGS_CXX
     "-Weffc++"
     "-Woverloaded-virtual"
     "-Wsign-promo"
+)
+
+set(KLEIDIAI_WARNING_FLAGS
+    ${KLEIDIAI_WARNING_FLAGS_C}
+    $<$<COMPILE_LANGUAGE:CXX>:${KLEIDIAI_WARNING_FLAGS_CXX}>
 )
 
 if(KLEIDIAI_BUILD_TESTS)
@@ -81,7 +86,6 @@ if(KLEIDIAI_BUILD_TESTS)
 
     target_compile_options(kleidiai_test
         PRIVATE ${KLEIDIAI_WARNING_FLAGS}
-        PRIVATE ${KLEIDIAI_WARNING_FLAGS_CXX}
     )
 
     target_link_libraries(kleidiai_test
