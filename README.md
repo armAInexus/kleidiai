@@ -1,5 +1,5 @@
 <!--
-    SPDX-FileCopyrightText: Copyright 2024 Arm® Limited and/or its affiliates <open-source-office@Arm®.com>
+    SPDX-FileCopyrightText: Copyright 2024 Arm Limited and/or its affiliates <open-source-office@arm.com>
 
     SPDX-License-Identifier: Apache-2.0
 -->
@@ -44,9 +44,9 @@ A micro-kernel exists for different Arm® architectures, technologies, and compu
 Some of the key features of KleidiAI are the following:
 
 - No dependencies on external libraries
-- No internal memory allocation​
+- No internal memory allocation
 - No internal threading mechanisms
-- Stateless, stable, and consistent API​
+- Stateless, stable, and consistent API
 - Performance-critical compute-bound and memory-bound micro-kernels
 - Specialized micro-kernels for different Arm® CPU architectures and technologies
 - Specialized micro-kernels for different fusion patterns
