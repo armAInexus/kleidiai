@@ -29,9 +29,9 @@ For example, consider the convolution 2d operator performed through the Winograd
 - Matrix multiplication
 - Winograd output transform
 
-Each of the preceding operations is a micro-kernel. For an example, please refer to the [first micro kernel PR](https://gitlab.arm.com/kleidi/kleidiai/-/merge_requests/2)
+Each of the preceding operations is a micro-kernel.
 
-<em>However, why are the preceding operations not called kernels or functions?</em>
+<em>However, why the preceding operations are not called kernels or functions instead?</em>
 
 <b>Because the micro-kernels are designed to give the flexibility to process also a portion of the output tensor</b>, which is the reason why we call it micro-kernel.
 
@@ -44,15 +44,108 @@ A micro-kernel exists for different Arm® architectures, technologies, and compu
 Some of the key features of KleidiAI are the following:
 
 - No dependencies on external libraries
-- No internal memory allocation
-- No internal threading mechanisms
-- Stateless, stable, and consistent API
+
+- No dynamic memory allocation
+
+- No memory management​
+
+- No scheduling
+
+- Stateless, stable, and consistent API​
+
 - Performance-critical compute-bound and memory-bound micro-kernels
-- Specialized micro-kernels for different Arm® CPU architectures and technologies
+
+- Specialized micro-kernels utilizing different Arm® CPU architectural features (for example, <strong>FEAT_DotProd</strong> and <strong>FEAT_I8MM</strong>)
+
 - Specialized micro-kernels for different fusion patterns
+
 - Micro-kernel as a standalone library, consisting of only a <strong>.c</strong> and <strong>.h</strong> files
 
 > ℹ️ The micro-kernel API is designed to be as generic as possible for integration into third-party runtimes.
+
+<h1> Current supported Arm® CPUs technologies and features </h1>
+
+<strong>Arm® Neon™</strong>
+
+- <strong>FEAT_DotProd</strong> is optional in Armv8.2-A and mandatory in Armv8.4-A
+- <strong>FEAT_I8MM</strong> is optional in Armv8.2-A and mandatory in Armv8.6-A
+
+<h1> Filename convention </h1>
+
+The `src/` directory is the home for all micro-kernels. The micro-kernels are grouped in separate directories based on the performed operation. For example, all the matrix-multiplication micro-kernels are held in the `matmul/` operator directory.
+
+Inside the operator directory, you can find:
+
+- *The common micro-kernels*, which are helper micro-kernels necessary for the correct functioning of the main ones. For example, some of these may be required for packing the input tensors.
+- *The micro-kernels* files, which are held in separate sub-directories.
+
+The name of the micro-kernel folder provides the description of the operation performed and the data type of the destination and source tensors. The general syntax for the micro-kernel folder is as follows:
+
+`<op>_<dst-data-type>_<src0-data-type>_<src1-data-type>_...`
+
+All <strong>.c</strong> and <strong>.h</strong> pair files in that folder are micro-kernel variants. The variants are differentiated by specifying the computational paramaters (for example, the block size), the Arm® technology (for example, Arm® Neon™), and Arm® architecture feature exploited (for example, <strong>FEAT_DotProd</strong>). The general syntax for the micro-kernel variant is as follows:
+
+`kai_<micro-kernel-folder>_<compute-params>_<technology>_<arch-feature>.c/.h`
+
+> ℹ️ These files, only depend on the `kai_common.h` file.
+
+All functions defined in the <strong>.h</strong> header file of the micro-kernel variant has the following syntax:
+
+`kai_<op>_<micro-kernel-variant-filename>.c/.h`
+
+<h1> Data types </h1>
+
+Some of the data types currently supported with the KleidiAI library are the following:
+
+| Data type      | Abbreviation | Notes |
+| ----------- | ----------- | ----------- |
+| Floating-point 32-bit | <b>f32</b> | |
+| Quantized (q) Symmetric (s) Signed (u) 4-bit (4) Per-Channel (cx) quantization parameters | <b>qsi4cx</b> | An <b>fp32</b> multiplier shared among all values of the same channel. `x` denotes the entirety of the channel |
+| Quantized (q) Asymmetric (a) Signed (i) 8-bit (8) Per-Dimension (dx) (for example, Per-Row) quantization parameters | <b>qai8dx</b> | An <b>fp32</b> multiplier and a <b>int32</b> zero offset shared among all values of the same dimension. |
+
+> ℹ️ In some cases, we may append the letter `p` to the data type to specify that the tensor is expected to be <strong>packed</strong>. A packed tensor is a tensor that has been rearranged in our preferred data layout from the original data layout to improve the performance of the micro-kernel. In addition to the letter `p`, we may append other alphanumerical values to specify the attributes of the data packing (for example, the block packing size).
+
+<h1> Supported micro-kernels </h1>
+
+<table class="fixed" style="width:100%">
+<tr>
+    <th style="width:30%">Micro-kernel</th>
+    <th style="width:10%">Abbreviation</th>
+    <th style="width:20%">Data type</th>
+    <th style="width:10%">Reference framework</th>
+    <th style="width:30%">Notes</th>
+</tr>
+<tr>
+    <td>Matrix-multiplication with LHS packed and RHS packed matrices</td>
+    <td style="width:10%">matmul_clamp_f32_qai8dxp_qsi4cxp</td>
+    <td style="width:20%">
+        <b>LHS</b>: qai8dxp <br>
+        <b>RHS</b>: qsi4cxp <br>
+        <b>DST</b>: f32 <br>
+    </td>
+    <td>
+        TensorFlow Lite <br>
+    </td>
+    <td>
+        The packing function for the RHS matrix is available in the `kai_rhs_pack_nxk_qsi4cxp_qsi4cxs1s0.c/.h` files. <br>
+        Since the RHS matrix often contains constant values, we recommend packing the RHS matrix only once and freeing the content of the original RHS matrix. <br>
+    </td>
+</tr>
+<tr>
+    <td>Dynamic quantization and LHS matrix packing</td>
+    <td>kai_lhs_quant_pack_qai8dxp_f32</td>
+    <td>
+        <b>SRC</b>: f32 <br>
+        <b>DST</b>: qai8cx <br>
+    </td>
+    <td>
+        TensorFlow Lite <br>
+    </td>
+    <td>
+        <br>
+    </td>
+</tr>
+</table>
 
 <h1> Frequently Asked Questions (FAQ) </h1>
 

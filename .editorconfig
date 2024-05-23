@@ -21,5 +21,9 @@ trim_trailing_whitespace = true
 indent_size = 2
 
 # Override settings.
+[*.{c,cpp,h,hpp}]
+indent_size = unset
+
+# Override settings.
 [LICENSES/*]
 indent_size = unset

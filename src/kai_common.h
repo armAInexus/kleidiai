@@ -3,11 +3,14 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 //
-
 #pragma once
 
 #include <stdio.h>
 #include <stdlib.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 // NOLINTBEGIN(cppcoreguidelines-avoid-do-while,cppcoreguidelines-pro-type-vararg,cert-err33-c)
 //
@@ -27,6 +30,7 @@
             KAI_ERROR(msg);       \
         }                         \
     } while (0)
+
 // NOLINTEND(cppcoreguidelines-avoid-do-while,cppcoreguidelines-pro-type-vararg,cert-err33-c)
 
 #define KAI_ASSERT(cond) KAI_ASSERT_MSG(cond, #cond)
@@ -40,3 +44,15 @@
 #define KAI_ASSUME_IF KAI_ASSERT_IF
 
 #define KAI_UNUSED(x) (void)(x)
+
+#define KAI_UNUSED(x) (void)(x)
+#define KAI_MIN(a, b) (((a) < (b)) ? (a) : (b))
+#define KAI_MAX(a, b) (((a) > (b)) ? (a) : (b))
+
+inline static size_t kai_roundup(size_t a, size_t b) {
+    return ((a + b - 1) / b) * b;
+}
+
+#ifdef __cplusplus
+}
+#endif
