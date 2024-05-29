@@ -92,8 +92,10 @@ void kai_run_rhs_pack_nxk_qsi4cxp_qsu4cxs1s0(
                         const size_t k_idx_start0 = (x / 2) + kr_idx / 2 + s * (kr / sr) / 2;
                         const size_t k_idx_start1 = k_idx_start0 + (kr / 2);
 
-                        const size_t src_addr_byte0 = i * rhs_stride + k_idx_start0;
-                        const size_t src_addr_byte1 = i * rhs_stride + k_idx_start1;
+                        // Clamp the row index to avoid out-of-bound reads
+                        const size_t src_row_idx = y + i >= n ? 0 : i;
+                        const size_t src_addr_byte0 = src_row_idx * rhs_stride + k_idx_start0;
+                        const size_t src_addr_byte1 = src_row_idx * rhs_stride + k_idx_start1;
 
                         uint8_t byte0 = rhs_zero_point | rhs_zero_point << 4;
                         uint8_t byte1 = rhs_zero_point | rhs_zero_point << 4;
@@ -135,7 +137,9 @@ void kai_run_rhs_pack_nxk_qsi4cxp_qsu4cxs1s0(
 
         // Adjust the scales
         for (size_t i = 0; i < nr; ++i) {
-            *((float*)(dst_row)) = scale[y + i] * 0.0625F;
+            // Clamp the row index to avoid out-of-bound reads
+            const size_t src_row_idx = KAI_MIN(y + i, n - 1);
+            *((float*)(dst_row)) = scale[src_row_idx] * 0.0625F;
             dst_row += sizeof(float);
         }
     }

@@ -71,12 +71,13 @@ void kai_run_lhs_quant_pack_qai8dxp_f32(
         float max0 = -FLT_MAX;
         float min0 = FLT_MAX;
 
+        // Find min/max for each channel
+        int32_t k_idx = 0;
+
+#if defined(__aarch64__)
         float32x4_t vmax0 = vdupq_n_f32(-FLT_MAX);
         float32x4_t vmin0 = vdupq_n_f32(FLT_MAX);
 
-        // Find min/max for each channel
-        int32_t k_idx = 0;
-#if defined(__aarch64__)
         for (; k_idx <= ((int32_t)k - 8); k_idx += 8) {
             const float32x4_t src0_0 = vld1q_f32(src_ptr + 0 + (size_t)k_idx);
             const float32x4_t src0_1 = vld1q_f32(src_ptr + 4 + (size_t)k_idx);
@@ -135,7 +136,7 @@ void kai_run_lhs_quant_pack_qai8dxp_f32(
         for (; k_idx < (int32_t)k_internal; k_idx += k_block_len) {
             for (size_t k_block_idx = 0; k_block_idx < (size_t)k_block_len; ++k_block_idx) {
                 // Clamp at the last valid k-index
-                const size_t k_idx_start = KAI_MIN((size_t)k_idx + k_block_idx, k);
+                const size_t k_idx_start = KAI_MIN((size_t)k_idx + k_block_idx, k - 1);
 
                 const float src0_0 = *(src_ptr + k_idx_start);
 

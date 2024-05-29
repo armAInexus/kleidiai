@@ -3,6 +3,9 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 //
+#if !defined(__ARM_FEATURE_DOTPROD)
+#error "Dotprod extension required to compile this micro-kernel"
+#else
 #include "kai_matmul_clamp_f32_qai8dxp1x8_qsi4cxp4x8_1x4x32_neon_dotprod.h"
 
 #include <arm_neon.h>
@@ -95,7 +98,6 @@ size_t kai_get_dst_size_matmul_clamp_f32_qai8dxp1x8_qsi4cxp4x8_1x4x32_neon_dotpr
 void kai_run_matmul_clamp_f32_qai8dxp1x8_qsi4cxp4x8_1x4x32_neon_dotprod(
     size_t m, size_t n, size_t k, const void* restrict lhs_packed, const void* restrict rhs_packed, float* restrict dst,
     size_t dst_stride_row, size_t dst_stride_col, float scalar_min, float scalar_max) {
-#if defined(__ARM_FEATURE_DOTPROD)
     KAI_ASSERT(dst_stride_col == sizeof(float));
 
     if (m == 0) {
@@ -214,17 +216,5 @@ void kai_run_matmul_clamp_f32_qai8dxp1x8_qsi4cxp4x8_1x4x32_neon_dotprod(
         }
         lhs_ptr_start += lhs_packed_stride;
     }
-#else
-    KAI_ASSERT(false);
-    KAI_UNUSED(m);
-    KAI_UNUSED(n);
-    KAI_UNUSED(k);
-    KAI_UNUSED(lhs_packed);
-    KAI_UNUSED(rhs_packed);
-    KAI_UNUSED(dst);
-    KAI_UNUSED(dst_stride_row);
-    KAI_UNUSED(dst_stride_col);
-    KAI_UNUSED(scalar_min);
-    KAI_UNUSED(scalar_max);
-#endif
 }
+#endif  // Architectural feature check

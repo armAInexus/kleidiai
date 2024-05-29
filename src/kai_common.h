@@ -44,8 +44,6 @@ extern "C" {
 #define KAI_ASSUME_IF KAI_ASSERT_IF
 
 #define KAI_UNUSED(x) (void)(x)
-
-#define KAI_UNUSED(x) (void)(x)
 #define KAI_MIN(a, b) (((a) < (b)) ? (a) : (b))
 #define KAI_MAX(a, b) (((a) > (b)) ? (a) : (b))
 

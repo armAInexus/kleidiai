@@ -3,6 +3,9 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 //
+#if !defined(__ARM_FEATURE_MATMUL_INT8)
+#error "I8mm extension required to compile this micro-kernel"
+#else
 #include "kai_matmul_clamp_f32_qai8dxp4x8_qsi4cxp4x8_4x4x32_neon_i8mm.h"
 
 #include <arm_neon.h>
@@ -95,7 +98,6 @@ size_t kai_get_dst_size_matmul_clamp_f32_qai8dxp4x8_qsi4cxp4x8_4x4x32_neon_i8mm(
 void kai_run_matmul_clamp_f32_qai8dxp4x8_qsi4cxp4x8_4x4x32_neon_i8mm(
     size_t m, size_t n, size_t k, const void* lhs_packed, const void* rhs_packed, float* dst, size_t dst_stride_row,
     size_t dst_stride_col, float scalar_min, float scalar_max) {
-#if defined(__ARM_FEATURE_MATMUL_INT8)
     KAI_ASSERT(dst_stride_col == sizeof(float));
 
     if (m == 0) {
@@ -263,17 +265,5 @@ void kai_run_matmul_clamp_f32_qai8dxp4x8_qsi4cxp4x8_4x4x32_neon_i8mm(
         : "cc", "memory", "v0", "v1", "v2", "v3", "v4", "v16", "v17", "v18", "v19", "v20", "v21", "v22", "v23", "v24",
           "v25", "v26", "v27", "v28", "v29", "v30", "v31", "x20", "x21", "x22", "x23", "x24", "x25", "x26", "x27",
           "x28");
-#else
-    KAI_ASSERT(false);
-    KAI_UNUSED(m);
-    KAI_UNUSED(n);
-    KAI_UNUSED(k);
-    KAI_UNUSED(lhs_packed);
-    KAI_UNUSED(rhs_packed);
-    KAI_UNUSED(dst);
-    KAI_UNUSED(dst_stride_row);
-    KAI_UNUSED(dst_stride_col);
-    KAI_UNUSED(scalar_min);
-    KAI_UNUSED(scalar_max);
-#endif
 }
+#endif  // Architectural feature check
