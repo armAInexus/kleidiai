@@ -9,10 +9,19 @@
 #include <cstdint>
 #include <tuple>
 
+#include "kai_common.h"
+
 namespace kai::test {
 
 UInt4& UInt4::operator=(uint8_t value) {
+    KAI_ASSUME(value >= 0 && value < 16);
     _value = value;
+    return *this;
+}
+
+UInt4& UInt4::operator=(int value) {
+    KAI_ASSUME(value >= 0 && value < 16);
+    _value = static_cast<uint8_t>(value);
     return *this;
 }
 
@@ -54,7 +63,14 @@ std::tuple<UInt4, UInt4> UInt4::unpack_u8(uint8_t value) {
 // =====================================================================================================================
 
 Int4& Int4::operator=(int8_t value) {
+    KAI_ASSUME(value >= -8 && value < 8);
     _value = value;
+    return *this;
+}
+
+Int4& Int4::operator=(int value) {
+    KAI_ASSUME(value >= -8 && value < 8);
+    _value = static_cast<int8_t>(value);
     return *this;
 }
 

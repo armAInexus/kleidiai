@@ -13,6 +13,7 @@
 
 #include "src/kai_common.h"
 #include "test/common/data_type.hpp"
+#include "test/common/float16.hpp"
 #include "test/common/int4.hpp"
 #include "test/common/memory.hpp"
 
@@ -104,6 +105,9 @@ std::vector<uint8_t> binary_elementwise_any_type(
     switch (lhs_dt) {
         case DataType::FP32:
             return binary_elementwise_any_op_type<op, float>(lhs, rhs, lhs_height, lhs_width, rhs_height, rhs_width);
+
+        case DataType::FP16:
+            return binary_elementwise_any_op_type<op, Float16>(lhs, rhs, lhs_height, lhs_width, rhs_height, rhs_width);
 
         case DataType::I32:
             return binary_elementwise_any_op_type<op, int32_t>(lhs, rhs, lhs_height, lhs_width, rhs_height, rhs_width);

@@ -61,6 +61,11 @@ set(KLEIDIAI_FILES_NEON
     src/matmul/kai_rhs_pack_nxk_qsi4cxp_qsu4cxs1s0.c
 )
 
+set(KLEIDIAI_FILES_NEON_FP16
+    src/matmul/kai_rhs_pack_kxn_f16p16x1biasf16_f16_f16_neon.c
+    src/matmul/matmul_clamp_f16_f16_f16p/kai_matmul_clamp_f16_f16_f16p16x1biasf16_6x16x8_neon_mla.c
+)
+
 set(KLEIDIAI_FILES_NEON_DOTPROD
     src/matmul/matmul_clamp_f32_qai8dxp_qsi4cxp/kai_matmul_clamp_f32_qai8dxp1x8_qsi4cxp4x8_1x4x32_neon_dotprod.c
     src/matmul/matmul_clamp_f32_qai8dxp_qsi4cxp/kai_matmul_clamp_f32_qai8dxp1x8_qsi4cxp8x8_1x8x32_neon_dotprod.c
@@ -75,6 +80,7 @@ set(KLEIDIAI_FILES_NEON_I8MM
 
 add_library(kleidiai
     ${KLEIDIAI_FILES_NEON}
+    ${KLEIDIAI_FILES_NEON_FP16}
     ${KLEIDIAI_FILES_NEON_DOTPROD}
     ${KLEIDIAI_FILES_NEON_I8MM}
 )
@@ -82,6 +88,10 @@ add_library(kleidiai
 target_include_directories(kleidiai
     PUBLIC  src
     PRIVATE .
+)
+
+target_compile_options(kleidiai
+    PRIVATE ${KLEIDIAI_WARNING_FLAGS}
 )
 
 foreach(KLEIDIAI_SOURCE_FILE IN LISTS KLEIDIAI_FILES_NEON_DOTPROD)
@@ -92,9 +102,17 @@ foreach(KLEIDIAI_SOURCE_FILE IN LISTS KLEIDIAI_FILES_NEON_I8MM)
     set_property(SOURCE ${KLEIDIAI_SOURCE_FILE} PROPERTY COMPILE_OPTIONS -march=armv8.2-a+i8mm)
 endforeach()
 
-target_compile_options(kleidiai
-    PRIVATE ${KLEIDIAI_WARNING_FLAGS}
-)
+foreach(KLEIDIAI_SOURCE_FILE IN LISTS KLEIDIAI_FILES_NEON_FP16)
+    set_property(SOURCE ${KLEIDIAI_SOURCE_FILE} PROPERTY COMPILE_OPTIONS -march=armv8.2-a+fp16)
+endforeach()
+
+foreach(KLEIDIAI_SOURCE_FILE IN LISTS KLEIDIAI_FILES_NEON_DOTPROD)
+    set_property(SOURCE ${KLEIDIAI_SOURCE_FILE} PROPERTY COMPILE_OPTIONS -march=armv8.2-a+dotprod)
+endforeach()
+
+foreach(KLEIDIAI_SOURCE_FILE IN LISTS KLEIDIAI_FILES_NEON_I8MM)
+    set_property(SOURCE ${KLEIDIAI_SOURCE_FILE} PROPERTY COMPILE_OPTIONS -march=armv8.2-a+i8mm)
+endforeach()
 
 if(KLEIDIAI_BUILD_TESTS)
     enable_testing()
@@ -108,6 +126,8 @@ if(KLEIDIAI_BUILD_TESTS)
         test/common/compare.cpp
         test/common/matrix_portion.cpp
         test/common/rect.cpp
+        test/common/bfloat16.cpp
+        test/common/float16.cpp
 
         test/reference/binary_elementwise.cpp
         test/reference/matmul.cpp
@@ -116,6 +136,8 @@ if(KLEIDIAI_BUILD_TESTS)
         test/reference/quantize.cpp
         test/reference/reduce.cpp
         test/reference/round.cpp
+        test/reference/transpose.cpp
+        test/reference/cast.cpp
 
         test/tests/matmul_test.cpp
     )
@@ -126,10 +148,12 @@ if(KLEIDIAI_BUILD_TESTS)
 
     target_compile_options(kleidiai_test
         PRIVATE ${KLEIDIAI_WARNING_FLAGS}
+        PRIVATE -march=armv8.2-a+fp16+bf16
     )
 
     target_link_libraries(kleidiai_test
         PRIVATE GTest::gtest_main
+        PRIVATE kleidiai
     )
 
     # Cross-compiling is a common use case which creates a conflict if DISCOVERY_MODE is set to POST_BUILD (by default)

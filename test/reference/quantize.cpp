@@ -85,7 +85,7 @@ std::vector<uint8_t> dequantize_any_type(
 
         for (size_t x = 0; x < width; ++x) {
             const ZeroPoint input = read_array<Input>(data, y * width + x);
-            const Scale output = Scale(input - zero_point) * scale;
+            const Scale output = static_cast<Scale>(input - zero_point) * scale;
             write_array<Scale>(dst.data(), y * width + x, output);
         }
     }

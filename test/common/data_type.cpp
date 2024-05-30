@@ -69,13 +69,11 @@ bool data_type_is_signed(DataType dt) {
 }
 
 bool data_type_is_quantized(DataType dt) {
-    KAI_ASSERT_IF(has_q(dt), data_type_is_integral(dt));
-    return has_q(dt);
+    return data_type_is_integral(dt) && has_q(dt);
 }
 
 bool data_type_is_quantized_asymm(DataType dt) {
-    KAI_ASSERT_IF(has_a(dt), data_type_is_quantized(dt));
-    return has_a(dt);
+    return data_type_is_quantized(dt) && has_a(dt);
 }
 
 }  // namespace kai::test

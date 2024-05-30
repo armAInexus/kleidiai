@@ -39,6 +39,8 @@ enum class DataType : uint16_t {
     FP32 = 0b0'1'0'0'0000'00100000,  ///< Single-precision floating-point.
     FP16 = 0b0'1'0'0'0000'00010000,  ///< Half-precision floating-point.
 
+    BF16 = 0b0'1'1'0'0000'00010000,  ///< Half-precision brain floating-point.
+
     I32 = 0b1'1'0'0'0000'00100000,  ///< 32-bit signed integer.
 
     QAI8 = 0b1'1'1'1'0000'00001000,  ///< 8-bit signed asymmetric quantized.

@@ -23,6 +23,9 @@ public:
     /// Assignment operator.
     UInt4& operator=(uint8_t value);
 
+    /// Assignment operator.
+    UInt4& operator=(int value);
+
     /// Conversion operator.
     operator int32_t() const;
 
@@ -71,6 +74,9 @@ public:
 
     /// Assignment operator.
     Int4& operator=(int8_t value);
+
+    /// Assignment operator.
+    Int4& operator=(int value);
 
     /// Conversion operator.
     explicit operator int32_t() const;

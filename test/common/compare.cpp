@@ -10,10 +10,13 @@
 #include <cstdint>
 #include <cstdlib>
 #include <tuple>
+#include <type_traits>
 
 #include "src/kai_common.h"
+#include "test/common/bfloat16.hpp"
 #include "test/common/data_format.hpp"
 #include "test/common/data_type.hpp"
+#include "test/common/float16.hpp"
 #include "test/common/int4.hpp"
 #include "test/common/logging.hpp"
 #include "test/common/memory.hpp"
@@ -52,7 +55,7 @@ bool compare_raw(
                 y >= rect.start_row() && y < rect.end_row() && x >= rect.start_col() && x < rect.end_col();
 
             const auto imp_value = read_array<Data>(imp_data, y * full_width + x);
-            const auto ref_value = in_roi ? read_array<Data>(ref_data, y * full_width + x) : 0;
+            const auto ref_value = in_roi ? read_array<Data>(ref_data, y * full_width + x) : static_cast<Data>(0);
 
             const auto [abs_err, rel_err] = calculate_error(imp_value, ref_value);
 
@@ -69,13 +72,17 @@ bool compare_raw(
     return handler.success(full_height * full_width);
 }
 
-/// Compares matrices with per-row quantization.
+/// Compares matrices with per-row bias or per-row quantization.
 template <typename Data, typename Scale, typename Offset>
 bool compare_per_row(
     const void* imp_data, const void* ref_data, const DataFormat& format, size_t full_height, size_t full_width,
     const Rect& rect, MismatchHandler& handler) {
-    const auto block_height = format.block_height();
-    const auto block_width = format.block_width();
+    constexpr auto has_scale = !std::is_null_pointer_v<Scale>;
+
+    const auto block_height = format.actual_block_height(full_height);
+    const auto block_width = format.actual_block_width(full_width);
+    const auto subblock_height = format.actual_subblock_height(full_height);
+    const auto subblock_width = format.actual_subblock_width(full_width);
 
     KAI_ASSUME(format.scheduler_block_height(full_height) == block_height);
     KAI_ASSUME(format.scheduler_block_width(full_width) == full_width);
@@ -84,84 +91,83 @@ bool compare_per_row(
 
     const auto data_bits = size_in_bits<Data>;
 
-    const auto num_groups = (full_height + block_height - 1) / block_height;
-    const auto group_num_blocks = (full_width + block_width - 1) / block_width;
-
-    const auto group_offsets_bytes = block_height * sizeof(Offset);
-    const auto group_scales_bytes = block_height * sizeof(Scale);
-    const auto block_data_bytes = block_height * block_width * data_bits / 8;
-
-    const auto begin_group = rect.start_row() / block_height;
-    const auto end_group = rect.end_row() / block_height;
+    const auto row_block_zero_points_bytes = block_height * sizeof(Offset);
+    const auto row_block_scales_bytes = has_scale ? block_height * sizeof(Scale) : 0;
+    const auto row_block_data_bytes = block_height * block_width * data_bits / 8;
 
     const auto* imp_ptr = reinterpret_cast<const uint8_t*>(imp_data);
     const auto* ref_ptr = reinterpret_cast<const uint8_t*>(ref_data);
 
-    for (size_t group_no = 0; group_no < num_groups; ++group_no) {
-        const auto in_roi = group_no >= begin_group && group_no < end_group;
+    for (size_t y_block = 0; y_block < full_height; y_block += block_height) {
+        const auto in_roi = y_block >= rect.start_row() && y_block < rect.end_row();
 
-        // Checks the quantization offsets.
+        // Checks the zero points.
         for (size_t i = 0; i < block_height; ++i) {
-            const auto imp_offset = reinterpret_cast<const Offset*>(imp_ptr)[i];
-            const Offset ref_offset = in_roi ? reinterpret_cast<const Offset*>(ref_ptr)[i] : 0;
-            const auto [abs_err, rel_err] = calculate_error(imp_offset, ref_offset);
+            const auto imp_zero_point = reinterpret_cast<const Offset*>(imp_ptr)[i];
+            const Offset ref_zero_point = in_roi ? reinterpret_cast<const Offset*>(ref_ptr)[i] : 0;
+            const auto [abs_err, rel_err] = calculate_error(imp_zero_point, ref_zero_point);
 
             if (abs_err != 0 || rel_err != 0) {
                 handler.mark_as_failed();
 
-                const auto raw_row = group_no * block_height + i;
+                const auto raw_row = y_block + i;
                 KAI_LOGE(
-                    "Mismatched quantization offset ", raw_row, ": actual = ", imp_offset, ", expected: ", ref_offset);
+                    "Mismatched zero point ", raw_row, ": actual = ", imp_zero_point, ", expected: ", ref_zero_point);
             }
         }
 
-        imp_ptr += group_offsets_bytes;
-        ref_ptr += group_offsets_bytes;
+        imp_ptr += row_block_zero_points_bytes;
+        ref_ptr += row_block_zero_points_bytes;
 
         // Checks the data.
-        for (size_t block_no = 0; block_no < group_num_blocks; ++block_no) {
-            for (size_t y = 0; y < block_height; ++y) {
-                for (size_t x = 0; x < block_width; ++x) {
-                    const auto imp_data = read_array<Data>(imp_ptr, y * block_width + x);
-                    const Data ref_data = in_roi ? read_array<Data>(ref_ptr, y * block_width + x) : Data(0);
-                    const auto [abs_err, rel_err] = calculate_error(imp_data, ref_data);
+        for (size_t x_block = 0; x_block < full_width; x_block += block_width) {
+            for (size_t y_subblock = 0; y_subblock < block_height; y_subblock += subblock_height) {
+                for (size_t x_subblock = 0; x_subblock < block_width; x_subblock += subblock_width) {
+                    for (size_t y = 0; y < subblock_height; ++y) {
+                        for (size_t x = 0; x < subblock_width; ++x) {
+                            const auto offset = (y_subblock + y) * full_width + x_block + x_subblock + x;
+                            const auto imp_data = read_array<Data>(imp_ptr, offset);
+                            const Data ref_data = in_roi ? read_array<Data>(ref_ptr, offset) : static_cast<Data>(0);
+                            const auto [abs_err, rel_err] = calculate_error(imp_data, ref_data);
 
-                    if (abs_err != 0 || rel_err != 0) {
-                        const auto notifying = !in_roi || handler.handle_data(abs_err, rel_err);
+                            if (abs_err != 0 || rel_err != 0) {
+                                const auto notifying = !in_roi || handler.handle_data(abs_err, rel_err);
 
-                        if (notifying) {
-                            const auto raw_row = group_no * block_height + y;
-                            const auto raw_col = block_no * block_width + x;
-
-                            KAI_LOGE(
-                                "Mismatched data at (", raw_row, ", ", raw_col, "): actual = ", imp_data,
-                                ", expected: ", ref_data);
+                                if (notifying) {
+                                    const auto raw_index = y_block * block_height * block_width + offset;
+                                    KAI_LOGE(
+                                        "Mismatched data ", raw_index, ": actual = ", imp_data,
+                                        ", expected: ", ref_data);
+                                }
+                            }
                         }
                     }
                 }
             }
-
-            imp_ptr += block_data_bytes;
-            ref_ptr += block_data_bytes;
         }
 
-        // Checks the quantization scales.
-        for (size_t i = 0; i < block_height; ++i) {
-            const auto imp_scale = reinterpret_cast<const Scale*>(imp_ptr)[i];
-            const Scale ref_scale = in_roi ? reinterpret_cast<const Scale*>(ref_ptr)[i] : 0;
-            const auto [abs_err, rel_err] = calculate_error(imp_scale, ref_scale);
+        imp_ptr += row_block_data_bytes;
+        ref_ptr += row_block_data_bytes;
 
-            if (abs_err != 0 || rel_err != 0) {
-                handler.mark_as_failed();
+        // Checks the scales (if exists).
+        if constexpr (has_scale) {
+            for (size_t i = 0; i < block_height; ++i) {
+                const auto imp_scale = reinterpret_cast<const Scale*>(imp_ptr)[i];
+                const Scale ref_scale = in_roi ? reinterpret_cast<const Scale*>(ref_ptr)[i] : 0;
+                const auto [abs_err, rel_err] = calculate_error(imp_scale, ref_scale);
 
-                const auto raw_row = group_no * block_height + i;
-                KAI_LOGE(
-                    "Mismatched quantization scale ", raw_row, ": actual = ", imp_scale, ", expected: ", ref_scale);
+                if (abs_err != 0 || rel_err != 0) {
+                    handler.mark_as_failed();
+
+                    const auto raw_row = y_block + i;
+                    KAI_LOGE(
+                        "Mismatched quantization scale ", raw_row, ": actual = ", imp_scale, ", expected: ", ref_scale);
+                }
             }
-        }
 
-        imp_ptr += group_scales_bytes;
-        ref_ptr += group_scales_bytes;
+            imp_ptr += row_block_scales_bytes;
+            ref_ptr += row_block_scales_bytes;
+        }
     }
 
     return handler.success(rect.height() * full_width);
@@ -176,11 +182,14 @@ bool compare(
     const auto scale_dt = format.scale_data_type();
     const auto offset_dt = format.zero_point_data_type();
 
-    switch (format.quantization_format()) {
-        case DataFormat::QuantizationFormat::NONE:
+    switch (format.pack_format()) {
+        case DataFormat::PackFormat::NONE:
             switch (data_type) {
                 case DataType::FP32:
                     return compare_raw<float>(imp_data, ref_data, full_height, full_width, rect, handler);
+
+                case DataType::FP16:
+                    return compare_raw<Float16>(imp_data, ref_data, full_height, full_width, rect, handler);
 
                 default:
                     break;
@@ -188,7 +197,18 @@ bool compare(
 
             break;
 
-        case DataFormat::QuantizationFormat::PER_ROW:
+        case DataFormat::PackFormat::BIAS_PER_ROW:
+            if (data_type == DataType::FP16 && offset_dt == DataType::FP16) {
+                return compare_per_row<Float16, std::nullptr_t, Float16>(
+                    imp_data, ref_data, format, full_height, full_width, rect, handler);
+            } else if (data_type == DataType::BF16 && offset_dt == DataType::FP32) {
+                return compare_per_row<BFloat16, std::nullptr_t, float>(
+                    imp_data, ref_data, format, full_height, full_width, rect, handler);
+            }
+
+            break;
+
+        case DataFormat::PackFormat::QUANTIZE_PER_ROW:
             if (data_type == DataType::QAI8 && scale_dt == DataType::FP32 && offset_dt == DataType::I32) {
                 return compare_per_row<int8_t, float, int32_t>(
                     imp_data, ref_data, format, full_height, full_width, rect, handler);

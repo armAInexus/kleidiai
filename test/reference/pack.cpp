@@ -6,9 +6,11 @@
 
 #include "test/reference/pack.hpp"
 
+#include <algorithm>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
+#include <iostream>
 #include <limits>
 #include <vector>
 
@@ -16,10 +18,61 @@
 #include "test/common/data_format.hpp"
 #include "test/common/data_type.hpp"
 #include "test/reference/quantize.hpp"
+#include "test/reference/round.hpp"
 
 namespace kai::test {
 
 namespace {
+
+/// Packs the matrix from raw to per-row bias format.
+std::vector<uint8_t> pack_bias_per_row(
+    size_t data_esize, size_t zero_point_esize, const void* src, const void* bias, size_t height, size_t width,
+    size_t block_height, size_t block_width, size_t subblock_height, size_t subblock_width) {
+    const auto num_groups = (height + block_height - 1) / block_height;
+    const auto group_num_blocks = (width + block_width - 1) / block_width;
+
+    const auto group_zero_points_bytes = block_height * zero_point_esize;
+    const auto block_data_bytes = block_height * block_width * data_esize;
+    const auto group_bytes = group_zero_points_bytes + group_num_blocks * block_data_bytes;
+    const auto dst_bytes = num_groups * group_bytes;
+
+    std::vector<uint8_t> dst;
+    dst.resize(dst_bytes);
+
+    const auto* src_ptr = reinterpret_cast<const uint8_t*>(src);
+    const auto* bias_ptr = reinterpret_cast<const uint8_t*>(bias);
+    auto* dst_ptr = dst.data();
+
+    for (size_t y_block = 0; y_block < height; y_block += block_height) {
+        // Packs the zero points.
+        const auto bias_len = std::min(block_height, height - y_block);
+        memcpy(dst_ptr, bias_ptr, bias_len * zero_point_esize);
+        bias_ptr += block_height * zero_point_esize;
+        dst_ptr += block_height * zero_point_esize;
+
+        for (size_t x_block = 0; x_block < width; x_block += block_width) {
+            for (size_t y_subblock = 0; y_subblock < block_height; y_subblock += subblock_height) {
+                for (size_t x_subblock = 0; x_subblock < block_width; x_subblock += subblock_width) {
+                    for (size_t y_element = 0; y_element < subblock_height; ++y_element) {
+                        if (y_block + y_subblock + y_element < height) {
+                            const auto len = std::min(subblock_width, width - x_block - x_subblock);
+                            memcpy(
+                                dst_ptr,
+                                src_ptr +
+                                    ((y_block + y_subblock + y_element) * width + x_block + x_subblock) * data_esize,
+                                len * data_esize);
+                        }
+                        dst_ptr += subblock_width * data_esize;
+                    }
+                }
+            }
+        }
+    }
+
+    KAI_ASSERT(reinterpret_cast<uintptr_t>(dst_ptr) - reinterpret_cast<uintptr_t>(dst.data()) == dst_bytes);
+
+    return dst;
+}
 
 /// Packs the matrix from raw to quantized format.
 template <typename Output, typename Input, typename Scale, typename ZeroPoint>
@@ -182,21 +235,37 @@ std::vector<uint8_t> pack(
     const DataFormat& dst_format, const void* src, const void* scales, const void* zero_points,
     const DataFormat& src_format, size_t height, size_t width) {
     const auto dst_dt = dst_format.data_type();
-    const auto dst_qf = dst_format.quantization_format();
+    const auto dst_qf = dst_format.pack_format();
     const auto src_dt = src_format.data_type();
-    const auto src_qf = src_format.quantization_format();
+    const auto src_qf = src_format.pack_format();
 
-    if (src_qf == DataFormat::QuantizationFormat::NONE && dst_qf == DataFormat::QuantizationFormat::PER_ROW) {
+    const auto block_height = dst_format.actual_block_height(height);
+    const auto block_width = dst_format.actual_block_width(width);
+    const auto subblock_height = dst_format.actual_subblock_height(height);
+    const auto subblock_width = dst_format.actual_subblock_width(width);
+
+    if (src_qf == DataFormat::PackFormat::NONE && dst_qf == DataFormat::PackFormat::QUANTIZE_PER_ROW) {
         if (dst_dt == DataType::QAI8 && src_dt == DataType::FP32 && dst_format.scale_data_type() == DataType::FP32 &&
             dst_format.zero_point_data_type() == DataType::I32) {
-            return pack_quant_per_row<int8_t, float, float, int32_t>(
-                src, height, width, dst_format.block_height(), dst_format.block_width());
+            return pack_quant_per_row<int8_t, float, float, int32_t>(src, height, width, block_height, block_width);
         } else if (
             dst_dt == DataType::QSI4 && src_dt == DataType::QSU4 && dst_format.scale_data_type() == DataType::FP32 &&
             dst_format.zero_point_data_type() == DataType::I32) {
             return pack_per_row_qs4(
-                src, scales, zero_points, height, width, dst_format.block_height(), dst_format.block_width(),
-                dst_format.subblock_height(), dst_format.subblock_width());
+                src, scales, zero_points, height, width, block_height, block_width, subblock_height, subblock_width);
+        }
+    }
+
+    if (src_qf == DataFormat::PackFormat::NONE && dst_qf == DataFormat::PackFormat::BIAS_PER_ROW) {
+        KAI_ASSUME(src_dt == dst_dt);
+
+        const auto data_esize = data_type_size_in_bits(dst_dt);
+        const auto zero_point_esize = data_type_size_in_bits(dst_format.zero_point_data_type());
+
+        if (data_esize % 8 == 0 && zero_point_esize % 8 == 0) {
+            return pack_bias_per_row(
+                data_esize / 8, zero_point_esize / 8, src, zero_points, height, width, block_height, block_width,
+                subblock_height, subblock_width);
         }
     }
 

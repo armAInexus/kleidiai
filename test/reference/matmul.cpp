@@ -13,13 +13,15 @@
 #include "src/kai_common.h"
 #include "test/common/data_format.hpp"
 #include "test/common/data_type.hpp"
+#include "test/common/float16.hpp"
 #include "test/common/int4.hpp"
 #include "test/common/memory.hpp"
-#include "test/common/printer.hpp"
 #include "test/reference/binary_elementwise.hpp"
+#include "test/reference/cast.hpp"
 #include "test/reference/pack.hpp"
 #include "test/reference/quantize.hpp"
 #include "test/reference/reduce.hpp"
+#include "test/reference/transpose.hpp"
 
 namespace kai::test {
 
@@ -74,19 +76,24 @@ std::vector<uint8_t> matmul_any_type(
 
 std::vector<uint8_t> matmul_pack_rhs(
     const void* data, const void* scales, const void* zero_points, const DataFormat& src_format,
-    const DataFormat& dst_format, size_t height, size_t width) {
+    const DataFormat& dst_format, size_t n, size_t k, bool transposing) {
     const auto src_dt = src_format.data_type();
-    const auto src_qf = src_format.quantization_format();
+    const auto src_pf = src_format.pack_format();
 
     const auto dst_dt = dst_format.data_type();
-    const auto dst_qf = dst_format.quantization_format();
+    const auto dst_pf = dst_format.pack_format();
 
     std::vector<uint8_t> tmp_data;
     std::vector<uint8_t> tmp_scales;
     std::vector<uint8_t> tmp_zero_points;
 
-    if (src_dt == DataType::QSU4 && src_qf == DataFormat::QuantizationFormat::NONE &&  //
-        dst_dt == DataType::QSI4 && dst_qf == DataFormat::QuantizationFormat::PER_ROW) {
+    if (transposing) {
+        tmp_data = transpose(data, src_dt, k, n);
+        data = tmp_data.data();
+    }
+
+    if (src_dt == DataType::QSU4 && src_pf == DataFormat::PackFormat::NONE &&  //
+        dst_dt == DataType::QSI4 && dst_pf == DataFormat::PackFormat::QUANTIZE_PER_ROW) {
         // For this specific RHS format conversion:
         //
         //   * 4-bit data is added by 8.
@@ -96,33 +103,33 @@ std::vector<uint8_t> matmul_pack_rhs(
         KAI_ASSUME(zero_points == nullptr);
         const int32_t zero_point = 8;
         const uint8_t zero_point_i4 = UInt4::pack_u8(UInt4(zero_point), UInt4(zero_point));
-        const int32_t row_zero_point = zero_point * static_cast<int32_t>(width);
+        const int32_t row_zero_point = zero_point * static_cast<int32_t>(k);
 
         KAI_ASSUME(dst_format.subblock_width() > 0);
         const auto subblock_width_i32 = static_cast<int32_t>(dst_format.subblock_width());
         const auto subblock_width_f = static_cast<float>(dst_format.subblock_width());
 
-        tmp_zero_points = reduce_add(data, src_format, height, width, DataFormat(DataType::I32), 0);
-        tmp_zero_points = sub(tmp_zero_points.data(), DataType::I32, height, 1, &row_zero_point, DataType::I32, 1, 1);
-        tmp_zero_points =
-            mul(tmp_zero_points.data(), DataType::I32, height, 1, &subblock_width_i32, DataType::I32, 1, 1);
+        tmp_zero_points = reduce_add(data, src_format, n, k, DataFormat(DataType::I32), 0);
+        tmp_zero_points = sub(tmp_zero_points.data(), DataType::I32, n, 1, &row_zero_point, DataType::I32, 1, 1);
+        tmp_zero_points = mul(tmp_zero_points.data(), DataType::I32, n, 1, &subblock_width_i32, DataType::I32, 1, 1);
         zero_points = tmp_zero_points.data();
 
-        tmp_data = add(data, DataType::QSU4, height, width, &zero_point_i4, DataType::QSU4, 1, 1);
+        tmp_data = add(data, DataType::QSU4, n, k, &zero_point_i4, DataType::QSU4, 1, 1);
         data = tmp_data.data();
 
-        tmp_scales = div(scales, DataType::FP32, height, 1, &subblock_width_f, DataType::FP32, 1, 1);
+        tmp_scales = div(scales, DataType::FP32, n, 1, &subblock_width_f, DataType::FP32, 1, 1);
         scales = tmp_scales.data();
     }
 
-    return pack(dst_format, data, scales, zero_points, src_format, height, width);
+    return pack(dst_format, data, scales, zero_points, src_format, n, k);
 }
 
 std::vector<uint8_t> matmul(
-    const void* lhs, const void* lhs_scales, const void* lhs_zero_points, DataType lhs_dt,  //
-    const void* rhs, const void* rhs_scales, const void* rhs_zero_points, DataType rhs_dt,  //
-    DataType dst_dt,                                                                        //
-    size_t m, size_t n, size_t k,                                                           //
+    const void* lhs, const void* lhs_scales, const void* lhs_zero_points, DataType lhs_dt,      //
+    const void* rhs, const void* rhs_scales, const void* rhs_zero_points, DataType rhs_dt,      //
+    const void* bias, const void* bias_scales, const void* bias_zero_points, DataType bias_dt,  //
+    DataType dst_dt,                                                                            //
+    size_t m, size_t n, size_t k,                                                               //
     bool lhs_transposed, bool rhs_transposed) {
     const auto lhs_h = lhs_transposed ? k : m;
     const auto lhs_w = lhs_transposed ? m : k;
@@ -132,6 +139,8 @@ std::vector<uint8_t> matmul(
 
     std::vector<uint8_t> tmp_lhs;
     std::vector<uint8_t> tmp_rhs;
+    std::vector<uint8_t> tmp_dst;
+    std::vector<uint8_t> tmp_bias;
 
     if (data_type_is_quantized(lhs_dt)) {
         tmp_lhs = dequantize(
@@ -145,8 +154,41 @@ std::vector<uint8_t> matmul(
         rhs = tmp_rhs.data();
     }
 
-    KAI_ASSUME(dst_dt == DataType::FP32);
-    const auto tmp_dst = matmul_any_type<float>(lhs, rhs, m, n, k, lhs_transposed, rhs_transposed);
+    if (lhs_dt != dst_dt) {
+        tmp_lhs = cast(lhs, lhs_dt, dst_dt, lhs_h, lhs_w);
+        lhs = tmp_lhs.data();
+    }
+
+    if (rhs_dt != dst_dt) {
+        tmp_rhs = cast(rhs, rhs_dt, dst_dt, rhs_h, rhs_w);
+        rhs = tmp_rhs.data();
+    }
+
+    switch (dst_dt) {
+        case DataType::FP32:
+            tmp_dst = matmul_any_type<float>(lhs, rhs, m, n, k, lhs_transposed, rhs_transposed);
+            break;
+
+        case DataType::FP16:
+            tmp_dst = matmul_any_type<Float16>(lhs, rhs, m, n, k, lhs_transposed, rhs_transposed);
+            break;
+
+        default:
+            KAI_ERROR("Unknown data type!");
+    }
+
+    if (bias != nullptr) {
+        if (bias_dt != dst_dt) {
+            tmp_bias = cast(bias, bias_dt, dst_dt, 1, n);
+            bias = tmp_bias.data();
+        }
+
+        KAI_ASSUME(!data_type_is_quantized(bias_dt));
+        KAI_ASSUME(bias_scales == nullptr);
+        KAI_ASSUME(bias_zero_points == nullptr);
+
+        tmp_dst = add(tmp_dst.data(), dst_dt, m, n, bias, bias_dt, 1, n);
+    }
 
     return tmp_dst;
 }

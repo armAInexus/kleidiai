@@ -14,8 +14,10 @@
 #include <vector>
 
 #include "src/kai_common.h"
+#include "test/common/bfloat16.hpp"
 #include "test/common/data_format.hpp"
 #include "test/common/data_type.hpp"
+#include "test/common/float16.hpp"
 #include "test/common/int4.hpp"
 #include "test/common/memory.hpp"
 
@@ -53,6 +55,22 @@ std::vector<uint8_t> fill_matrix_random_raw(size_t height, size_t width, uint64_
 }
 
 template <>
+std::vector<uint8_t> fill_matrix_random_raw<Float16>(size_t height, size_t width, uint64_t seed) {
+    std::mt19937 rnd(seed);
+    std::uniform_real_distribution<float> dist;
+
+    return fill_matrix_raw<Float16>(height, width, [&](size_t, size_t) { return static_cast<Float16>(dist(rnd)); });
+}
+
+template <>
+std::vector<uint8_t> fill_matrix_random_raw<BFloat16>(size_t height, size_t width, uint64_t seed) {
+    std::mt19937 rnd(seed);
+    std::uniform_real_distribution<float> dist;
+
+    return fill_matrix_raw<BFloat16>(height, width, [&](size_t, size_t) { return static_cast<BFloat16>(dist(rnd)); });
+}
+
+template <>
 std::vector<uint8_t> fill_matrix_random_raw<Int4>(size_t height, size_t width, uint64_t seed) {
     std::mt19937 rnd(seed);
     std::uniform_int_distribution<int8_t> dist(-8, 7);
@@ -71,11 +89,17 @@ std::vector<uint8_t> fill_matrix_random_raw<UInt4>(size_t height, size_t width, 
 }  // namespace
 
 std::vector<uint8_t> fill_matrix_random(size_t height, size_t width, const DataFormat& format, uint64_t seed) {
-    switch (format.quantization_format()) {
-        case DataFormat::QuantizationFormat::NONE:
+    switch (format.pack_format()) {
+        case DataFormat::PackFormat::NONE:
             switch (format.data_type()) {
                 case DataType::FP32:
                     return fill_matrix_random_raw<float>(height, width, seed);
+
+                case DataType::FP16:
+                    return fill_matrix_random_raw<Float16>(height, width, seed);
+
+                case DataType::BF16:
+                    return fill_matrix_random_raw<BFloat16>(height, width, seed);
 
                 case DataType::QSU4:
                     return fill_matrix_random_raw<UInt4>(height, width, seed);

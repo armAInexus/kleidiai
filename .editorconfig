@@ -17,6 +17,10 @@ insert_final_newline = true
 trim_trailing_whitespace = true
 
 # Override settings.
+[*.{c,h,cpp,hpp}]
+indent_size = unset  # Avoid conflict with clang-format.
+
+# Override settings.
 [*.{json,yml,yaml}]
 indent_size = 2
 
