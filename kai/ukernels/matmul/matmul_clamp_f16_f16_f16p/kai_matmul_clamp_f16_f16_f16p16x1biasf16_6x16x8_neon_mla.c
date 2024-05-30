@@ -13,7 +13,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "kai_common.h"
+#include "kai/kai_common.h"
 
 static const size_t kai_mr = 6;
 static const size_t kai_nr = 16;

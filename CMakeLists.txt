@@ -57,25 +57,25 @@ set(KLEIDIAI_WARNING_FLAGS
 )
 
 set(KLEIDIAI_FILES_NEON
-    src/matmul/kai_lhs_quant_pack_qai8dxp_f32.c
-    src/matmul/kai_rhs_pack_nxk_qsi4cxp_qsu4cxs1s0.c
+    kai/ukernels/matmul/pack/kai_lhs_quant_pack_qai8dxp_f32.c
+    kai/ukernels/matmul/pack/kai_rhs_pack_nxk_qsi4cxp_qsu4cxs1s0.c
 )
 
 set(KLEIDIAI_FILES_NEON_FP16
-    src/matmul/kai_rhs_pack_kxn_f16p16x1biasf16_f16_f16_neon.c
-    src/matmul/matmul_clamp_f16_f16_f16p/kai_matmul_clamp_f16_f16_f16p16x1biasf16_6x16x8_neon_mla.c
+    kai/ukernels/matmul/pack/kai_rhs_pack_kxn_f16p16x1biasf16_f16_f16_neon.c
+    kai/ukernels/matmul/matmul_clamp_f16_f16_f16p/kai_matmul_clamp_f16_f16_f16p16x1biasf16_6x16x8_neon_mla.c
 )
 
 set(KLEIDIAI_FILES_NEON_DOTPROD
-    src/matmul/matmul_clamp_f32_qai8dxp_qsi4cxp/kai_matmul_clamp_f32_qai8dxp1x8_qsi4cxp4x8_1x4x32_neon_dotprod.c
-    src/matmul/matmul_clamp_f32_qai8dxp_qsi4cxp/kai_matmul_clamp_f32_qai8dxp1x8_qsi4cxp8x8_1x8x32_neon_dotprod.c
+    kai/ukernels/matmul/matmul_clamp_f32_qai8dxp_qsi4cxp/kai_matmul_clamp_f32_qai8dxp1x8_qsi4cxp4x8_1x4x32_neon_dotprod.c
+    kai/ukernels/matmul/matmul_clamp_f32_qai8dxp_qsi4cxp/kai_matmul_clamp_f32_qai8dxp1x8_qsi4cxp8x8_1x8x32_neon_dotprod.c
 )
 
 set(KLEIDIAI_FILES_NEON_I8MM
-    src/matmul/matmul_clamp_f32_qai8dxp_qsi4cxp/kai_matmul_clamp_f32_qai8dxp4x8_qsi4cxp4x8_4x4x32_neon_i8mm.c
-    src/matmul/matmul_clamp_f32_qai8dxp_qsi4cxp/kai_matmul_clamp_f32_qai8dxp4x8_qsi4cxp4x8_8x4x32_neon_i8mm.c
-    src/matmul/matmul_clamp_f32_qai8dxp_qsi4cxp/kai_matmul_clamp_f32_qai8dxp4x8_qsi4cxp8x8_4x8x32_neon_i8mm.c
-    src/matmul/matmul_clamp_f32_qai8dxp_qsi4cxp/kai_matmul_clamp_f32_qai8dxp4x8_qsi4cxp8x8_8x8x32_neon_i8mm.c
+    kai/ukernels/matmul/matmul_clamp_f32_qai8dxp_qsi4cxp/kai_matmul_clamp_f32_qai8dxp4x8_qsi4cxp4x8_4x4x32_neon_i8mm.c
+    kai/ukernels/matmul/matmul_clamp_f32_qai8dxp_qsi4cxp/kai_matmul_clamp_f32_qai8dxp4x8_qsi4cxp4x8_8x4x32_neon_i8mm.c
+    kai/ukernels/matmul/matmul_clamp_f32_qai8dxp_qsi4cxp/kai_matmul_clamp_f32_qai8dxp4x8_qsi4cxp8x8_4x8x32_neon_i8mm.c
+    kai/ukernels/matmul/matmul_clamp_f32_qai8dxp_qsi4cxp/kai_matmul_clamp_f32_qai8dxp4x8_qsi4cxp8x8_8x8x32_neon_i8mm.c
 )
 
 add_library(kleidiai
@@ -86,8 +86,7 @@ add_library(kleidiai
 )
 
 target_include_directories(kleidiai
-    PUBLIC  src
-    PRIVATE .
+    PUBLIC  .
 )
 
 target_compile_options(kleidiai
@@ -140,10 +139,6 @@ if(KLEIDIAI_BUILD_TESTS)
         test/reference/cast.cpp
 
         test/tests/matmul_test.cpp
-    )
-
-    target_include_directories(kleidiai_test
-        PRIVATE .
     )
 
     target_compile_options(kleidiai_test

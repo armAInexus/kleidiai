@@ -11,7 +11,7 @@
 #include <arm_neon.h>
 #include <stdint.h>
 
-#include "kai_common.h"
+#include "kai/kai_common.h"
 
 static const size_t kai_m_step = 8;
 static const size_t kai_n_step = 8;

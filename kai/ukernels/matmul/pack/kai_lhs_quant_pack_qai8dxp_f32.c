@@ -10,7 +10,7 @@
 #include <math.h>
 #include <stdint.h>
 
-#include "kai_common.h"
+#include "kai/kai_common.h"
 
 static const size_t kai_num_bytes_per_multiplier = sizeof(float);
 static const size_t kai_num_bytes_per_offset = sizeof(int32_t);

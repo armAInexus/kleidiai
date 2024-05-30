@@ -10,7 +10,7 @@
 #include <stdint.h>
 #include <string.h>
 
-#include "kai_common.h"
+#include "kai/kai_common.h"
 
 static const size_t kai_num_bytes_sum_rhs = sizeof(int32_t);
 static const size_t kai_num_bytes_multiplier_rhs = sizeof(float);

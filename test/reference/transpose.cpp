@@ -11,7 +11,7 @@
 #include <cstring>
 #include <vector>
 
-#include "kai_common.h"
+#include "kai/kai_common.h"
 #include "test/common/data_type.hpp"
 
 namespace kai::test {

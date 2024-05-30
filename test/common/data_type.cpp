@@ -9,7 +9,7 @@
 #include <cstddef>
 #include <cstdint>
 
-#include "src/kai_common.h"
+#include "kai/kai_common.h"
 
 namespace kai::test {
 

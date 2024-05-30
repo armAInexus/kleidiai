@@ -9,7 +9,7 @@
 #include <algorithm>
 #include <cstddef>
 
-#include "src/kai_common.h"
+#include "kai/kai_common.h"
 #include "test/common/rect.hpp"
 #include "test/reference/round.hpp"
 

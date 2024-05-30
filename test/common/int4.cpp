@@ -9,7 +9,7 @@
 #include <cstdint>
 #include <tuple>
 
-#include "kai_common.h"
+#include "kai/kai_common.h"
 
 namespace kai::test {
 

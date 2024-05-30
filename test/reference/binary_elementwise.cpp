@@ -11,7 +11,7 @@
 #include <cstdint>
 #include <vector>
 
-#include "src/kai_common.h"
+#include "kai/kai_common.h"
 #include "test/common/data_type.hpp"
 #include "test/common/float16.hpp"
 #include "test/common/int4.hpp"

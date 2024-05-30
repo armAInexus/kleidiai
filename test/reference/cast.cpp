@@ -8,7 +8,7 @@
 #include <cstdint>
 #include <vector>
 
-#include "kai_common.h"
+#include "kai/kai_common.h"
 #include "test/common/bfloat16.hpp"
 #include "test/common/data_type.hpp"
 #include "test/common/memory.hpp"

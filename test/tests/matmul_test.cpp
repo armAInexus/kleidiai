@@ -20,9 +20,9 @@
 #include <utility>
 #include <vector>
 
-#include "src/kai_common.h"
-#include "src/matmul/kai_rhs_pack_kxn_f16p16x1biasf16_f16_f16_neon.h"
-#include "src/matmul/matmul_clamp_f16_f16_f16p/kai_matmul_clamp_f16_f16_f16p16x1biasf16_6x16x8_neon_mla.h"
+#include "kai/kai_common.h"
+#include "kai/ukernels/matmul/matmul_clamp_f16_f16_f16p/kai_matmul_clamp_f16_f16_f16p16x1biasf16_6x16x8_neon_mla.h"
+#include "kai/ukernels/matmul/pack/kai_rhs_pack_kxn_f16p16x1biasf16_f16_f16_neon.h"
 #include "test/common/compare.hpp"
 #include "test/common/data_format.hpp"
 #include "test/common/data_type.hpp"
