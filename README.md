@@ -72,11 +72,11 @@ Some of the key features of KleidiAI are the following:
 
 <h1> Filename convention </h1>
 
-The `src/` directory is the home for all micro-kernels. The micro-kernels are grouped in separate directories based on the performed operation. For example, all the matrix-multiplication micro-kernels are held in the `matmul/` operator directory.
+The `kai/ukernels` directory is the home for all micro-kernels. The micro-kernels are grouped in separate directories based on the performed operation. For example, all the matrix-multiplication micro-kernels are held in the `matmul/` operator directory.
 
 Inside the operator directory, you can find:
 
-- *The common micro-kernels*, which are helper micro-kernels necessary for the correct functioning of the main ones. For example, some of these may be required for packing the input tensors.
+- *The common micro-kernels*, which are helper micro-kernels necessary for the correct functioning of the main ones. For example, some of these may be required for packing the input tensors and held in the `pack` subdirectory.
 - *The micro-kernels* files, which are held in separate sub-directories.
 
 The name of the micro-kernel folder provides the description of the operation performed and the data type of the destination and source tensors. The general syntax for the micro-kernel folder is as follows:
@@ -100,10 +100,11 @@ Some of the data types currently supported with the KleidiAI library are the fol
 | Data type      | Abbreviation | Notes |
 | ----------- | ----------- | ----------- |
 | Floating-point 32-bit | <b>f32</b> | |
+| Floating-point 16-bit | <b>f16</b> | |
 | Quantized (q) Symmetric (s) Signed (u) 4-bit (4) Per-Channel (cx) quantization parameters | <b>qsi4cx</b> | An <b>fp32</b> multiplier shared among all values of the same channel. `x` denotes the entirety of the channel |
 | Quantized (q) Asymmetric (a) Signed (i) 8-bit (8) Per-Dimension (dx) (for example, Per-Row) quantization parameters | <b>qai8dx</b> | An <b>fp32</b> multiplier and a <b>int32</b> zero offset shared among all values of the same dimension. |
 
-> ℹ️ In some cases, we may append the letter `p` to the data type to specify that the tensor is expected to be <strong>packed</strong>. A packed tensor is a tensor that has been rearranged in our preferred data layout from the original data layout to improve the performance of the micro-kernel. In addition to the letter `p`, we may append other alphanumerical values to specify the attributes of the data packing (for example, the block packing size).
+> ℹ️ In some cases, we may append the letter `p` to the data type to specify that the tensor is expected to be <strong>packed</strong>. A packed tensor is a tensor that has been rearranged in our preferred data layout from the original data layout to improve the performance of the micro-kernel. In addition to the letter `p`, we may append other alphanumerical values to specify the attributes of the data packing (for example, the block packing size or the data type of for the additional packed arguments).
 
 <h1> Supported micro-kernels </h1>
 
@@ -128,6 +129,22 @@ Some of the data types currently supported with the KleidiAI library are the fol
     </td>
     <td>
         The packing function for the RHS matrix is available in the `kai_rhs_pack_nxk_qsi4cxp_qsi4cxs1s0.c/.h` files. <br>
+        Since the RHS matrix often contains constant values, we recommend packing the RHS matrix only once and freeing the content of the original RHS matrix. <br>
+    </td>
+</tr>
+<tr>
+    <td>Matrix-multiplication with RHS packed</td>
+    <td style="width:10%">matmul_clamp_f16_f16_f16p</td>
+    <td style="width:20%">
+        <b>LHS</b>: f16 <br>
+        <b>RHS</b>: f16p <br>
+        <b>DST</b>: f16 <br>
+    </td>
+    <td>
+        TensorFlow Lite <br>
+    </td>
+    <td>
+        The packing function for the RHS matrix is available in the `kai_rhs_pack_kxn_f16p16x1biasf16_f16_f16_neon.c/.h` files. <br>
         Since the RHS matrix often contains constant values, we recommend packing the RHS matrix only once and freeing the content of the original RHS matrix. <br>
     </td>
 </tr>

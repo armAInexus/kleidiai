@@ -4,7 +4,6 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-// Include micro-kernel variants
 #include <cassert>
 #include <cfloat>
 #include <cmath>
@@ -12,6 +11,7 @@
 #include <iostream>
 #include <string>
 
+// Include micro-kernel variants
 #include "kai_lhs_quant_pack_qai8dxp_f32.h"
 #include "kai_matmul_clamp_f32_qai8dxp1x8_qsi4cxp4x8_1x4x32_neon_dotprod.h"
 #include "kai_matmul_clamp_f32_qai8dxp1x8_qsi4cxp8x8_1x8x32_neon_dotprod.h"
@@ -351,8 +351,8 @@ int main(int argc, char** argv) {
     // Memory sizes for the reference implementation
     // After dynamically quantized the LHS matrix, we have the scale and offset for each
     // row. The scale (f32) and offset (int32) are stored at the beginning of each row
-    size_t lhs_ref_size_qa8dx = m * (k + sizeof(int32_t) + sizeof(float));
-    size_t dst_ref_size_f32 = m * n * sizeof(float);
+    const size_t lhs_ref_size_qa8dx = m * (k + sizeof(int32_t) + sizeof(float));
+    const size_t dst_ref_size_f32 = m * n * sizeof(float);
 
     uint8_t* lhs_ref_mtx_qa8dx = new uint8_t[lhs_ref_size_qa8dx];
     uint8_t* dst_ref_mtx_f32 = new uint8_t[dst_ref_size_f32];
