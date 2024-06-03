@@ -17,6 +17,12 @@
 extern "C" {
 #endif  // __cplusplus
 
+/// Micro-kernel dependencies
+///
+/// -# kai_rhs_pack_kxn_f16p16x1biasf16_f16_f16_neon to pack the RHS matrix
+
+/// --------------------------------------------------
+
 /// Gets m step value.
 ///
 /// The starting row index must be divisible by `m_step`.
