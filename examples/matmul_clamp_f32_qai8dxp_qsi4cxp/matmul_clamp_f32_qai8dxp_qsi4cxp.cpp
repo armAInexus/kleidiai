@@ -3,7 +3,9 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 //
-
+#if !defined(__ARM_FEATURE_DOTPROD) && !defined(__ARM_FEATURE_MATMUL_INT8)
+#error "Dotprod and I8mm extensions required to compile this example"
+#else
 #include <cassert>
 #include <cfloat>
 #include <cmath>
@@ -400,16 +402,19 @@ int main(int argc, char** argv) {
 
         // RHS packing
         kai_run_rhs_pack_nxk_qsi4cxp_qsu4cxs1s0(
-            1, n, k, nr, kr, sr,
+            1, n, k, nr, kr, sr,                     // Packing arguments
             (const uint8_t*)(rhs_native_mtx_qs4cx),  // RHS
             NULL,                                    // Bias
             (const float*)(rhs_scales_f32),          // Scale
-            rhs_packed_mtx_qs4cx,                    // DST
+            rhs_packed_mtx_qs4cx,                    // RHS packed
             0, &params);
 
         // LHS packing
         kai_run_lhs_quant_pack_qai8dxp_f32(
-            m, k, mr, kr, sr, 0, (const float*)lhs_native_mtx_f32, k * sizeof(float), lhs_packed_mtx_qa8dx);
+            m, k, mr, kr, sr, 0,               // Packing arguments
+            (const float*)lhs_native_mtx_f32,  // LHS
+            k * sizeof(float),                 // LHS stride
+            lhs_packed_mtx_qa8dx);             // LHS packed
 
         // Matmul
         {
@@ -423,7 +428,14 @@ int main(int argc, char** argv) {
             float* dst_ptr = (float*)((uint8_t*)dst_act_mtx_f32 + dst_offset);
 
             ukernel_variants[idx_variant].ukernel.run_matmul(
-                m, n, k, lhs_ptr, rhs_ptr, dst_ptr, dst_stride, sizeof(float), -FLT_MAX, FLT_MAX);
+                m, n, k,           // Dimensions
+                lhs_ptr,           // LHS packed
+                rhs_ptr,           // RHS packed
+                dst_ptr,           // DST
+                dst_stride,        // DST stride (row)
+                sizeof(float),     // DST stride (col)
+                -FLT_MAX, FLT_MAX  // Min and max for the clamp operation
+            );
         }
 
         const bool is_valid =
@@ -447,3 +459,5 @@ int main(int argc, char** argv) {
 //----------- END MICRO-KERNELS TESTS
 //------------------------------------
 //------------------------------------
+
+#endif  // Architectural feature check
