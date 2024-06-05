@@ -65,10 +65,13 @@ size_t kai_get_dst_size_matmul_clamp_f16_f16_f16p16x1biasf16_6x16x8_neon_mla(siz
 }
 
 void kai_run_matmul_clamp_f16_f16_f16p16x1biasf16_6x16x8_neon_mla(
-    size_t m, size_t n, size_t k,                        //
-    const void* lhs, const void* packed_rhs, void* dst,  //
-    size_t lhs_stride, size_t dst_stride,                //
+    size_t m, size_t n, size_t k,                             //
+    const void* lhs, size_t lhs_stride,                       //
+    const void* rhs_packed,                                   //
+    void* dst, size_t dst_stride_row, size_t dst_stride_col,  //
     __fp16 clamp_min, __fp16 clamp_max) {
+    KAI_ASSERT(dst_stride_col == sizeof(__fp16));
+
     typedef struct {
         __fp16 maxval;
         __fp16 minval;
@@ -91,7 +94,7 @@ void kai_run_matmul_clamp_f16_f16_f16p16x1biasf16_6x16x8_neon_mla(
     ka.num_strings = 1;
     ka.string_lengths = &string_length;
     ka.N = n;
-    ka.B_ptr = packed_rhs;
+    ka.B_ptr = rhs_packed;
     ka.bias = NULL;
 
     // Direct input.
@@ -101,7 +104,7 @@ void kai_run_matmul_clamp_f16_f16_f16p16x1biasf16_6x16x8_neon_mla(
 
     // Direct output.
     ka.output_ptr = dst;
-    ka.output_offset = dst_stride / sizeof(__fp16);
+    ka.output_offset = dst_stride_row / sizeof(__fp16);
 
     // Clamping output.
     flags |= 0x2;

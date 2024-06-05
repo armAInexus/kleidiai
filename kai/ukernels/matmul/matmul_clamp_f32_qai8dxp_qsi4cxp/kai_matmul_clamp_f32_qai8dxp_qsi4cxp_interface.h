@@ -14,7 +14,7 @@ extern "C" {
 // All micro-kernels variants of the same type share the same interfaces
 // In this case, the micro-kernel type is: matmul_clamp_f32_qai8dxp_qsi4cxp
 
-/** Micro-kernel helper functions ("get" methods) */
+/// Micro-kernel helper functions ("get" methods)
 typedef size_t (*kai_matmul_clamp_f32_qai8dxp_qsi4cxp_get_m_step_func_t)(void);
 typedef size_t (*kai_matmul_clamp_f32_qai8dxp_qsi4cxp_get_n_step_func_t)(void);
 typedef size_t (*kai_matmul_clamp_f32_qai8dxp_qsi4cxp_get_mr_func_t)(void);
@@ -27,12 +27,12 @@ typedef size_t (*kai_matmul_clamp_f32_qai8dxp_qsi4cxp_get_dst_offset_func_t)(
     size_t m_idx, size_t n_idx, size_t dst_stride);
 typedef size_t (*kai_matmul_clamp_f32_qai8dxp_qsi4cxp_get_dst_size_func_t)(size_t m, size_t n);
 
-/** Micro-kernel core function ("run" method) */
+/// Micro-kernel core function ("run" method)
 typedef void (*kai_matmul_clamp_f32_qai8dxp_qsi4cxp_run_matmul_func_t)(
     size_t m, size_t n, size_t k, const void* lhs_p, const void* rhs_p, float* dst, size_t dst_stride_row,
     size_t dst_stride_col, float scalar_min, float scalar_max);
 
-/** Micro-kernel interface */
+/// Micro-kernel interface
 struct kai_matmul_clamp_f32_qai8dxp_qsi4cxp_ukernel {
     kai_matmul_clamp_f32_qai8dxp_qsi4cxp_get_m_step_func_t get_m_step;
     kai_matmul_clamp_f32_qai8dxp_qsi4cxp_get_n_step_func_t get_n_step;
