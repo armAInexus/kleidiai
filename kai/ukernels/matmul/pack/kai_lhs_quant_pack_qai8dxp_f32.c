@@ -5,7 +5,9 @@
 //
 #include "kai_lhs_quant_pack_qai8dxp_f32.h"
 
+#if defined(__aarch64__)
 #include <arm_neon.h>
+#endif
 #include <float.h>
 #include <math.h>
 #include <stdint.h>

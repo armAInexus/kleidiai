@@ -5,7 +5,6 @@
 //
 #include "kai_rhs_pack_nxk_qsi4cxp_qsu4cxs1s0.h"
 
-#include <arm_neon.h>
 #include <math.h>
 #include <stdint.h>
 #include <string.h>
