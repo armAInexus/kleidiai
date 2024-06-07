@@ -10,7 +10,7 @@
 #error This file must be compiled for AArch64, FEAT_FP16.
 #else  // Architectural features check.
 
-#include <stdint.h>
+#include <stddef.h>
 
 #ifdef __cplusplus
 extern "C" {
