@@ -9,7 +9,7 @@
 ## Prerequisities
 
 - Understanding of matrix multiplication routines
-- Knowledge of quantization schemes, such as 8-bit per-channel quantization
+- Knowledge of quantization schemes, such as 8-bit (int8) per-channel quantization
 - Experience with Arm® cross-compilation on Linux® or Android™
 - Proficiency with Linux® commands
 
@@ -30,7 +30,7 @@ In this guide, we will perform matrix multiplication between two matrices with t
 
 Since the **RHS** matrix uses symmetric per-channel quantization, it is accompanied by an additional array (`RHS scales`) containing the scale quantization parameters for each `N` value.
 
-> ℹ️ The quantization is called per-channel because matrix multiplication is commonly used to accelerate the convolution layer and the `N` dimension corresponds to the `output channel` (`output feature maps`)
+> ℹ️ The quantization is called per-channel because matrix multiplication is commonly used to accelerate the convolution layer and the `N` dimension corresponds to the `output channel`, for example, `C` in `NHWC`.
 
 The following image visually describes the operations involved to perform this matrix multiplication type:
 ![int4_matmul_per_channel](imgs/int4_matmul_per_channel.png)
@@ -66,7 +66,7 @@ In the header of the matrix multiplication micro-kernel we report the additional
 - [kai_lhs_quant_pack_qai8dxp_f32](../../kai/ukernels/matmul/pack/kai_lhs_quant_pack_qai8dxp_f32.c)
 - [kai_rhs_pack_nxk_qsu4cxp_qsu4cxs1s0](../../kai/ukernels/matmul/pack/kai_rhs_pack_nxk_qsu4cxp_qsu4cxs1s0.c)
 
-The **kai_lhs_quant_pack_qai8dxp_f32** micro-kernel performs the dynamic quantization of the LHS matrix from f32 to 8-bit and packs the value to improve the cache locality during the matrix multiplication routine.
+The **kai_lhs_quant_pack_qai8dxp_f32** micro-kernel performs the dynamic quantization of the LHS matrix from f32 to int8 and packs the value to improve the cache locality during the matrix multiplication routine.
 Instead, the **kai_rhs_pack_nxk_qsu4cxp_qsu4cxs1s0** packs the original integer 4-bit RHS matrix to improve the cache locality during the matrix multiplication routine
 
 The packing arguments required to run the preceeding micro-kernels, such as **mr**, **kr**, and **sr**, are obtained using the helper methods provided in the matrix multiplication micro-kernel.
@@ -218,14 +218,28 @@ Since the content of the LHS matrix changes at runtime, the LHS dynamic quantiza
 Perform the matrix multiplication:
 
 ```c
+    const size_t dst_stride = n * sizeof(float);
     kai_run_matmul_clamp_f32_qai8dxp4x8_qsu4cxp8x8_8x8x32_neon_i8mm(
-        m, n, k,            // Dimensions
-        lhs_ptr,            // LHS packed
-        rhs_ptr,            // RHS packed
-        dst_ptr,            // DST
-        dst_stride,         // DST stride (row)
-        sizeof(float),      // DST stride (column)
-        -FLT_MAX, FLT_MAX); // Min and max for the clamp operation
+        m, n, k,                            // Dimensions
+        (const void*)lhs_packed_mtx_qa8dx,  // LHS packed
+        (const void*)rhs_packed_mtx_qs4cx,  // RHS packed
+        (float*)dst_mtx_f32,                // DST
+        dst_stride,                         // DST stride (row)
+        sizeof(float),                      // DST stride (column)
+        -FLT_MAX, FLT_MAX);                 // Min and max for the clamp operation
+```
+
+### Step 9:
+
+Free the dynamically allocated memory:
+
+```c
+    delete[] lhs_native_mtx_f32;
+    delete[] rhs_native_mtx_qs4cx;
+    delete[] dst_mtx_f32;
+    delete[] rhs_scales_f32;
+    delete[] lhs_packed_mtx_qa8dx;
+    delete[] rhs_packed_mtx_qs4cx;
 ```
 
 Now, write the build script to compile the example. If you are using CMake, your script might look like this:
