@@ -21,7 +21,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 include(FetchGTest)
 
-option(KLEIDIAI_BUILD_TESTS "Build unit tests." ON)
+option(KLEIDIAI_BUILD_TESTS "Build unit tests." OFF)
 option(KLEIDIAI_ENABLE_CLANG_TIDY "Build with Clang-Tidy checks." OFF)
 
 if(KLEIDIAI_ENABLE_CLANG_TIDY)
@@ -29,27 +29,33 @@ if(KLEIDIAI_ENABLE_CLANG_TIDY)
     set(CMAKE_CXX_CLANG_TIDY "clang-tidy")
 endif()
 
-set(KLEIDIAI_WARNING_FLAGS_C
-    "-Wall"
-    "-Wdisabled-optimization"
-    "-Werror"
-    "-Wextra"
-    "-Wformat-security"
-    "-Wformat=2"
-    "-Winit-self"
-    "-Wno-ignored-attributes"
-    "-Wno-misleading-indentation"
-    "-Wno-overlength-strings"
-    "-Wstrict-overflow=2"
-    "-Wswitch-default"
-)
+if(MSVC)
+    set(KLEIDIAI_WARNING_FLAGS_C
+        "/Wall"
+    )
+else()
+    set(KLEIDIAI_WARNING_FLAGS_C
+        "-Wall"
+        "-Wdisabled-optimization"
+        "-Werror"
+        "-Wextra"
+        "-Wformat-security"
+        "-Wformat=2"
+        "-Winit-self"
+        "-Wno-ignored-attributes"
+        "-Wno-misleading-indentation"
+        "-Wno-overlength-strings"
+        "-Wstrict-overflow=2"
+        "-Wswitch-default"
+    )
 
-set(KLEIDIAI_WARNING_FLAGS_CXX
-    "-Wctor-dtor-privacy"
-    "-Weffc++"
-    "-Woverloaded-virtual"
-    "-Wsign-promo"
-)
+    set(KLEIDIAI_WARNING_FLAGS_CXX
+        "-Wctor-dtor-privacy"
+        "-Weffc++"
+        "-Woverloaded-virtual"
+        "-Wsign-promo"
+    )
+endif()
 
 set(KLEIDIAI_WARNING_FLAGS
     ${KLEIDIAI_WARNING_FLAGS_C}
@@ -95,7 +101,10 @@ set(KLEIDIAI_FILES_NEON_I8MM
 
 set(KLEIDIAI_MICROKERNEL_SRCS ${KLEIDIAI_FILES_SCALAR})
 
-if(CMAKE_SYSTEM_PROCESSOR STREQUAL "aarch64" OR CMAKE_SYSTEM_PROCESSOR STREQUAL "arm64")
+# MSVC compiler does not support inline assembly for Arm® processors hence it cannot be used to compile the optimized
+# KleidiAI micro-kernels. It can however still be used to compile scalar routines.
+# https://learn.microsoft.com/en-us/cpp/assembler/inline/inline-assembler?view=msvc-170
+if((CMAKE_SYSTEM_PROCESSOR STREQUAL "aarch64" OR CMAKE_SYSTEM_PROCESSOR STREQUAL "arm64") AND NOT MSVC)
     list(APPEND KLEIDIAI_MICROKERNEL_SRCS ${KLEIDIAI_FILES_NEON_I8MM})
     list(APPEND KLEIDIAI_MICROKERNEL_SRCS ${KLEIDIAI_FILES_NEON_DOTPROD})
     list(APPEND KLEIDIAI_MICROKERNEL_SRCS ${KLEIDIAI_FILES_NEON_FP16})
