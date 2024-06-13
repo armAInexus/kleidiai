@@ -56,33 +56,25 @@ set(KAI_WARNING_FLAGS
     $<$<COMPILE_LANGUAGE:CXX>:${KAI_WARNING_FLAGS_CXX}>
 )
 
-set(KAI_I8MM ON CACHE STRING "" INTERNAL)
-set(KAI_FP16 ON CACHE STRING "" INTERNAL)
-set(KAI_DOTPROD ON CACHE STRING "" INTERNAL)
+set(KAI_I8MM_ENABLED ON)
+set(KAI_FP16_ENABLED ON)
+set(KAI_DOTPROD_ENABLED ON)
+set(KAI_MIN_CLANG_VERSION 11)
+set(KAI_MIN_GNU_VERSION 11)
 
 if(CMAKE_C_COMPILER_ID STREQUAL "Clang")
-    if(CMAKE_C_COMPILER_VERSION VERSION_LESS "11")
-        set(KAI_I8MM OFF)
-    endif()
-
-    if(CMAKE_C_COMPILER_VERSION VERSION_LESS "7")
-        set(KAI_FP16 OFF)
-        set(KAI_DOTPROD OFF)
+    if(CMAKE_C_COMPILER_VERSION VERSION_LESS ${KAI_MIN_CLANG_VERSION})
+        message(WARNING "KleidiAI: Using non-supported Clang version. Expected ${KAI_MIN_CLANG_VERSION}, Received ${CMAKE_C_COMPILER_VERSION} ")
     endif()
 endif()
 
 if(CMAKE_C_COMPILER_ID STREQUAL "GNU")
-    if(CMAKE_C_COMPILER_VERSION VERSION_LESS "10")
-        set(KAI_I8MM OFF)
-    endif()
-
-    if(CMAKE_C_COMPILER_VERSION VERSION_LESS "8")
-        set(KAI_FP16 OFF)
-        set(KAI_DOTPROD OFF)
+    if(CMAKE_C_COMPILER_VERSION VERSION_LESS ${KAI_MIN_GNU_VERSION})
+    message(WARNING "KleidiAI: Using non-supported Clang version. Expected ${KAI_MIN_GNU_VERSION}, Received ${CMAKE_C_COMPILER_VERSION} ")
     endif()
 endif()
 
-set(KAI_FILES_NEON
+set(KAI_FILES_SCALAR
     kai/ukernels/matmul/pack/kai_lhs_quant_pack_qai8dxp_f32.c
     kai/ukernels/matmul/pack/kai_rhs_pack_nxk_qsi4cxp_qsu4cxs1s0.c
 )
@@ -104,17 +96,17 @@ set(KAI_FILES_NEON_I8MM
     kai/ukernels/matmul/matmul_clamp_f32_qai8dxp_qsi4cxp/kai_matmul_clamp_f32_qai8dxp4x8_qsi4cxp8x8_8x8x32_neon_i8mm.c
 )
 
-set(KAI_MICROKERNEL_SRCS ${KAI_FILES_NEON})
+set(KAI_MICROKERNEL_SRCS ${KAI_FILES_SCALAR})
 
-if(KAI_I8MM)
+if(KAI_I8MM_ENABLED)
     list(APPEND KAI_MICROKERNEL_SRCS ${KAI_FILES_NEON_I8MM})
 endif()
 
-if(KAI_DOTPROD)
+if(KAI_DOTPROD_ENABLED)
     list(APPEND KAI_MICROKERNEL_SRCS ${KAI_FILES_NEON_DOTPROD})
 endif()
 
-if(KAI_FP16)
+if(KAI_FP16_ENABLED)
     list(APPEND KAI_MICROKERNEL_SRCS ${KAI_FILES_NEON_FP16})
 endif()
 
@@ -130,9 +122,11 @@ target_compile_options(kleidiai
     PRIVATE ${KAI_WARNING_FLAGS}
 )
 
-foreach(KAI_SOURCE_FILE IN LISTS KAI_FILES_NEON)
-    set_property(SOURCE ${KAI_SOURCE_FILE} PROPERTY COMPILE_OPTIONS -march=armv8-a)
-endforeach()
+if(CMAKE_SYSTEM_PROCESSOR STREQUAL "aarch64" OR CMAKE_SYSTEM_PROCESSOR STREQUAL "arm64")
+    foreach(KAI_SOURCE_FILE IN LISTS KAI_FILES_SCALAR)
+        set_property(SOURCE ${KAI_SOURCE_FILE} PROPERTY COMPILE_OPTIONS -march=armv8-a)
+    endforeach()
+endif()
 
 foreach(KAI_SOURCE_FILE IN LISTS KAI_FILES_NEON_FP16)
     set_property(SOURCE ${KAI_SOURCE_FILE} PROPERTY COMPILE_OPTIONS -march=armv8.2-a+fp16)
