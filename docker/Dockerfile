@@ -12,6 +12,7 @@ RUN apt-get update  \
     ca-certificates \
     clang \
     clang-tidy \
+    llvm \
     cmake \
     git \
     ninja-build \
@@ -20,4 +21,5 @@ RUN apt-get update  \
 
 RUN pip install \
     reuse \
-    pre-commit
+    pre-commit \
+    gcovr

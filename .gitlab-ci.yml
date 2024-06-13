@@ -7,6 +7,7 @@
 stages:
   - build
   - test
+  - deploy
 
 default:
   image: registry.gitlab.arm.com/kleidi/kleidiai/image:latest
@@ -34,6 +35,19 @@ build-clang:
     expire_in: 1 day
     paths:
       - "build/"
+
+build-clang-cov:
+  extends:
+    - .standard-rules
+  interruptible: true
+  stage: build
+  script:
+    - cmake -G Ninja -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=Release -DKLEIDIAI_BUILD_TESTS=ON -DCMAKE_C_FLAGS="--coverage" -DCMAKE_CXX_FLAGS="--coverage" -S . -B build/linux-cov
+    - cmake --build ./build/linux-cov
+  artifacts:
+    expire_in: 1 day
+    paths:
+      - "build/linux-cov"
 
 build-gcc:
   extends:
@@ -72,3 +86,35 @@ test-linux-aarch64:
     - build-clang
   script:
     - ./build/kleidiai_test
+
+test-linux-aarch64-cov:
+  extends:
+    - .standard-rules
+  interruptible: true
+  stage: test
+  dependencies:
+    - build-clang-cov
+  script:
+    - ./build/linux-cov/kleidiai_test
+    - mkdir -p build/html/coverage
+    - gcovr --gcov-executable="llvm-cov gcov" --xml-pretty --exclude-unreachable-branches --exclude=build --print-summary --cobertura=build/coverage.xml --html-details=build/html/coverage/coverage_report.html --html-title="KleidiAI Coverage Report" --root . build/linux-cov
+  artifacts:
+    name: ${CI_JOB_NAME}-${CI_COMMIT_REF_NAME}-${CI_COMMIT_SHA}
+    expire_in: 1 day
+    reports:
+      coverage_report:
+        coverage_format: cobertura
+        path: build/coverage.xml
+    paths:
+      - build/html/coverage
+
+pages:
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+  interruptible: true
+  stage: deploy
+  dependencies:
+    - test-linux-aarch64-cov
+  script:
+    - pwd
+  publish: build/html
