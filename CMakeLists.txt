@@ -21,15 +21,15 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 include(FetchGTest)
 
-option(KAI_BUILD_TESTS "Build unit tests." ON)
-option(KAI_ENABLE_CLANG_TIDY "Build with Clang-Tidy checks." OFF)
+option(KLEIDIAI_BUILD_TESTS "Build unit tests." ON)
+option(KLEIDIAI_ENABLE_CLANG_TIDY "Build with Clang-Tidy checks." OFF)
 
-if(KAI_ENABLE_CLANG_TIDY)
+if(KLEIDIAI_ENABLE_CLANG_TIDY)
     set(CMAKE_C_CLANG_TIDY "clang-tidy")
     set(CMAKE_CXX_CLANG_TIDY "clang-tidy")
 endif()
 
-set(KAI_WARNING_FLAGS_C
+set(KLEIDIAI_WARNING_FLAGS_C
     "-Wall"
     "-Wdisabled-optimization"
     "-Werror"
@@ -44,16 +44,16 @@ set(KAI_WARNING_FLAGS_C
     "-Wswitch-default"
 )
 
-set(KAI_WARNING_FLAGS_CXX
+set(KLEIDIAI_WARNING_FLAGS_CXX
     "-Wctor-dtor-privacy"
     "-Weffc++"
     "-Woverloaded-virtual"
     "-Wsign-promo"
 )
 
-set(KAI_WARNING_FLAGS
-    ${KAI_WARNING_FLAGS_C}
-    $<$<COMPILE_LANGUAGE:CXX>:${KAI_WARNING_FLAGS_CXX}>
+set(KLEIDIAI_WARNING_FLAGS
+    ${KLEIDIAI_WARNING_FLAGS_C}
+    $<$<COMPILE_LANGUAGE:CXX>:${KLEIDIAI_WARNING_FLAGS_CXX}>
 )
 
 set(KAI_I8MM_ENABLED ON)
@@ -74,44 +74,44 @@ if(CMAKE_C_COMPILER_ID STREQUAL "GNU")
     endif()
 endif()
 
-set(KAI_FILES_SCALAR
+set(KLEIDIAI_FILES_SCALAR
     kai/ukernels/matmul/pack/kai_lhs_quant_pack_qai8dxp_f32.c
     kai/ukernels/matmul/pack/kai_rhs_pack_nxk_qsi4cxp_qsu4cxs1s0.c
 )
 
-set(KAI_FILES_NEON_FP16
+set(KLEIDIAI_FILES_NEON_FP16
     kai/ukernels/matmul/pack/kai_rhs_pack_kxn_f16p16x1biasf16_f16_f16_neon.c
     kai/ukernels/matmul/matmul_clamp_f16_f16_f16p/kai_matmul_clamp_f16_f16_f16p16x1biasf16_6x16x8_neon_mla.c
 )
 
-set(KAI_FILES_NEON_DOTPROD
+set(KLEIDIAI_FILES_NEON_DOTPROD
     kai/ukernels/matmul/matmul_clamp_f32_qai8dxp_qsi4cxp/kai_matmul_clamp_f32_qai8dxp1x8_qsi4cxp4x8_1x4x32_neon_dotprod.c
     kai/ukernels/matmul/matmul_clamp_f32_qai8dxp_qsi4cxp/kai_matmul_clamp_f32_qai8dxp1x8_qsi4cxp8x8_1x8x32_neon_dotprod.c
 )
 
-set(KAI_FILES_NEON_I8MM
+set(KLEIDIAI_FILES_NEON_I8MM
     kai/ukernels/matmul/matmul_clamp_f32_qai8dxp_qsi4cxp/kai_matmul_clamp_f32_qai8dxp4x8_qsi4cxp4x8_4x4x32_neon_i8mm.c
     kai/ukernels/matmul/matmul_clamp_f32_qai8dxp_qsi4cxp/kai_matmul_clamp_f32_qai8dxp4x8_qsi4cxp4x8_8x4x32_neon_i8mm.c
     kai/ukernels/matmul/matmul_clamp_f32_qai8dxp_qsi4cxp/kai_matmul_clamp_f32_qai8dxp4x8_qsi4cxp8x8_4x8x32_neon_i8mm.c
     kai/ukernels/matmul/matmul_clamp_f32_qai8dxp_qsi4cxp/kai_matmul_clamp_f32_qai8dxp4x8_qsi4cxp8x8_8x8x32_neon_i8mm.c
 )
 
-set(KAI_MICROKERNEL_SRCS ${KAI_FILES_SCALAR})
+set(KLEIDIAI_MICROKERNEL_SRCS ${KLEIDIAI_FILES_SCALAR})
 
 if(KAI_I8MM_ENABLED)
-    list(APPEND KAI_MICROKERNEL_SRCS ${KAI_FILES_NEON_I8MM})
+    list(APPEND KLEIDIAI_MICROKERNEL_SRCS ${KLEIDIAI_FILES_NEON_I8MM})
 endif()
 
 if(KAI_DOTPROD_ENABLED)
-    list(APPEND KAI_MICROKERNEL_SRCS ${KAI_FILES_NEON_DOTPROD})
+    list(APPEND KLEIDIAI_MICROKERNEL_SRCS ${KLEIDIAI_FILES_NEON_DOTPROD})
 endif()
 
 if(KAI_FP16_ENABLED)
-    list(APPEND KAI_MICROKERNEL_SRCS ${KAI_FILES_NEON_FP16})
+    list(APPEND KLEIDIAI_MICROKERNEL_SRCS ${KLEIDIAI_FILES_NEON_FP16})
 endif()
 
 add_library(kleidiai
-    ${KAI_MICROKERNEL_SRCS}
+    ${KLEIDIAI_MICROKERNEL_SRCS}
 )
 
 target_include_directories(kleidiai
@@ -119,28 +119,28 @@ target_include_directories(kleidiai
 )
 
 target_compile_options(kleidiai
-    PRIVATE ${KAI_WARNING_FLAGS}
+    PRIVATE ${KLEIDIAI_WARNING_FLAGS}
 )
 
 if(CMAKE_SYSTEM_PROCESSOR STREQUAL "aarch64" OR CMAKE_SYSTEM_PROCESSOR STREQUAL "arm64")
-    foreach(KAI_SOURCE_FILE IN LISTS KAI_FILES_SCALAR)
-        set_property(SOURCE ${KAI_SOURCE_FILE} PROPERTY COMPILE_OPTIONS -march=armv8-a)
+    foreach(KLEIDIAI_SOURCE_FILE IN LISTS KLEIDIAI_FILES_SCALAR)
+        set_property(SOURCE ${KLEIDIAI_SOURCE_FILE} PROPERTY COMPILE_OPTIONS -march=armv8-a)
+    endforeach()
+
+    foreach(KLEIDIAI_SOURCE_FILE IN LISTS KLEIDIAI_FILES_NEON_FP16)
+        set_property(SOURCE ${KLEIDIAI_SOURCE_FILE} PROPERTY COMPILE_OPTIONS -march=armv8.2-a+fp16)
+    endforeach()
+
+    foreach(KLEIDIAI_SOURCE_FILE IN LISTS KLEIDIAI_FILES_NEON_DOTPROD)
+        set_property(SOURCE ${KLEIDIAI_SOURCE_FILE} PROPERTY COMPILE_OPTIONS -march=armv8.2-a+dotprod)
+    endforeach()
+
+    foreach(KLEIDIAI_SOURCE_FILE IN LISTS KLEIDIAI_FILES_NEON_I8MM)
+        set_property(SOURCE ${KLEIDIAI_SOURCE_FILE} PROPERTY COMPILE_OPTIONS -march=armv8.2-a+i8mm)
     endforeach()
 endif()
 
-foreach(KAI_SOURCE_FILE IN LISTS KAI_FILES_NEON_FP16)
-    set_property(SOURCE ${KAI_SOURCE_FILE} PROPERTY COMPILE_OPTIONS -march=armv8.2-a+fp16)
-endforeach()
-
-foreach(KAI_SOURCE_FILE IN LISTS KAI_FILES_NEON_DOTPROD)
-    set_property(SOURCE ${KAI_SOURCE_FILE} PROPERTY COMPILE_OPTIONS -march=armv8.2-a+dotprod)
-endforeach()
-
-foreach(KAI_SOURCE_FILE IN LISTS KAI_FILES_NEON_I8MM)
-    set_property(SOURCE ${KAI_SOURCE_FILE} PROPERTY COMPILE_OPTIONS -march=armv8.2-a+i8mm)
-endforeach()
-
-if(KAI_BUILD_TESTS)
+if(KLEIDIAI_BUILD_TESTS)
     enable_testing()
     include(GoogleTest)
 
@@ -169,7 +169,7 @@ if(KAI_BUILD_TESTS)
     )
 
     target_compile_options(kleidiai_test
-        PRIVATE ${KAI_WARNING_FLAGS}
+        PRIVATE ${KLEIDIAI_WARNING_FLAGS}
         PRIVATE -march=armv8.2-a+fp16+bf16
     )
 
