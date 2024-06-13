@@ -56,21 +56,18 @@ set(KLEIDIAI_WARNING_FLAGS
     $<$<COMPILE_LANGUAGE:CXX>:${KLEIDIAI_WARNING_FLAGS_CXX}>
 )
 
-set(KAI_I8MM_ENABLED ON)
-set(KAI_FP16_ENABLED ON)
-set(KAI_DOTPROD_ENABLED ON)
 set(KAI_MIN_CLANG_VERSION 11)
 set(KAI_MIN_GNU_VERSION 11)
 
 if(CMAKE_C_COMPILER_ID STREQUAL "Clang")
     if(CMAKE_C_COMPILER_VERSION VERSION_LESS ${KAI_MIN_CLANG_VERSION})
-        message(WARNING "KleidiAI: Using non-supported Clang version. Expected ${KAI_MIN_CLANG_VERSION}, Received ${CMAKE_C_COMPILER_VERSION} ")
+        message(WARNING "KleidiAI: Using non-supported Clang version. Expected ${KAI_MIN_CLANG_VERSION} or newer, Received ${CMAKE_C_COMPILER_VERSION} ")
     endif()
 endif()
 
 if(CMAKE_C_COMPILER_ID STREQUAL "GNU")
     if(CMAKE_C_COMPILER_VERSION VERSION_LESS ${KAI_MIN_GNU_VERSION})
-    message(WARNING "KleidiAI: Using non-supported Clang version. Expected ${KAI_MIN_GNU_VERSION}, Received ${CMAKE_C_COMPILER_VERSION} ")
+    message(WARNING "KleidiAI: Using non-supported Clang version. Expected ${KAI_MIN_GNU_VERSION} or newer, Received ${CMAKE_C_COMPILER_VERSION} ")
     endif()
 endif()
 
@@ -98,31 +95,11 @@ set(KLEIDIAI_FILES_NEON_I8MM
 
 set(KLEIDIAI_MICROKERNEL_SRCS ${KLEIDIAI_FILES_SCALAR})
 
-if(KAI_I8MM_ENABLED)
-    list(APPEND KLEIDIAI_MICROKERNEL_SRCS ${KLEIDIAI_FILES_NEON_I8MM})
-endif()
-
-if(KAI_DOTPROD_ENABLED)
-    list(APPEND KLEIDIAI_MICROKERNEL_SRCS ${KLEIDIAI_FILES_NEON_DOTPROD})
-endif()
-
-if(KAI_FP16_ENABLED)
-    list(APPEND KLEIDIAI_MICROKERNEL_SRCS ${KLEIDIAI_FILES_NEON_FP16})
-endif()
-
-add_library(kleidiai
-    ${KLEIDIAI_MICROKERNEL_SRCS}
-)
-
-target_include_directories(kleidiai
-    PUBLIC  .
-)
-
-target_compile_options(kleidiai
-    PRIVATE ${KLEIDIAI_WARNING_FLAGS}
-)
-
 if(CMAKE_SYSTEM_PROCESSOR STREQUAL "aarch64" OR CMAKE_SYSTEM_PROCESSOR STREQUAL "arm64")
+    list(APPEND KLEIDIAI_MICROKERNEL_SRCS ${KLEIDIAI_FILES_NEON_I8MM})
+    list(APPEND KLEIDIAI_MICROKERNEL_SRCS ${KLEIDIAI_FILES_NEON_DOTPROD})
+    list(APPEND KLEIDIAI_MICROKERNEL_SRCS ${KLEIDIAI_FILES_NEON_FP16})
+
     foreach(KLEIDIAI_SOURCE_FILE IN LISTS KLEIDIAI_FILES_SCALAR)
         set_property(SOURCE ${KLEIDIAI_SOURCE_FILE} PROPERTY COMPILE_OPTIONS -march=armv8-a)
     endforeach()
@@ -139,6 +116,18 @@ if(CMAKE_SYSTEM_PROCESSOR STREQUAL "aarch64" OR CMAKE_SYSTEM_PROCESSOR STREQUAL 
         set_property(SOURCE ${KLEIDIAI_SOURCE_FILE} PROPERTY COMPILE_OPTIONS -march=armv8.2-a+i8mm)
     endforeach()
 endif()
+
+add_library(kleidiai
+    ${KLEIDIAI_MICROKERNEL_SRCS}
+)
+
+target_include_directories(kleidiai
+    PUBLIC  .
+)
+
+target_compile_options(kleidiai
+    PRIVATE ${KLEIDIAI_WARNING_FLAGS}
+)
 
 if(KLEIDIAI_BUILD_TESTS)
     enable_testing()
