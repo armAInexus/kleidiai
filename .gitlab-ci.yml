@@ -116,5 +116,8 @@ pages:
   dependencies:
     - test-linux-aarch64-cov
   script:
-    - pwd
+    - pwd > /dev/null
+  artifacts:
+    paths:
+      - build/html
   publish: build/html
