@@ -23,6 +23,7 @@ static const size_t kai_num_bytes_multiplier_lhs = sizeof(float);
 static const size_t kai_num_bytes_multiplier_rhs = sizeof(float);
 static const size_t kai_num_bytes_offset_lhs = sizeof(int32_t);
 static const size_t kai_num_bytes_sum_rhs = sizeof(int32_t);
+static const size_t kai_num_bytes_bias = sizeof(float);
 
 inline static size_t kai_k_roundedup(size_t k) {
     // Since we pack a float and int32 value at the end of the row,
@@ -183,6 +184,9 @@ void kai_run_matmul_clamp_f32_qai8dxp1x8_qsi4cxp4x8_1x4x32_neon_dotprod(
             // RHS scale
             const float32x4_t rhs_scale = vld1q_f32((const float*)rhs_ptr);
             rhs_ptr += sizeof(float32x4_t);
+
+            // Skip the bias
+            rhs_ptr += kai_nr * kai_num_bytes_bias;
 
             // Add the reduction sum
             iacc = vmlaq_s32(iacc, sum_n_s32, lhs_offset);

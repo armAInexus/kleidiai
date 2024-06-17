@@ -13,6 +13,7 @@
 
 static const size_t kai_num_bytes_sum_rhs = sizeof(int32_t);
 static const size_t kai_num_bytes_multiplier_rhs = sizeof(float);
+static const size_t kai_num_bytes_bias = sizeof(float);
 
 inline static size_t kai_k_roundedup(size_t k, size_t kr, size_t sr) {
     // Since we pack a float and int32 value at the end of the row,
@@ -26,7 +27,7 @@ inline static size_t kai_rhs_packed_stride(size_t k, size_t kr, size_t nr, size_
 
     KAI_ASSERT((k_internal % 2) == 0);
 
-    return nr * ((k_internal / 2) + kai_num_bytes_multiplier_rhs + kai_num_bytes_sum_rhs);
+    return nr * ((k_internal / 2) + kai_num_bytes_multiplier_rhs + kai_num_bytes_sum_rhs + kai_num_bytes_bias);
 }
 
 size_t kai_get_n_step_rhs_pack_nxk_qsi4cxp_qsu4cxs1s0(size_t nr) {
@@ -56,10 +57,8 @@ void kai_run_rhs_pack_nxk_qsi4cxp_qsu4cxs1s0(
     const struct kai_rhs_pack_nxk_qsi4cxp_qsu4cxs1s0_params* params) {
     KAI_ASSERT((k % 2) == 0);
     KAI_ASSERT(num_groups == 1);
-    KAI_ASSERT(bias == NULL);
     KAI_ASSERT(extra_bytes == 0);
     KAI_ASSERT((kr % sr) == 0);
-
     KAI_ASSERT(rhs != NULL);
     KAI_ASSERT(scale != NULL);
     KAI_ASSERT(rhs_packed != NULL);
@@ -130,7 +129,7 @@ void kai_run_rhs_pack_nxk_qsi4cxp_qsu4cxs1s0(
 
         // Adjust the reduction sums
         for (size_t i = 0; i < nr; ++i) {
-            *((int32_t*)(dst_row)) = sums[i] * 16;
+            sums[i] = sums[i] * 16;
             dst_row += sizeof(int32_t);
         }
 
@@ -141,5 +140,18 @@ void kai_run_rhs_pack_nxk_qsi4cxp_qsu4cxs1s0(
             *((float*)(dst_row)) = scale[src_row_idx] * 0.0625F;
             dst_row += sizeof(float);
         }
+
+        // Set the bias
+        if (bias == NULL) {
+            memset(dst_row, 0, nr * kai_num_bytes_bias);
+        } else {
+            for (size_t i = 0; i < nr; ++i) {
+                // Clamp the row index to avoid out-of-bound reads
+                const size_t src_row_idx = KAI_MIN(y + i, n - 1);
+                ((float*)dst_row)[i] = bias[src_row_idx];
+            }
+        }
+
+        dst_row += (kai_num_bytes_bias * nr);
     }
 }
