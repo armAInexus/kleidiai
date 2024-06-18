@@ -4,7 +4,7 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 
-FROM ubuntu:22.04
+FROM ubuntu:24.04
 
 RUN apt-get update  \
     && DEBIAN_FRONTEND=noninteractive apt-get -y --no-install-recommends install \
@@ -13,13 +13,11 @@ RUN apt-get update  \
     clang \
     clang-tidy \
     llvm \
+    libclang-rt-dev \
     cmake \
     git \
     ninja-build \
     python3 \
-    python3-pip
-
-RUN pip install \
     reuse \
     pre-commit \
     gcovr
