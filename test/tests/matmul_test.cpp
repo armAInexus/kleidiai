@@ -278,10 +278,12 @@ void PrintTo(const MatMulTestParams& param, std::ostream* os) {
     const auto& [method_no, shape, portion] = param;
 
     // NOLINTBEGIN(cppcoreguidelines-pro-bounds-constant-array-index)
-    *os << "method: " << matmul_methods[method_no].name << ", m: " << shape.m << ", n: " << shape.n
-        << ", k: " << shape.k << ", portion: { start_row: " << portion.start_row()
-        << ", start_col: " << portion.start_col() << ", height: " << portion.height() << ", width: " << portion.width()
-        << "}";
+    *os << "Method_" << matmul_methods[method_no].name                           //
+        << "__M_" << shape.m << "__N_" << shape.n << "__K_" << shape.k           //
+        << "__PortionStartRow_" << static_cast<int>(portion.start_row() * 1000)  //
+        << "__PortionStartCol_" << static_cast<int>(portion.start_col() * 1000)  //
+        << "__PortionHeight_" << static_cast<int>(portion.height() * 1000)       //
+        << "__PortionWidth_" << static_cast<int>(portion.width() * 1000);
     // NOLINTEND(cppcoreguidelines-pro-bounds-constant-array-index)
 }
 
@@ -581,6 +583,7 @@ INSTANTIATE_TEST_SUITE_P(
             MatrixPortion(0, 0, 1, 1),        // Full matrix.
             MatrixPortion(0, 0, 0.25, 0.25),  // Top-left corner.
             MatrixPortion(0.75, 0.75, 1, 1)   // Bottom-right corner.
-            )));
+            )),
+    testing::PrintToStringParamName());
 
 }  // namespace kai::test
