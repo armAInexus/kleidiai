@@ -42,12 +42,12 @@ build-clang-cov:
   interruptible: true
   stage: build
   script:
-    - cmake -G Ninja -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=Release -DKLEIDIAI_BUILD_TESTS=ON -DCMAKE_C_FLAGS="--coverage" -DCMAKE_CXX_FLAGS="--coverage" -S . -B build/linux-cov
-    - cmake --build ./build/linux-cov
+    - cmake -G Ninja -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=Release -DKLEIDIAI_BUILD_TESTS=ON -DCMAKE_C_FLAGS="--coverage" -DCMAKE_CXX_FLAGS="--coverage" -S . -B build
+    - cmake --build ./build
   artifacts:
     expire_in: 1 day
     paths:
-      - "build/linux-cov"
+      - "build"
 
 build-gcc:
   extends:
@@ -95,9 +95,108 @@ test-linux-aarch64-cov:
   dependencies:
     - build-clang-cov
   script:
-    - ./build/linux-cov/kleidiai_test
+    - ./build/kleidiai_test
+    - mkdir -p build/coverage
+    - gcovr --gcov-executable="llvm-cov gcov" --exclude-unreachable-branches --exclude=build --exclude=test --exclude-lines-by-pattern=".*KAI_(?:ASSERT|ASSUME|ERROR).*" --exclude-branches-by-pattern=".*KAI_(?:ASSERT|ASSUME).*" --json=build/coverage/linux-aarch64.json -j --root . build
+  artifacts:
+    expire_in: 1 day
+    paths:
+      - "build/coverage/linux-aarch64.json"
+
+test-linux-aarch64-cov-fvp:
+  extends:
+    - .standard-rules
+  interruptible: true
+  stage: test
+  dependencies:
+    - build-clang-cov
+  script:
+    - tar xJf /opt/devtools/linux-rootfs.img.xz
+    - echo '#!/bin/bash' > startup
+    - >
+      echo "
+        echo '=================================================='
+        echo '== START                                        =='
+        echo '=================================================='
+
+        cd '$PWD'
+        mkdir -p artifacts
+        GCOV_PREFIX=artifacts ./build/kleidiai_test && echo 'FINISHED WITHOUT ERROR'
+        tar cf artifacts.tar -C artifacts .
+        sync
+
+        echo '=================================================='
+        echo '== END                                          =='
+        echo '=================================================='
+        " >> startup
+    - e2cp -O 0 -G 0 -P 755 startup linux-rootfs.img:/root/startup
+    - e2cp -a -O 0 -G 0 -P 755 build/kleidiai_test linux-rootfs.img:"$PWD/build/kleidiai_test"
+    - >
+      /opt/devtools/fvp_base_aemva/models/Linux64_armv8l_GCC-9.3/FVP_Base_RevC-2xAEMvA \
+        -C cache_state_modelled=0 \
+        -C bp.refcounter.non_arch_start_at_default=1 \
+        -C bp.secure_memory=0 \
+        -C bp.pl011_uart0.out_file=- \
+        -C bp.pl011_uart0.shutdown_tag="System halted" \
+        -C bp.terminal_0.mode=telnet \
+        -C bp.terminal_0.start_telnet=0 \
+        -C bp.terminal_1.mode=raw \
+        -C bp.terminal_1.start_telnet=0 \
+        -C bp.terminal_2.mode=raw \
+        -C bp.terminal_2.start_telnet=0 \
+        -C bp.terminal_3.mode=raw \
+        -C bp.terminal_3.start_telnet=0 \
+        -C cluster0.NUM_CORES=1 \
+        -C cluster0.has_arm_v8-1=1 \
+        -C cluster0.has_arm_v8-2=1 \
+        -C cluster0.has_arm_v8-3=1 \
+        -C cluster0.has_arm_v8-4=1 \
+        -C cluster0.has_arm_v8-5=1 \
+        -C cluster0.has_arm_v8-6=1 \
+        -C cluster0.has_arm_v8-7=1 \
+        -C cluster0.has_arm_v8-8=1 \
+        -C cluster0.has_arm_v9-0=1 \
+        -C cluster0.has_arm_v9-1=1 \
+        -C cluster0.has_arm_v9-2=1 \
+        -C cluster0.has_arm_v9-3=1 \
+        -C cluster0.has_arm_v9-4=1 \
+        -C cluster0.has_arm_v9-5=1 \
+        -C cluster0.has_sve=1 \
+        -C cluster0.sve.has_b16b16=1 \
+        -C cluster0.sve.has_sve2=1 \
+        -C cluster0.sve.has_sme=1 \
+        -C cluster0.sve.has_sme_f16f16=1 \
+        -C cluster0.sve.has_sme_fa64=1 \
+        -C cluster0.sve.has_sme_lutv2=1 \
+        -C cluster0.sve.sme2_version=1 \
+        -C cluster0.sve.veclen=2 \
+        -C cluster0.sve.sme_veclens_implemented=4 \
+        -C bp.virtio_rng.enabled=1 \
+        -C bp.virtioblockdevice.image_path=linux-rootfs.img \
+        -C bp.vis.disable_visualisation=1 \
+        -a cluster*.cpu*=/opt/devtools/linux-system.axf \
+        |& tee output.txt
+    - grep -q "FINISHED WITHOUT ERROR" output.txt
+    - e2cp linux-rootfs.img:"$PWD/artifacts.tar" .
+    - tar xf artifacts.tar -C /
+    - mkdir -p build/coverage
+    - gcovr --gcov-executable="llvm-cov gcov" --exclude-unreachable-branches --exclude=build --exclude=test --exclude-lines-by-pattern=".*KAI_(?:ASSERT|ASSUME|ERROR).*" --exclude-branches-by-pattern=".*KAI_(?:ASSERT|ASSUME).*" --json=build/coverage/linux-aarch64-fvp.json -j --root . build
+  artifacts:
+    expire_in: 1 day
+    paths:
+      - "build/coverage/linux-aarch64-fvp.json"
+
+coverage:
+  extends:
+    - .standard-rules
+  interruptible: true
+  stage: deploy
+  dependencies:
+    - test-linux-aarch64-cov
+    - test-linux-aarch64-cov-fvp
+  script:
     - mkdir -p build/html/coverage
-    - gcovr --gcov-executable="llvm-cov gcov" --xml-pretty --exclude-unreachable-branches --exclude=build --print-summary --cobertura=build/coverage.xml --html-details=build/html/coverage/coverage_report.html --html-title="KleidiAI Coverage Report" --root . build/linux-cov
+    - gcovr --json-add-tracefile "build/coverage/*.json" --print-summary --cobertura=build/coverage.xml --html-details=build/html/coverage/coverage_report.html --html-title="KleidiAI Coverage Report" -j
   artifacts:
     name: ${CI_JOB_NAME}-${CI_COMMIT_REF_NAME}-${CI_COMMIT_SHA}
     expire_in: 1 day
@@ -114,7 +213,7 @@ pages:
   interruptible: true
   stage: deploy
   dependencies:
-    - test-linux-aarch64-cov
+    - coverage
   script:
     - pwd > /dev/null
   artifacts:
