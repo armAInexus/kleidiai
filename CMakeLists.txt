@@ -62,18 +62,18 @@ set(KLEIDIAI_WARNING_FLAGS
     $<$<COMPILE_LANGUAGE:CXX>:${KLEIDIAI_WARNING_FLAGS_CXX}>
 )
 
-set(KAI_MIN_CLANG_VERSION 11)
-set(KAI_MIN_GNU_VERSION 11)
+set(KLEIDIAI_MIN_CLANG_VERSION 11)
+set(KLEIDIAI_MIN_GNU_VERSION 11)
 
 if(CMAKE_C_COMPILER_ID STREQUAL "Clang")
-    if(CMAKE_C_COMPILER_VERSION VERSION_LESS ${KAI_MIN_CLANG_VERSION})
-        message(WARNING "KleidiAI: Using non-supported Clang version. Expected ${KAI_MIN_CLANG_VERSION} or newer, Received ${CMAKE_C_COMPILER_VERSION} ")
+    if(CMAKE_C_COMPILER_VERSION VERSION_LESS ${KLEIDIAI_MIN_CLANG_VERSION})
+        message(WARNING "KleidiAI: Using non-supported Clang version. Expected ${KLEIDIAI_MIN_CLANG_VERSION} or newer, Received ${CMAKE_C_COMPILER_VERSION} ")
     endif()
 endif()
 
 if(CMAKE_C_COMPILER_ID STREQUAL "GNU")
-    if(CMAKE_C_COMPILER_VERSION VERSION_LESS ${KAI_MIN_GNU_VERSION})
-    message(WARNING "KleidiAI: Using non-supported Clang version. Expected ${KAI_MIN_GNU_VERSION} or newer, Received ${CMAKE_C_COMPILER_VERSION} ")
+    if(CMAKE_C_COMPILER_VERSION VERSION_LESS ${KLEIDIAI_MIN_GNU_VERSION})
+    message(WARNING "KleidiAI: Using non-supported Clang version. Expected ${KLEIDIAI_MIN_GNU_VERSION} or newer, Received ${CMAKE_C_COMPILER_VERSION} ")
     endif()
 endif()
 
