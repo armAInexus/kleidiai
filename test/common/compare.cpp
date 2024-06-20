@@ -47,23 +47,45 @@ std::tuple<float, float> calculate_error(T imp, T ref) {
 /// Compares matrices with per-row quantization.
 template <typename Data>
 bool compare_raw(
-    const void* imp_data, const void* ref_data, size_t full_height, size_t full_width, const Rect& rect,
-    MismatchHandler& handler) {
-    for (size_t y = 0; y < full_height; ++y) {
-        for (size_t x = 0; x < full_width; ++x) {
-            const auto in_roi =
-                y >= rect.start_row() && y < rect.end_row() && x >= rect.start_col() && x < rect.end_col();
+    const void* imp_data, const void* ref_data, const DataFormat& format, size_t full_height, size_t full_width,
+    const Rect& rect, MismatchHandler& handler) {
+    const auto block_height = format.actual_block_height(full_height);
+    const auto block_width = format.actual_block_width(full_width);
+    const auto subblock_height = format.actual_subblock_height(full_height);
+    const auto subblock_width = format.actual_subblock_width(full_width);
 
-            const auto imp_value = read_array<Data>(imp_data, y * full_width + x);
-            const auto ref_value = in_roi ? read_array<Data>(ref_data, y * full_width + x) : static_cast<Data>(0);
+    size_t idx = 0;
 
-            const auto [abs_err, rel_err] = calculate_error(imp_value, ref_value);
+    for (size_t y_block = 0; y_block < full_height; y_block += block_height) {
+        for (size_t x_block = 0; x_block < full_width; x_block += block_width) {
+            for (size_t y_subblock = 0; y_subblock < block_height; y_subblock += subblock_height) {
+                for (size_t x_subblock = 0; x_subblock < block_width; x_subblock += subblock_width) {
+                    for (size_t y_element = 0; y_element < subblock_height; ++y_element) {
+                        for (size_t x_element = 0; x_element < subblock_width; ++x_element) {
+                            const auto y = y_block + y_subblock + y_element;
+                            const auto x = x_block + x_subblock + x_element;
 
-            if (abs_err != 0 || rel_err != 0) {
-                const auto notifying = !in_roi || handler.handle_data(abs_err, rel_err);
+                            const auto in_roi = y >= rect.start_row() && y < rect.end_row() && x >= rect.start_col() &&
+                                x < rect.end_col();
 
-                if (notifying) {
-                    KAI_LOGE("Mismatched data at (", y, ", ", x, "): actual = ", imp_value, ", expected: ", ref_value);
+                            const auto imp_value = read_array<Data>(imp_data, idx);
+                            const auto ref_value = in_roi ? read_array<Data>(ref_data, idx) : static_cast<Data>(0);
+
+                            const auto [abs_err, rel_err] = calculate_error(imp_value, ref_value);
+
+                            if (abs_err != 0 || rel_err != 0) {
+                                const auto notifying = !in_roi || handler.handle_data(abs_err, rel_err);
+
+                                if (notifying) {
+                                    KAI_LOGE(
+                                        "Mismatched data at (", y, ", ", x, "): actual = ", imp_value,
+                                        ", expected: ", ref_value);
+                                }
+                            }
+
+                            ++idx;
+                        }
+                    }
                 }
             }
         }
@@ -186,10 +208,10 @@ bool compare(
         case DataFormat::PackFormat::NONE:
             switch (data_type) {
                 case DataType::FP32:
-                    return compare_raw<float>(imp_data, ref_data, full_height, full_width, rect, handler);
+                    return compare_raw<float>(imp_data, ref_data, format, full_height, full_width, rect, handler);
 
                 case DataType::FP16:
-                    return compare_raw<Float16>(imp_data, ref_data, full_height, full_width, rect, handler);
+                    return compare_raw<Float16>(imp_data, ref_data, format, full_height, full_width, rect, handler);
 
                 default:
                     break;
@@ -200,6 +222,9 @@ bool compare(
         case DataFormat::PackFormat::BIAS_PER_ROW:
             if (data_type == DataType::FP16 && offset_dt == DataType::FP16) {
                 return compare_per_row<Float16, std::nullptr_t, Float16>(
+                    imp_data, ref_data, format, full_height, full_width, rect, handler);
+            } else if (data_type == DataType::FP32 && offset_dt == DataType::FP32) {
+                return compare_per_row<float, std::nullptr_t, float>(
                     imp_data, ref_data, format, full_height, full_width, rect, handler);
             } else if (data_type == DataType::BF16 && offset_dt == DataType::FP32) {
                 return compare_per_row<BFloat16, std::nullptr_t, float>(

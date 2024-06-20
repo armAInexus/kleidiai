@@ -129,7 +129,7 @@ uintptr_t DataFormat::default_row_stride(size_t width) const {
 
     switch (_pack_format) {
         case PackFormat::NONE:
-            return padded_width * data_type_size_in_bits(_data_type) / 8;
+            return (_block_height > 0 ? _block_height : 1) * padded_width * data_type_size_in_bits(_data_type) / 8;
 
         case PackFormat::BIAS_PER_ROW:
             KAI_ASSUME(_block_height > 0);

@@ -24,6 +24,46 @@ namespace kai::test {
 
 namespace {
 
+std::vector<uint8_t> pack_block(
+    const void* src, size_t data_esize, size_t full_height, size_t full_width, size_t block_height, size_t block_width,
+    size_t subblock_height, size_t subblock_width) {
+    const auto dst_bytes =
+        round_up_multiple(full_height, block_height) * round_up_multiple(full_width, block_width) * data_esize;
+
+    std::vector<uint8_t> dst;
+    dst.resize(dst_bytes);
+
+    const auto* src_ptr = reinterpret_cast<const uint8_t*>(src);
+    auto* dst_ptr = dst.data();
+
+    for (size_t y_block = 0; y_block < full_height; y_block += block_height) {
+        for (size_t x_block = 0; x_block < full_width; x_block += block_width) {
+            for (size_t y_subblock = 0; y_subblock < block_height; y_subblock += subblock_height) {
+                for (size_t x_subblock = 0; x_subblock < block_width; x_subblock += subblock_width) {
+                    for (size_t y_element = 0; y_element < subblock_height; ++y_element) {
+                        if (y_block + y_subblock + y_element < full_height) {
+                            const auto len = std::min(subblock_width, full_width - x_block - x_subblock);
+
+                            memcpy(
+                                dst_ptr,
+                                src_ptr +
+                                    ((y_block + y_subblock + y_element) * full_width + x_block + x_subblock) *
+                                        data_esize,
+                                len * data_esize);
+                        }
+
+                        dst_ptr += subblock_width * data_esize;
+                    }
+                }
+            }
+        }
+    }
+
+    KAI_ASSERT(reinterpret_cast<uintptr_t>(dst_ptr) - reinterpret_cast<uintptr_t>(dst.data()) == dst_bytes);
+
+    return dst;
+}
+
 /// Packs the matrix from raw to per-row bias format.
 std::vector<uint8_t> pack_bias_per_row(
     size_t data_esize, size_t zero_point_esize, const void* src, const void* bias, size_t height, size_t width,
@@ -266,6 +306,17 @@ std::vector<uint8_t> pack(
             return pack_bias_per_row(
                 data_esize / 8, zero_point_esize / 8, src, zero_points, height, width, block_height, block_width,
                 subblock_height, subblock_width);
+        }
+    }
+
+    if (src_qf == DataFormat::PackFormat::NONE && dst_qf == DataFormat::PackFormat::NONE) {
+        KAI_ASSUME(src_dt == dst_dt);
+
+        const auto data_esize = data_type_size_in_bits(dst_dt);
+
+        if (data_esize % 8 == 0) {
+            return pack_block(
+                src, data_esize / 8, height, width, block_height, block_width, subblock_height, subblock_width);
         }
     }
 

@@ -86,7 +86,7 @@ test-linux-aarch64:
   dependencies:
     - build-clang
   script:
-    - ./build/kleidiai_test
+    - ./build/kleidiai_test --gtest_filter=*:-*sme*
 
 test-linux-aarch64-cov:
   extends:
@@ -96,7 +96,7 @@ test-linux-aarch64-cov:
   dependencies:
     - build-clang-cov
   script:
-    - ./build/kleidiai_test
+    - ./build/kleidiai_test --gtest_filter=*:-*sme*
     - mkdir -p build/coverage
     - gcovr --gcov-executable="llvm-cov gcov" --exclude-unreachable-branches --exclude=build --exclude=test --exclude-lines-by-pattern=".*KAI_(?:ASSERT|ASSUME|ERROR).*" --exclude-branches-by-pattern=".*KAI_(?:ASSERT|ASSUME).*" --json=build/coverage/linux-aarch64.json -j --root . build
   artifacts:
@@ -122,7 +122,7 @@ test-linux-aarch64-cov-fvp:
 
         cd '$PWD'
         mkdir -p artifacts
-        GCOV_PREFIX=artifacts ./build/kleidiai_test && echo 'FINISHED WITHOUT ERROR'
+        GCOV_PREFIX=artifacts ./build/kleidiai_test --gtest_filter=*sme* && echo 'FINISHED WITHOUT ERROR'
         tar cf artifacts.tar -C artifacts .
         sync
 
@@ -166,6 +166,7 @@ test-linux-aarch64-cov-fvp:
         -C cluster0.sve.has_b16b16=1 \
         -C cluster0.sve.has_sve2=1 \
         -C cluster0.sve.has_sme=1 \
+        -C cluster0.sve.has_sme2=1 \
         -C cluster0.sve.has_sme_f16f16=1 \
         -C cluster0.sve.has_sme_fa64=1 \
         -C cluster0.sve.has_sme_lutv2=1 \

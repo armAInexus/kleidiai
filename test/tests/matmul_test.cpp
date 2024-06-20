@@ -21,16 +21,24 @@
 #include <vector>
 
 #include "kai/kai_common.h"
-#include "kai/ukernels/matmul/matmul_clamp_f16_f16_f16p/kai_matmul_clamp_f16_f16_f16p16x1biasf16_6x16x8_neon_mla.h"
-#include "kai/ukernels/matmul/pack/kai_rhs_pack_kxn_f16p16x1biasf16_f16_f16_neon.h"
 #include "test/common/compare.hpp"
 #include "test/common/data_format.hpp"
 #include "test/common/data_type.hpp"
 #include "test/common/float16.hpp"
 #include "test/common/matrix_portion.hpp"
 #include "test/common/printer.hpp"
+#include "test/common/sme.hpp"
 #include "test/reference/fill.hpp"
 #include "test/reference/pack.hpp"
+
+// matmul_nt_nt_fp16_fp16_fp16_6x16_neon_mla
+#include "kai/ukernels/matmul/matmul_clamp_f16_f16_f16p/kai_matmul_clamp_f16_f16_f16p16x1biasf16_6x16x8_neon_mla.h"
+#include "kai/ukernels/matmul/pack/kai_rhs_pack_kxn_f16p16x1biasf16_f16_f16_neon.h"
+
+// matmul_nt_nt_fp32_fp32_fp32_2vlx2vl_sme2_mopa
+#include "kai/ukernels/matmul/matmul_clamp_f32_f32p_f32p/kai_matmul_clamp_f32_f32p2vlx1_f32p2vlx1biasf32_sme2_mopa.h"
+#include "kai/ukernels/matmul/pack/kai_lhs_pack_f32p2vlx1_f32_sme.h"
+#include "kai/ukernels/matmul/pack/kai_rhs_pack_kxn_f32p2vlx1biasf32_f32_f32_sme.h"
 
 namespace kai::test {
 
@@ -112,11 +120,14 @@ struct MatMulMethod {
 
     /// Gets the size in bytes of the packed LHS matrix.
     ///
-    /// @param[in] m Size of the matrix in M dimension.
-    /// @param[in] k Size of the matrix in K dimension.
+    /// @param[in] m Number of rows in the unpacked LHS matrix.
+    /// @param[in] k Number of columns in the unpacked LHS matrix.
+    /// @param[in] mr Number of rows to be interleaved.
+    /// @param[in] kr Unused. Must be 1.
+    /// @param[in] sr Unused. Must be 1.
     ///
     /// @return The size in bytes.
-    std::function<size_t(size_t m, size_t k)> fn_get_packed_lhs_size;
+    std::function<size_t(size_t m, size_t k, size_t mr, size_t kr, size_t sr)> fn_get_packed_lhs_size;
 
     /// Gets the offset in bytes of the packed LHS matrix.
     ///
@@ -128,12 +139,19 @@ struct MatMulMethod {
 
     /// Preprocesses the LHS matrix.
     ///
-    /// @param[in] m Size of the matrix in M dimension.
-    /// @param[in] k Size of the matrix in K dimension.
+    /// @param[in] m Number of rows of the unpacked LHS matrix.
+    /// @param[in] k Common dimension between the LHS and RHS matrix.
+    /// @param[in] mr Block size in M dimension. It must be {{ kernel.interleave_by }}VL.
+    /// @param[in] kr Block size in K dimension. It must be {{ kernel.block_by }}.
+    /// @param[in] sr Number of kr splits. It must be 1.
+    /// @param[in] m_idx_start Unused. Must be 0.
     /// @param[in] lhs LHS matrix data buffer.
-    /// @param[in] lhs_row_stride Row stride in bytes of the LHS matrix.
-    /// @param[out] packed_lhs Packed LHS matrix data buffer.
-    std::function<void(size_t m, size_t k, const void* lhs, size_t lhs_row_stride, void* packed_lhs)> fn_pack_lhs;
+    /// @param[in] lhs_stride Row stride in bytes of the LHS matrix.
+    /// @param[out] lhs_packed Packed RHS matrix.
+    std::function<void(
+        size_t m, size_t k, size_t mr, size_t kr, size_t sr, size_t m_idx_start, const void* lhs, size_t lhs_stride,
+        void* lhs_packed)>
+        fn_pack_lhs;
 
     /// Gets a value indicating whether LHS packing is needed.
     [[nodiscard]] bool is_pack_lhs_needed() const {
@@ -220,6 +238,23 @@ struct MatMulMethod {
         Float16 clamp_min, Float16 clamp_max)>
         fn_main_hybrid_fp16;
 
+    /// Runs the matrix multiplication microkernel followed by a clamp operation.
+    ///
+    /// @param[in] m Number of output rows to be computed.
+    /// @param[in] n Number of output columns to be computed.
+    /// @param[in] k Common dimension of the LHS and RHS operands.
+    /// @param[in] packed_lhs Packed LHS matrix buffer.
+    /// @param[in] packed_rhs Packed RHS matrix buffer.
+    /// @param[out] dst Output matrix buffer.
+    /// @param[in] dst_stride_row Row stride in bytes of the output matrix.
+    /// @param[in] dst_stride_col Column stride in bytes of the output matrix.
+    /// @param[in] clamp_min Minimum value to clamp the final result.
+    /// @param[in] clamp_max Maximum value to clamp the final result.
+    std::function<void(
+        size_t m, size_t n, size_t k, const void* lhs_packed, const void* rhs_packed, void* dst, size_t dst_stride_row,
+        size_t dst_stride_col, float clamp_min, float clamp_max)>
+        fn_main_interleave_fp32;
+
     /// Gets a value indicating whether pre-processing the RHS matrix is needed.
     [[nodiscard]] bool is_pack_rhs_needed() const {
         return fn_pack_rhs != nullptr;
@@ -255,7 +290,7 @@ struct MatMulMethod {
     }
 
     [[nodiscard]] bool has_main_kernel() const {
-        return fn_main_hybrid_fp16 != nullptr;
+        return fn_main_hybrid_fp16 != nullptr || fn_main_interleave_fp32 != nullptr;
     }
 
     void main_kernel(
@@ -268,6 +303,8 @@ struct MatMulMethod {
             fn_main_hybrid_fp16(
                 m, n, k, lhs, lhs_stride, rhs, dst, dst_stride, sizeof(Float16), static_cast<Float16>(clamp_min),
                 static_cast<Float16>(clamp_max));
+        } else if (fn_main_interleave_fp32) {
+            fn_main_interleave_fp32(m, n, k, lhs, rhs, dst, dst_stride, sizeof(float), clamp_min, clamp_max);
         } else {
             KAI_ERROR("Main kernel is not available!");
         }
@@ -321,6 +358,56 @@ static const std::array matmul_methods = {
         .fn_get_dst_size = kai_get_dst_size_matmul_clamp_f16_f16_f16p16x1biasf16_6x16x8_neon_mla,
 
         .fn_main_hybrid_fp16 = kai_run_matmul_clamp_f16_f16_f16p16x1biasf16_6x16x8_neon_mla,
+        .fn_main_interleave_fp32 = nullptr,
+    },
+
+    MatMulMethod{
+        .name = "matmul_nt_nt_fp32_fp32_fp32_2vlx2vl_sme2_mopa",
+
+        .m0 = 2 * get_sme_vector_length<float>(),
+        .n0 = 2 * get_sme_vector_length<float>(),
+
+        .lhs_transposed = false,
+        .rhs_transposed = false,
+
+        .dst_format = DataFormat(DataType::FP32),
+        .lhs_format = DataFormat(DataType::FP32),
+        .packed_lhs_format = DataFormat(DataType::FP32, 2 * get_sme_vector_length<float>(), 1),
+        .rhs_format = DataFormat(DataType::FP32),
+        .packed_rhs_format = DataFormat(
+            DataType::FP32, 2 * get_sme_vector_length<float>(), 0, DataFormat::PackFormat::BIAS_PER_ROW, DataType::FP32,
+            DataType::UNKNOWN, 2 * get_sme_vector_length<float>(), 1),
+        .bias_format = DataFormat(DataType::FP32),
+
+        .fn_get_mr = kai_get_mr_matmul_clamp_f32_f32p2vlx1_f32p2vlx1biasf32_sme2_mopa,
+        .fn_get_nr = kai_get_nr_matmul_clamp_f32_f32p2vlx1_f32p2vlx1biasf32_sme2_mopa,
+        .fn_get_kr = kai_get_kr_matmul_clamp_f32_f32p2vlx1_f32p2vlx1biasf32_sme2_mopa,
+        .fn_get_sr = kai_get_sr_matmul_clamp_f32_f32p2vlx1_f32p2vlx1biasf32_sme2_mopa,
+
+        .fn_get_main_m_step = kai_get_m_step_matmul_clamp_f32_f32p2vlx1_f32p2vlx1biasf32_sme2_mopa,
+        .fn_get_pack_rhs_n_step = kai_get_n_step_rhs_pack_kxn_f32p2vlx1biasf32_f32_f32_sme,
+        .fn_get_main_n_step = kai_get_n_step_matmul_clamp_f32_f32p2vlx1_f32p2vlx1biasf32_sme2_mopa,
+
+        .fn_get_lhs_offset = kai_get_lhs_offset_lhs_pack_f32p2vlx1_f32_sme,
+        .fn_get_packed_lhs_size = kai_get_lhs_packed_size_lhs_pack_f32p2vlx1_f32_sme,
+        .fn_get_packed_lhs_offset = kai_get_lhs_packed_offset_matmul_clamp_f32_f32p2vlx1_f32p2vlx1biasf32_sme2_mopa,
+        .fn_pack_lhs = kai_run_lhs_pack_f32p2vlx1_f32_sme,
+
+        .fn_get_rhs_offset = kai_get_rhs_offset_rhs_pack_kxn_f32p2vlx1biasf32_f32_f32_sme,
+        .fn_get_packed_rhs_size = kai_get_rhs_packed_size_rhs_pack_kxn_f32p2vlx1biasf32_f32_f32_sme,
+        .fn_get_pack_rhs_packed_rhs_offset =
+            kai_get_rhs_packed_offset_matmul_clamp_f32_f32p2vlx1_f32p2vlx1biasf32_sme2_mopa,
+        .fn_get_main_packed_rhs_offset =
+            kai_get_rhs_packed_offset_matmul_clamp_f32_f32p2vlx1_f32p2vlx1biasf32_sme2_mopa,
+        .fn_pack_rhs = kai_run_rhs_pack_kxn_f32p2vlx1biasf32_f32_f32_sme,
+
+        .fn_get_bias_offset = kai_get_bias_offset_rhs_pack_kxn_f32p2vlx1biasf32_f32_f32_sme,
+
+        .fn_get_dst_offset = kai_get_dst_offset_matmul_clamp_f32_f32p2vlx1_f32p2vlx1biasf32_sme2_mopa,
+        .fn_get_dst_size = kai_get_dst_size_matmul_clamp_f32_f32p2vlx1_f32p2vlx1biasf32_sme2_mopa,
+
+        .fn_main_hybrid_fp16 = nullptr,
+        .fn_main_interleave_fp32 = kai_run_matmul_clamp_f32_f32p2vlx1_f32p2vlx1biasf32_sme2_mopa,
     },
 };
 
@@ -391,7 +478,8 @@ protected:
         std::vector<uint8_t> ref_packed_lhs;
 
         if (has_lhs_pack) {
-            pack(method.packed_lhs_format, lhs.data(), nullptr, nullptr, method.lhs_format, lhs_h, lhs_w);
+            ref_packed_lhs =
+                pack(method.packed_lhs_format, lhs.data(), nullptr, nullptr, method.lhs_format, lhs_h, lhs_w);
         }
 
         const auto rhs_h = method.rhs_transposed ? info.n : info.k;
@@ -467,7 +555,7 @@ TEST_P(MatMulTest, PackedLhs) {
 
     const auto rect = portion.compute_portion(
         lhs_h, lhs_w, method.packed_lhs_format.scheduler_block_height(lhs_h),
-        method.packed_lhs_format.scheduler_block_width(lhs_w));
+        lhs_w);  // LHS packing micro-kernel API doesn't support scheduling over K dimension.
 
     if (rect.height() == 0 || rect.width() == 0) {
         GTEST_SKIP();
@@ -475,12 +563,12 @@ TEST_P(MatMulTest, PackedLhs) {
 
     const auto ref_lhs_row_stride = method.lhs_format.default_row_stride(lhs_w);
 
-    const auto packed_lhs_size = method.fn_get_packed_lhs_size(info.m, info.k);
+    const auto packed_lhs_size = method.fn_get_packed_lhs_size(info.m, info.k, method.m0, 1, 1);
     const auto ref_packed_lhs_size = method.packed_lhs_format.default_size_in_bytes(lhs_h, lhs_w);
     ASSERT_EQ(packed_lhs_size, ref_packed_lhs_size);
 
     const auto lhs_offset = method.fn_get_lhs_offset(rect.start_row(), ref_lhs_row_stride);
-    const auto ref_lhs_offset = method.lhs_format.default_offset_in_bytes(rect.start_row(), 0, lhs_w);
+    const auto ref_lhs_offset = method.lhs_format.default_offset_in_bytes(rect.start_row(), rect.start_col(), lhs_w);
     ASSERT_EQ(lhs_offset, ref_lhs_offset);
 
     const auto packed_lhs_offset = method.fn_get_packed_lhs_offset(rect.start_row(), info.k);
@@ -490,7 +578,7 @@ TEST_P(MatMulTest, PackedLhs) {
     std::vector<uint8_t> packed_lhs;
     packed_lhs.resize(packed_lhs_size);
     method.fn_pack_lhs(
-        rect.height(), rect.width(), data.lhs.data() + lhs_offset, ref_lhs_row_stride,
+        rect.height(), rect.width(), method.m0, 1, 1, 0, data.lhs.data() + lhs_offset, ref_lhs_row_stride,
         packed_lhs.data() + packed_lhs_offset);
 
     DefaultMismatchHandler handler(0, 0.0001, 0, 0.001);

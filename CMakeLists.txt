@@ -79,11 +79,22 @@ set(KLEIDIAI_FILES_NEON_I8MM
     kai/ukernels/matmul/matmul_clamp_f32_qai8dxp_qsi4cxp/kai_matmul_clamp_f32_qai8dxp4x8_qsi4cxp8x8_8x8x32_neon_i8mm.c
 )
 
+set(KLEIDIAI_FILES_SME
+    kai/ukernels/matmul/pack/kai_rhs_pack_kxn_f32p2vlx1biasf32_f32_f32_sme.c
+    kai/ukernels/matmul/pack/kai_lhs_pack_f32p2vlx1_f32_sme.c
+)
+
+set(KLEIDIAI_FILES_SME2
+    kai/ukernels/matmul/matmul_clamp_f32_f32p_f32p/kai_matmul_clamp_f32_f32p2vlx1_f32p2vlx1biasf32_sme2_mopa.c
+)
+
 add_library(kleidiai
     ${KLEIDIAI_FILES_NEON}
     ${KLEIDIAI_FILES_NEON_FP16}
     ${KLEIDIAI_FILES_NEON_DOTPROD}
     ${KLEIDIAI_FILES_NEON_I8MM}
+    ${KLEIDIAI_FILES_SME}
+    ${KLEIDIAI_FILES_SME2}
 )
 
 target_include_directories(kleidiai
@@ -110,11 +121,19 @@ foreach(KLEIDIAI_SOURCE_FILE IN LISTS KLEIDIAI_FILES_NEON_I8MM)
     set_property(SOURCE ${KLEIDIAI_SOURCE_FILE} PROPERTY COMPILE_OPTIONS -march=armv8.2-a+i8mm)
 endforeach()
 
+foreach(KLEIDIAI_SOURCE_FILE IN LISTS KLEIDIAI_FILES_SME)
+    set_property(SOURCE ${KLEIDIAI_SOURCE_FILE} PROPERTY COMPILE_OPTIONS -march=armv8.2-a+sve+sve2)
+endforeach()
+
+foreach(KLEIDIAI_SOURCE_FILE IN LISTS KLEIDIAI_FILES_SME2)
+    set_property(SOURCE ${KLEIDIAI_SOURCE_FILE} PROPERTY COMPILE_OPTIONS -march=armv8.2-a+sve+sve2)
+endforeach()
+
 if(KLEIDIAI_BUILD_TESTS)
     enable_testing()
     include(GoogleTest)
 
-    add_executable(kleidiai_test
+    add_library(kleidiai_test_framework
         test/common/data_type.cpp
         test/common/data_format.cpp
         test/common/printer.cpp
@@ -124,6 +143,8 @@ if(KLEIDIAI_BUILD_TESTS)
         test/common/rect.cpp
         test/common/bfloat16.cpp
         test/common/float16.cpp
+        test/common/cpu_info.cpp
+        test/common/sme.cpp
 
         test/reference/binary_elementwise.cpp
         test/reference/matmul.cpp
@@ -134,18 +155,26 @@ if(KLEIDIAI_BUILD_TESTS)
         test/reference/round.cpp
         test/reference/transpose.cpp
         test/reference/cast.cpp
+    )
 
+    target_compile_options(kleidiai_test_framework
+        PUBLIC ${KLEIDIAI_WARNING_FLAGS}
+        PUBLIC -march=armv8.2-a+fp16+bf16
+    )
+
+    set_property(SOURCE test/common/sme.cpp PROPERTY COMPILE_OPTIONS -march=armv8.2-a+sve)
+
+    target_link_libraries(kleidiai_test_framework
+        PUBLIC  kleidiai
+    )
+
+    add_executable(kleidiai_test
         test/tests/matmul_test.cpp
     )
 
-    target_compile_options(kleidiai_test
-        PRIVATE ${KLEIDIAI_WARNING_FLAGS}
-        PRIVATE -march=armv8.2-a+fp16+bf16
-    )
-
     target_link_libraries(kleidiai_test
+        PRIVATE kleidiai_test_framework
         PRIVATE GTest::gtest_main
-        PRIVATE kleidiai
     )
 
     # Cross-compiling is a common use case which creates a conflict if DISCOVERY_MODE is set to POST_BUILD (by default)

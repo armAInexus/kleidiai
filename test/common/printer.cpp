@@ -63,14 +63,60 @@ inline void print_data(std::ostream& os, const uint8_t* data, size_t len, DataTy
     }
 }
 
-void print_matrix_raw(std::ostream& os, const uint8_t* data, DataType data_type, size_t height, size_t width) {
-    const auto row_stride = width * data_type_size_in_bits(data_type) / 8;
+void print_matrix_raw(std::ostream& os, const uint8_t* data, const DataFormat& format, size_t height, size_t width) {
+    const auto data_type = format.data_type();
+    const auto esize_bits = data_type_size_in_bits(data_type);
+    const auto block_height = format.actual_block_height(height);
+    const auto block_width = format.actual_block_width(width);
+    const auto subblock_height = format.actual_subblock_height(height);
+    const auto subblock_width = format.actual_subblock_width(width);
 
     os << "[\n";
-    for (size_t y = 0; y < height; ++y) {
-        os << "    [";
-        print_data(os, data + y * row_stride, width, data_type);
-        os << "],\n";
+    for (size_t y_block = 0; y_block < height; y_block += block_height) {
+        if (block_height != height) {
+            os << "  [\n";
+        }
+
+        for (size_t x_block = 0; x_block < width; x_block += block_width) {
+            if (block_width != width) {
+                os << "    [\n";
+            }
+
+            for (size_t y_subblock = 0; y_subblock < block_height; y_subblock += subblock_height) {
+                if (subblock_height != block_height) {
+                    os << "      [\n";
+                }
+
+                for (size_t x_subblock = 0; x_subblock < block_width; x_subblock += subblock_width) {
+                    if (subblock_width != block_width) {
+                        os << "        [\n";
+                    }
+
+                    for (size_t y = 0; y < subblock_height; ++y) {
+                        os << "          [";
+                        print_data(os, data, subblock_width, data_type);
+                        data += subblock_width * esize_bits / 8;
+                        os << "],\n";
+                    }
+
+                    if (subblock_width != block_width) {
+                        os << "        ]\n";
+                    }
+                }
+
+                if (subblock_height != block_height) {
+                    os << "      ]\n";
+                }
+            }
+
+            if (block_width != width) {
+                os << "    ],\n";
+            }
+        }
+
+        if (block_height != height) {
+            os << "  ],\n";
+        }
     }
     os << "]\n";
 }
@@ -84,7 +130,7 @@ void print_matrix_per_row(
     const auto num_blocks = (height + block_height - 1) / block_height;
 
     KAI_ASSUME(format.default_size_in_bytes(height, width) % num_blocks == 0);
-    const auto block_data_bytes = format.default_size_in_bytes(height, width) / num_blocks;
+    const auto block_data_bytes = block_height * width * data_type_size_in_bits(format.data_type()) / 8;
     const auto block_offsets_bytes = block_height * data_type_size_in_bits(format.zero_point_data_type()) / 8;
     const auto block_scales_bytes = has_scale ? block_height * data_type_size_in_bits(format.scale_data_type()) / 8 : 0;
 
@@ -115,7 +161,7 @@ void print_matrix(
 
     switch (format.pack_format()) {
         case DataFormat::PackFormat::NONE:
-            print_matrix_raw(os, reinterpret_cast<const uint8_t*>(data), format.data_type(), height, width);
+            print_matrix_raw(os, reinterpret_cast<const uint8_t*>(data), format, height, width);
             break;
 
         case DataFormat::PackFormat::BIAS_PER_ROW:
