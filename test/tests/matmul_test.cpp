@@ -42,7 +42,6 @@ struct MatMulMethod {
 
     size_t m0;  ///< Block size in M dimension.
     size_t n0;  ///< Block size in N dimension.
-    size_t k0;  ///< Block size in K dimension.
 
     bool lhs_transposed;  ///< LHS matrix is transposed.
     bool rhs_transposed;  ///< RHS matrix is transposed.
@@ -81,6 +80,27 @@ struct MatMulMethod {
     ///
     /// @return The sr value.
     std::function<size_t(void)> fn_get_sr;
+
+    /// Gets m step value for main kernel.
+    ///
+    /// The starting row index must be divisible by `m_step`.
+    ///
+    /// @return The m step value.
+    std::function<size_t(void)> fn_get_main_m_step;
+
+    /// Gets n step value for RHS packing kernel.
+    ///
+    /// The starting row index must be divisible by `n_step`.
+    ///
+    /// @return The n step value.
+    std::function<size_t(void)> fn_get_pack_rhs_n_step;
+
+    /// Gets n step value for main kernel.
+    ///
+    /// The starting column index must be divisible by `n_step`.
+    ///
+    /// @return The n step value.
+    std::function<size_t(void)> fn_get_main_n_step;
 
     /// Gets the offset in bytes of the LHS matrix.
     ///
@@ -135,18 +155,50 @@ struct MatMulMethod {
     /// @return The size in bytes.
     std::function<size_t(size_t n, size_t k)> fn_get_packed_rhs_size;
 
-    /// Gets the offset in bytes of the packed RHS matrix.
+    /// Gets the offset in bytes of the packed RHS matrix in the RHS packing kernel
     ///
     /// @param[in] n_idx Coordinate of the matrix in N dimension.
     /// @param[in] k Size of the matrix in K dimension.
     ///
     /// @return The offset in bytes.
-    std::function<size_t(size_t n_idx, size_t k)> fn_get_packed_rhs_offset;
+    std::function<size_t(size_t n_idx, size_t k)> fn_get_pack_rhs_packed_rhs_offset;
+
+    /// Gets the offset in bytes of the packed RHS matrix in the main kernel.
+    ///
+    /// @param[in] n_idx Coordinate of the matrix in N dimension.
+    /// @param[in] k Size of the matrix in K dimension.
+    ///
+    /// @return The offset in bytes.
+    std::function<size_t(size_t n_idx, size_t k)> fn_get_main_packed_rhs_offset;
 
     std::function<void(
         size_t num_groups, size_t n, size_t k, size_t nr, size_t kr, size_t sr, size_t rhs_stride, const void* rhs,
         const void* bias, const void* scale, void* rhs_packed, size_t extra_bytes, const void* params)>
         fn_pack_rhs;
+
+    /// Gets the offset in bytes to the data element in the bias buffer.
+    ///
+    /// @param[in] n_idx Column index.
+    ///
+    /// @return The offset in bytes to the data element.
+    std::function<size_t(size_t n_idx)> fn_get_bias_offset;
+
+    /// Gets the offset in bytes to the data element in the destination matrix buffer.
+    ///
+    /// @param[in] m_idx Row index.
+    /// @param[in] n_idx Column index.
+    /// @param[in] stride Row stride in bytes.
+    ///
+    /// @return The offset in bytes to the data element.
+    std::function<size_t(size_t m_idx, size_t n_idx, size_t stride)> fn_get_dst_offset;
+
+    /// Gets the size in bytes of the destination matrix buffer.
+    ///
+    /// @param[in] m Number of rows.
+    /// @param[in] n Number of columns.
+    ///
+    /// @return The size in bytes of the destination matrix buffer.
+    std::function<size_t(size_t m, size_t n)> fn_get_dst_size;
 
     /// Performs matrix multiplication.
     ///
@@ -231,7 +283,6 @@ static const std::array matmul_methods = {
 
         .m0 = 6,
         .n0 = 16,
-        .k0 = 0,  // Not applicable.
 
         .lhs_transposed = false,
         .rhs_transposed = false,
@@ -249,6 +300,10 @@ static const std::array matmul_methods = {
         .fn_get_kr = kai_get_kr_matmul_clamp_f16_f16_f16p16x1biasf16_6x16x8_neon_mla,
         .fn_get_sr = kai_get_sr_matmul_clamp_f16_f16_f16p16x1biasf16_6x16x8_neon_mla,
 
+        .fn_get_main_m_step = kai_get_m_step_matmul_clamp_f16_f16_f16p16x1biasf16_6x16x8_neon_mla,
+        .fn_get_pack_rhs_n_step = kai_get_n_step_rhs_pack_kxn_f16p16x1biasf16_f16_f16_neon,
+        .fn_get_main_n_step = kai_get_n_step_matmul_clamp_f16_f16_f16p16x1biasf16_6x16x8_neon_mla,
+
         .fn_get_lhs_offset = kai_get_lhs_offset_matmul_clamp_f16_f16_f16p16x1biasf16_6x16x8_neon_mla,
         .fn_get_packed_lhs_size = nullptr,
         .fn_get_packed_lhs_offset = nullptr,
@@ -256,8 +311,14 @@ static const std::array matmul_methods = {
 
         .fn_get_rhs_offset = kai_get_rhs_offset_rhs_pack_kxn_f16p16x1biasf16_f16_f16_neon,
         .fn_get_packed_rhs_size = kai_get_rhs_packed_size_rhs_pack_kxn_f16p16x1biasf16_f16_f16_neon,
-        .fn_get_packed_rhs_offset = kai_get_rhs_packed_offset_rhs_pack_kxn_f16p16x1biasf16_f16_f16_neon,
+        .fn_get_pack_rhs_packed_rhs_offset = kai_get_rhs_packed_offset_rhs_pack_kxn_f16p16x1biasf16_f16_f16_neon,
+        .fn_get_main_packed_rhs_offset = kai_get_rhs_packed_offset_matmul_clamp_f16_f16_f16p16x1biasf16_6x16x8_neon_mla,
         .fn_pack_rhs = kai_run_rhs_pack_kxn_f16p16x1biasf16_f16_f16_neon,
+
+        .fn_get_bias_offset = kai_get_bias_offset_rhs_pack_kxn_f16p16x1biasf16_f16_f16_neon,
+
+        .fn_get_dst_offset = kai_get_dst_offset_matmul_clamp_f16_f16_f16p16x1biasf16_6x16x8_neon_mla,
+        .fn_get_dst_size = kai_get_dst_size_matmul_clamp_f16_f16_f16p16x1biasf16_6x16x8_neon_mla,
 
         .fn_main_hybrid_fp16 = kai_run_matmul_clamp_f16_f16_f16p16x1biasf16_6x16x8_neon_mla,
     },
@@ -452,6 +513,10 @@ TEST_P(MatMulTest, PackedRhs) {
     const auto packed_rhs_h = info.n;
     const auto packed_rhs_w = info.k;
 
+    const auto n_step = method.fn_get_pack_rhs_n_step();
+    const auto ref_n_step = method.packed_rhs_format.scheduler_block_height(packed_rhs_h);
+    ASSERT_EQ(n_step, ref_n_step);
+
     const auto rect = portion.compute_portion(
         packed_rhs_h, packed_rhs_w, method.packed_rhs_format.scheduler_block_height(packed_rhs_h),
         method.packed_rhs_format.scheduler_block_width(packed_rhs_w));
@@ -473,7 +538,7 @@ TEST_P(MatMulTest, PackedRhs) {
     const auto ref_packed_rhs_size = method.packed_rhs_format.default_size_in_bytes(packed_rhs_h, packed_rhs_w);
     ASSERT_EQ(packed_rhs_size, ref_packed_rhs_size);
 
-    const auto packed_rhs_offset = method.fn_get_packed_rhs_offset(rect.start_row(), info.k);
+    const auto packed_rhs_offset = method.fn_get_pack_rhs_packed_rhs_offset(rect.start_row(), info.k);
     const auto ref_packed_rhs_offset =
         method.packed_rhs_format.default_offset_in_bytes(rect.start_row(), rect.start_col(), packed_rhs_w);
     ASSERT_EQ(packed_rhs_offset, ref_packed_rhs_offset);
@@ -481,14 +546,15 @@ TEST_P(MatMulTest, PackedRhs) {
     const auto ref_rhs_scales_offset =
         rect.start_row() * data_type_size_in_bits(method.packed_rhs_format.scale_data_type()) / 8;
 
+    const auto bias_offset = method.fn_get_bias_offset(rect.start_row());
     const auto ref_bias_offset = method.bias_format.default_offset_in_bytes(0, rect.start_row(), info.n);
+    ASSERT_EQ(bias_offset, ref_bias_offset);
 
     std::vector<uint8_t> packed_rhs;
     packed_rhs.resize(packed_rhs_size);
 
     method.pack_rhs(
-        rect.height(), rect.width(), data.rhs.data() + rhs_offset, ref_rhs_row_stride,
-        data.bias.data() + ref_bias_offset,
+        rect.height(), rect.width(), data.rhs.data() + rhs_offset, ref_rhs_row_stride, data.bias.data() + bias_offset,
         !data.rhs_scales.empty() ? data.rhs_scales.data() + ref_rhs_scales_offset : nullptr,
         packed_rhs.data() + packed_rhs_offset);
 
@@ -510,6 +576,12 @@ TEST_P(MatMulTest, Output) {
         GTEST_SKIP();
     }
 
+    const auto m_step = method.fn_get_main_m_step();
+    ASSERT_EQ(m_step, method.m0);
+
+    const auto n_step = method.fn_get_main_n_step();
+    ASSERT_EQ(n_step, method.n0);
+
     const auto rect = portion.compute_portion(info.m, info.n, method.m0, method.n0);
 
     if (rect.height() == 0 || rect.width() == 0) {
@@ -521,15 +593,22 @@ TEST_P(MatMulTest, Output) {
     const auto bias_w = info.n;
     const auto dst_w = info.n;
 
-    const auto* lhs_data = data.lhs.data();
     const auto lhs_start_row = method.lhs_transposed ? 0 : rect.start_row();
     const auto lhs_start_col = method.lhs_transposed ? rect.start_row() : 0;
-    auto lhs_offset = method.lhs_format.default_offset_in_bytes(lhs_start_row, lhs_start_col, lhs_w);
     const auto lhs_stride = method.lhs_format.default_row_stride(lhs_w);
+
+    const uint8_t* lhs_data = nullptr;
+    uintptr_t lhs_offset = 0;
 
     if (method.is_pack_lhs_needed()) {
         lhs_data = data.ref_packed_lhs.data();
         lhs_offset = method.packed_lhs_format.default_offset_in_bytes(lhs_start_row, lhs_start_col, info.k);
+    } else {
+        lhs_data = data.lhs.data();
+
+        lhs_offset = method.fn_get_lhs_offset(lhs_start_row, lhs_stride);
+        const auto ref_lhs_offset = method.lhs_format.default_offset_in_bytes(lhs_start_row, lhs_start_col, lhs_w);
+        ASSERT_EQ(lhs_offset, ref_lhs_offset);
     }
 
     const auto rhs_stride = method.rhs_format.default_row_stride(rhs_w);
@@ -542,8 +621,11 @@ TEST_P(MatMulTest, Output) {
         const auto packed_rhs_start_col = 0;
 
         rhs_data = data.ref_packed_rhs.data();
-        rhs_offset =
+
+        rhs_offset = method.fn_get_main_packed_rhs_offset(packed_rhs_start_row, info.k);
+        const auto ref_rhs_offset =
             method.packed_rhs_format.default_offset_in_bytes(packed_rhs_start_row, packed_rhs_start_col, info.k);
+        ASSERT_EQ(rhs_offset, ref_rhs_offset);
     } else {
         const auto rhs_start_row = method.rhs_transposed ? rect.start_col() : 0;
         const auto rhs_start_col = method.rhs_transposed ? 0 : rect.start_col();
@@ -555,10 +637,17 @@ TEST_P(MatMulTest, Output) {
     const auto* bias_data = data.bias.data();
     const auto bias_offset = method.bias_format.default_offset_in_bytes(0, rect.start_row(), bias_w);
 
-    const auto dst_offset = method.dst_format.default_offset_in_bytes(rect.start_row(), rect.start_col(), dst_w);
     const auto dst_stride = method.dst_format.default_row_stride(dst_w);
+    const auto dst_offset = method.fn_get_dst_offset(rect.start_row(), rect.start_col(), dst_stride);
+    const auto ref_dst_offset = method.dst_format.default_offset_in_bytes(rect.start_row(), rect.start_col(), dst_w);
+    ASSERT_EQ(dst_offset, ref_dst_offset);
+
+    const auto dst_size = method.fn_get_dst_size(info.m, info.n);
+    const auto ref_dst_size = method.dst_format.default_size_in_bytes(info.m, info.n);
+    ASSERT_EQ(dst_size, ref_dst_size);
+
     std::vector<uint8_t> dst;
-    dst.resize(method.dst_format.default_size_in_bytes(info.m, info.n));
+    dst.resize(dst_size);
 
     method.main_kernel(
         rect.height(), rect.width(), info.k, lhs_data + lhs_offset, rhs_data + rhs_offset, bias_data + bias_offset,
