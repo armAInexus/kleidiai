@@ -72,3 +72,11 @@ repos:
         description: Ensures that latest commit has been signed-off with `--signoff`.
         pass_filenames: false
         stages: [ commit, push ]
+      - id: bazel-buildifier
+        name: "Bazel BUILD formatter"
+        entry: buildifier
+        description: "Lint Bazel build files"
+        stages: [ commit ]
+        language: system
+        pass_filenames: true
+        types: [ bazel ]

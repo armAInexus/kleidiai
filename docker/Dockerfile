@@ -56,8 +56,23 @@ COPY build_linux_bootloader.sh .
 RUN ./build_linux_bootloader.sh && \
     rm ./build_linux_bootloader.sh
 
-# Cleans up.
-RUN apt-get purge -y wget autoconf automake device-tree-compiler flex bison bc libssl-dev genext2fs && \
-    apt-get autoremove --purge -y
-
 WORKDIR /
+
+ENV XDG_CACHE_HOME=/cache
+
+RUN mkdir -p ${XDG_CACHE_HOME} && \
+    wget "https://github.com/bazelbuild/bazelisk/releases/download/v1.20.0/bazelisk-linux-$(dpkg --print-architecture)" -O /usr/bin/bazelisk && \
+    chmod a+x /usr/bin/bazelisk && \
+    bazelisk && \
+    chmod -R a+rw ${XDG_CACHE_HOME}
+
+ARG BAZEL_BUILD_TOOLS_VER=v7.1.2
+
+RUN wget "https://github.com/bazelbuild/buildtools/releases/download/${BAZEL_BUILD_TOOLS_VER}/buildifier-linux-$(dpkg --print-architecture)" -O /usr/bin/buildifier && \
+    chmod a+x /usr/bin/buildifier
+
+RUN wget "https://github.com/bazelbuild/buildtools/releases/download/${BAZEL_BUILD_TOOLS_VER}/buildozer-linux-$(dpkg --print-architecture)" -O /usr/bin/buildozer && \
+    chmod a+x /usr/bin/buildozer
+
+RUN wget "https://github.com/bazelbuild/buildtools/releases/download/${BAZEL_BUILD_TOOLS_VER}/unused_deps-linux-$(dpkg --print-architecture)" -O /usr/bin/unused_deps && \
+    chmod a+x /usr/bin/unused_deps
