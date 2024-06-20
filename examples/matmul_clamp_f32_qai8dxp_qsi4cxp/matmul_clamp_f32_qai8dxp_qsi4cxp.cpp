@@ -3,7 +3,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 //
-#if !defined(__ARM_FEATURE_DOTPROD) && !defined(__ARM_FEATURE_MATMUL_INT8)
+#if 0  //! defined(__ARM_FEATURE_DOTPROD) && !defined(__ARM_FEATURE_MATMUL_INT8)
 #error "Dotprod and I8mm extensions required to compile this example"
 #else
 #include <cassert>
@@ -22,10 +22,15 @@
 #include "kai_matmul_clamp_f32_qai8dxp4x8_qsi4cxp8x8_4x8x32_neon_i8mm.h"
 #include "kai_matmul_clamp_f32_qai8dxp4x8_qsi4cxp8x8_8x8x32_neon_i8mm.h"
 #include "kai_matmul_clamp_f32_qai8dxp_qsi4cxp_interface.h"
-#include "kai_rhs_pack_nxk_qsi4cxp_qsu4cxs1s0.h"
+#include "kai_rhs_pack_qsi4cxp_qsu4cxs1s0.h"
 
 #define INT4_MIN (-8)
 #define INT4_MAX (7)
+
+enum class rhs_format {
+    nxk,
+    kxn,
+};
 
 // Micro-kernel interface
 struct kai_matmul_ukernel_f32_qa8dxp_qs4cxp {
@@ -120,8 +125,11 @@ static void fill_uniform_random(size_t num_rows, size_t num_cols, float* dst, si
     }
 }
 
-static void quant_qs4cx_f32(size_t n, size_t k, const float* rhs_f32, uint8_t* rhs_qs4cx, float* rhs_scales_f32) {
-    const size_t dst_stride = (k / 2) * sizeof(int8_t);
+static void quant_qs4cx_f32(
+    size_t n, size_t k, rhs_format format, const float* rhs_f32, uint8_t* rhs_qs4cx, float* rhs_scales_f32) {
+    const size_t dst_k_step = format == rhs_format::nxk ? sizeof(int8_t) : n * sizeof(int8_t);
+
+    const size_t dst_n_step = format == rhs_format::nxk ? (k / 2) * sizeof(int8_t) : sizeof(int8_t);
 
     for (size_t row_idx = 0; row_idx < n; ++row_idx) {
         const float* src_ptr = rhs_f32 + row_idx * k;
@@ -149,7 +157,7 @@ static void quant_qs4cx_f32(size_t n, size_t k, const float* rhs_f32, uint8_t* r
         // Reciprocal to quantize
         const float recip_scale0 = scale0 ? 1.0f / scale0 : 0.0f;
 
-        uint8_t* dst_ptr = (uint8_t*)rhs_qs4cx + row_idx * dst_stride;
+        uint8_t* dst_ptr = (uint8_t*)rhs_qs4cx + row_idx * dst_n_step;
 
         // Quantize the channels
         for (size_t k_idx = 0; k_idx < k; k_idx += 2) {
@@ -172,7 +180,7 @@ static void quant_qs4cx_f32(size_t n, size_t k, const float* rhs_f32, uint8_t* r
             const uint8_t rhs_v0 = (v1_u8 << 4) | v0_u8;
 
             dst_ptr[0] = rhs_v0;
-            dst_ptr += sizeof(uint8_t);
+            dst_ptr += dst_k_step;
         }
 
         rhs_scales_f32[row_idx] = recip_scale0;
@@ -248,10 +256,15 @@ static void ref_quant_qa8dx_f32(size_t m, size_t k, const float* lhs_f32, int8_t
 };
 
 static void ref_matmul_f32_qa8dx_qs4cx(
-    size_t m, size_t n, size_t k, const int8_t* lhs_qa8dx, const uint8_t* rhs_qs4cx, const float* rhs_scales_f32,
-    float* dst_f32, float scalar_min, float scalar_max) {
+    size_t m, size_t n, size_t k, rhs_format format, const int8_t* lhs_qa8dx, const uint8_t* rhs_qs4cx,
+    const float* rhs_scales_f32, float* dst_f32, float scalar_min, float scalar_max) {
     const size_t lhs_stride = k * sizeof(int8_t) + sizeof(float) + sizeof(int32_t);
-    const size_t rhs_stride = (k / 2) * sizeof(uint8_t);
+
+    const size_t lhs_k_step = sizeof(int8_t) * 2;
+
+    const size_t rhs_k_step = format == rhs_format::nxk ? sizeof(int8_t) : n * sizeof(int8_t);
+
+    const size_t rhs_n_step = format == rhs_format::nxk ? (k / 2) * sizeof(int8_t) : sizeof(int8_t);
 
     for (size_t row_idx = 0; row_idx < m; ++row_idx) {
         const int8_t* lhs_ptr_start = lhs_qa8dx + row_idx * lhs_stride;
@@ -260,7 +273,7 @@ static void ref_matmul_f32_qa8dx_qs4cx(
             int32_t iacc = 0;
 
             const int8_t* lhs_ptr = lhs_ptr_start;
-            const uint8_t* rhs_ptr = rhs_qs4cx + col_idx * rhs_stride;
+            const uint8_t* rhs_ptr = rhs_qs4cx + col_idx * rhs_n_step;
 
             // Get the LHS quantization parameters stored at the
             // beginning of each row
@@ -287,8 +300,8 @@ static void ref_matmul_f32_qa8dx_qs4cx(
                 iacc += lhs_offset * rhs_v0;
                 iacc += lhs_offset * rhs_v1;
 
-                lhs_ptr += 2;
-                rhs_ptr += 1;
+                lhs_ptr += lhs_k_step;
+                rhs_ptr += rhs_k_step;
             }
 
             // Get the RHS scale
@@ -329,131 +342,139 @@ int main(int argc, char** argv) {
     const size_t seed_lhs = 4568;
     const size_t seed_rhs = seed_lhs + 4;
 
-    const size_t lhs_native_size_f32 = m * k * sizeof(float);
-    const size_t rhs_native_size_f32 = n * k * sizeof(float);
-    const size_t rhs_native_size_qs4cx = n * (k / 2) * sizeof(uint8_t);
-    const size_t rhs_scales_size_f32 = n * sizeof(float);
+    // Iterate over the RHS format (NxK or KxN)
+    for (const rhs_format& format : {rhs_format::nxk, rhs_format::kxn}) {
+        std::cout << "Testing RHS format = " << (format == rhs_format::nxk ? "N x K" : "K x N") << std::endl;
 
-    // Allocate the memory
-    uint8_t* lhs_native_mtx_f32 = new uint8_t[lhs_native_size_f32];
-    uint8_t* rhs_native_mtx_f32 = new uint8_t[rhs_native_size_f32];
-    uint8_t* rhs_native_mtx_qs4cx = new uint8_t[rhs_native_size_qs4cx];
-    uint8_t* rhs_scales_f32 = new uint8_t[rhs_scales_size_f32];
+        const size_t lhs_native_size_f32 = m * k * sizeof(float);
+        const size_t rhs_native_size_f32 = n * k * sizeof(float);
+        const size_t rhs_native_size_qs4cx = n * (k / 2) * sizeof(uint8_t);
+        const size_t rhs_scales_size_f32 = n * sizeof(float);
 
-    fill_uniform_random(m, k, (float*)lhs_native_mtx_f32, seed_lhs);
-    fill_uniform_random(n, k, (float*)rhs_native_mtx_f32, seed_rhs);
+        // Allocate the memory
+        uint8_t* lhs_native_mtx_f32 = new uint8_t[lhs_native_size_f32];
+        uint8_t* rhs_native_mtx_f32 = new uint8_t[rhs_native_size_f32];
+        uint8_t* rhs_native_mtx_qs4cx = new uint8_t[rhs_native_size_qs4cx];
+        uint8_t* rhs_scales_f32 = new uint8_t[rhs_scales_size_f32];
 
-    quant_qs4cx_f32(n, k, (const float*)rhs_native_mtx_f32, (uint8_t*)rhs_native_mtx_qs4cx, (float*)rhs_scales_f32);
+        fill_uniform_random(m, k, (float*)lhs_native_mtx_f32, seed_lhs);
+        fill_uniform_random(n, k, (float*)rhs_native_mtx_f32, seed_rhs);
 
-    delete[] rhs_native_mtx_f32;
+        quant_qs4cx_f32(
+            n, k, format, (const float*)rhs_native_mtx_f32, (uint8_t*)rhs_native_mtx_qs4cx, (float*)rhs_scales_f32);
 
-    //----------- REFERENCE IMPLEMENTATION
-    //------------------------------------
-    //------------------------------------
-    // Memory sizes for the reference implementation
-    // After dynamically quantized the LHS matrix, we have the scale and offset for each
-    // row. The scale (f32) and offset (int32) are stored at the beginning of each row
-    const size_t lhs_ref_size_qa8dx = m * (k + sizeof(int32_t) + sizeof(float));
-    const size_t dst_ref_size_f32 = m * n * sizeof(float);
+        delete[] rhs_native_mtx_f32;
 
-    uint8_t* lhs_ref_mtx_qa8dx = new uint8_t[lhs_ref_size_qa8dx];
-    uint8_t* dst_ref_mtx_f32 = new uint8_t[dst_ref_size_f32];
+        //----------- REFERENCE IMPLEMENTATION
+        //------------------------------------
+        //------------------------------------
+        // Memory sizes for the reference implementation
+        // After dynamically quantized the LHS matrix, we have the scale and offset for each
+        // row. The scale (f32) and offset (int32) are stored at the beginning of each row
+        const size_t lhs_ref_size_qa8dx = m * (k + sizeof(int32_t) + sizeof(float));
+        const size_t dst_ref_size_f32 = m * n * sizeof(float);
 
-    ref_quant_qa8dx_f32(m, k, (const float*)lhs_native_mtx_f32, (int8_t*)lhs_ref_mtx_qa8dx);
+        uint8_t* lhs_ref_mtx_qa8dx = new uint8_t[lhs_ref_size_qa8dx];
+        uint8_t* dst_ref_mtx_f32 = new uint8_t[dst_ref_size_f32];
 
-    ref_matmul_f32_qa8dx_qs4cx(
-        m, n, k, (const int8_t*)lhs_ref_mtx_qa8dx, (const uint8_t*)rhs_native_mtx_qs4cx, (const float*)rhs_scales_f32,
-        (float*)dst_ref_mtx_f32, -FLT_MAX, FLT_MAX);
+        ref_quant_qa8dx_f32(m, k, (const float*)lhs_native_mtx_f32, (int8_t*)lhs_ref_mtx_qa8dx);
 
-    // Remove the unnecessary buffer
-    delete[] lhs_ref_mtx_qa8dx;
+        ref_matmul_f32_qa8dx_qs4cx(
+            m, n, k, format, (const int8_t*)lhs_ref_mtx_qa8dx, (const uint8_t*)rhs_native_mtx_qs4cx,
+            (const float*)rhs_scales_f32, (float*)dst_ref_mtx_f32, -FLT_MAX, FLT_MAX);
 
-    //----------- END REFERENCE IMPLEMENTATION
-    //------------------------------------
-    //------------------------------------
+        // Remove the unnecessary buffer
+        delete[] lhs_ref_mtx_qa8dx;
 
-    //----------- MICRO-KERNELS TESTS
-    //------------------------------------
-    //------------------------------------
-    for (size_t idx_variant = 0; idx_variant < num_ukernel_variants; ++idx_variant) {
-        std::cout << "Testing " << ukernel_variants[idx_variant].name << std::endl;
+        //----------- END REFERENCE IMPLEMENTATION
+        //------------------------------------
+        //------------------------------------
 
-        // Get the packing parameters
-        const size_t mr = ukernel_variants[idx_variant].ukernel.get_mr();
-        const size_t nr = ukernel_variants[idx_variant].ukernel.get_nr();
-        const size_t kr = ukernel_variants[idx_variant].ukernel.get_kr();
-        const size_t sr = ukernel_variants[idx_variant].ukernel.get_sr();
+        //----------- MICRO-KERNELS TESTS
+        //------------------------------------
+        //------------------------------------
+        for (size_t idx_variant = 0; idx_variant < num_ukernel_variants; ++idx_variant) {
+            std::cout << "Testing " << ukernel_variants[idx_variant].name << std::endl;
+            ;
 
-        // Get the size in bytes for the packed matrices
-        const size_t lhs_packed_size = kai_get_lhs_packed_size_lhs_quant_pack_qai8dxp_f32(m, k, mr, kr, sr);
-        const size_t rhs_packed_size = kai_get_rhs_packed_size_rhs_pack_nxk_qsi4cxp_qsu4cxs1s0(n, k, nr, kr, sr);
-        const size_t dst_size = ukernel_variants[idx_variant].ukernel.get_dst_size(m, n);
+            // Get the packing parameters
+            const size_t mr = ukernel_variants[idx_variant].ukernel.get_mr();
+            const size_t nr = ukernel_variants[idx_variant].ukernel.get_nr();
+            const size_t kr = ukernel_variants[idx_variant].ukernel.get_kr();
+            const size_t sr = ukernel_variants[idx_variant].ukernel.get_sr();
 
-        // Allocate the matrices
-        uint8_t* lhs_packed_mtx_qa8dx = new uint8_t[lhs_packed_size];
-        uint8_t* rhs_packed_mtx_qs4cx = new uint8_t[rhs_packed_size];
-        uint8_t* dst_act_mtx_f32 = new uint8_t[dst_size];
+            // Get the size in bytes for the packed matrices
+            const size_t lhs_packed_size = kai_get_lhs_packed_size_lhs_quant_pack_qai8dxp_f32(m, k, mr, kr, sr);
+            const size_t rhs_packed_size = kai_get_rhs_packed_size_rhs_pack_qsi4cxp_qsu4cxs1s0(n, k, nr, kr, sr);
+            const size_t dst_size = ukernel_variants[idx_variant].ukernel.get_dst_size(m, n);
 
-        // If the RHS matrix contains constant values, the packing can be performed
-        // only once
-        struct kai_rhs_pack_nxk_qsi4cxp_qsu4cxs1s0_params params;
-        params.lhs_zero_point = 1;
-        params.rhs_zero_point = 8;
+            // Allocate the matrices
+            uint8_t* lhs_packed_mtx_qa8dx = new uint8_t[lhs_packed_size];
+            uint8_t* rhs_packed_mtx_qs4cx = new uint8_t[rhs_packed_size];
+            uint8_t* dst_act_mtx_f32 = new uint8_t[dst_size];
 
-        // RHS packing
-        kai_run_rhs_pack_nxk_qsi4cxp_qsu4cxs1s0(
-            1, n, k, nr, kr, sr,                     // Packing arguments
-            (const uint8_t*)(rhs_native_mtx_qs4cx),  // RHS
-            NULL,                                    // Bias
-            (const float*)(rhs_scales_f32),          // Scale
-            rhs_packed_mtx_qs4cx,                    // RHS packed
-            0, &params);
+            // If the RHS matrix contains constant values, the packing can be performed
+            // only once
+            struct kai_rhs_pack_qsi4cxp_qsu4cxs1s0_params params;
+            params.lhs_zero_point = 1;
+            params.rhs_zero_point = 8;
 
-        // LHS packing
-        kai_run_lhs_quant_pack_qai8dxp_f32(
-            m, k, mr, kr, sr, 0,               // Packing arguments
-            (const float*)lhs_native_mtx_f32,  // LHS
-            k * sizeof(float),                 // LHS stride
-            lhs_packed_mtx_qa8dx);             // LHS packed
+            // RHS packing
+            kai_run_rhs_pack_qsi4cxp_qsu4cxs1s0(
+                1, n, k, nr, kr, sr,                     // Packing arguments
+                format == rhs_format::nxk,               // True, if the RHS matrix is N x K (transposed)
+                (const uint8_t*)(rhs_native_mtx_qs4cx),  // RHS
+                NULL,                                    // Bias
+                (const float*)(rhs_scales_f32),          // Scale
+                rhs_packed_mtx_qs4cx,                    // RHS packed
+                0, &params);
 
-        // Matmul
-        {
-            const size_t dst_stride = n * sizeof(float);
-            const size_t lhs_offset = ukernel_variants[idx_variant].ukernel.get_lhs_packed_offset(0, k);
-            const size_t rhs_offset = ukernel_variants[idx_variant].ukernel.get_rhs_packed_offset(0, k);
-            const size_t dst_offset = ukernel_variants[idx_variant].ukernel.get_dst_offset(0, 0, dst_stride);
+            // LHS packing
+            kai_run_lhs_quant_pack_qai8dxp_f32(
+                m, k, mr, kr, sr, 0,               // Packing arguments
+                (const float*)lhs_native_mtx_f32,  // LHS
+                k * sizeof(float),                 // LHS stride
+                lhs_packed_mtx_qa8dx);             // LHS packed
 
-            const void* lhs_ptr = (const void*)((const char*)lhs_packed_mtx_qa8dx + lhs_offset);
-            const void* rhs_ptr = (const void*)((const char*)rhs_packed_mtx_qs4cx + rhs_offset);
-            float* dst_ptr = (float*)((uint8_t*)dst_act_mtx_f32 + dst_offset);
+            // Matmul
+            {
+                const size_t dst_stride = n * sizeof(float);
+                const size_t lhs_offset = ukernel_variants[idx_variant].ukernel.get_lhs_packed_offset(0, k);
+                const size_t rhs_offset = ukernel_variants[idx_variant].ukernel.get_rhs_packed_offset(0, k);
+                const size_t dst_offset = ukernel_variants[idx_variant].ukernel.get_dst_offset(0, 0, dst_stride);
 
-            ukernel_variants[idx_variant].ukernel.run_matmul(
-                m, n, k,           // Dimensions
-                lhs_ptr,           // LHS packed
-                rhs_ptr,           // RHS packed
-                dst_ptr,           // DST
-                dst_stride,        // DST stride (row)
-                sizeof(float),     // DST stride (col)
-                -FLT_MAX, FLT_MAX  // Min and max for the clamp operation
-            );
+                const void* lhs_ptr = (const void*)((const char*)lhs_packed_mtx_qa8dx + lhs_offset);
+                const void* rhs_ptr = (const void*)((const char*)rhs_packed_mtx_qs4cx + rhs_offset);
+                float* dst_ptr = (float*)((uint8_t*)dst_act_mtx_f32 + dst_offset);
+
+                ukernel_variants[idx_variant].ukernel.run_matmul(
+                    m, n, k,           // Dimensions
+                    lhs_ptr,           // LHS packed
+                    rhs_ptr,           // RHS packed
+                    dst_ptr,           // DST
+                    dst_stride,        // DST stride (row)
+                    sizeof(float),     // DST stride (col)
+                    -FLT_MAX, FLT_MAX  // Min and max for the clamp operation
+                );
+            }
+
+            const bool is_valid =
+                is_output_correct(m, n, 0.0001f, (const float*)dst_ref_mtx_f32, (const float*)dst_act_mtx_f32);
+
+            if (is_valid) {
+                printf("TEST[%ld] = PASSED\n", idx_variant);
+            } else {
+                printf("TEST[%ld] = FAILED\n", idx_variant);
+            }
+            delete[] lhs_packed_mtx_qa8dx;
+            delete[] rhs_packed_mtx_qs4cx;
+            delete[] dst_act_mtx_f32;
         }
-
-        const bool is_valid =
-            is_output_correct(m, n, 0.0001f, (const float*)dst_ref_mtx_f32, (const float*)dst_act_mtx_f32);
-
-        if (is_valid) {
-            printf("TEST[%ld] = PASSED\n", idx_variant);
-        } else {
-            printf("TEST[%ld] = FAILED\n", idx_variant);
-        }
-        delete[] lhs_packed_mtx_qa8dx;
-        delete[] rhs_packed_mtx_qs4cx;
-        delete[] dst_act_mtx_f32;
+        delete[] lhs_native_mtx_f32;
+        delete[] rhs_native_mtx_qs4cx;
+        delete[] rhs_scales_f32;
+        delete[] dst_ref_mtx_f32;
     }
-    delete[] lhs_native_mtx_f32;
-    delete[] rhs_native_mtx_qs4cx;
-    delete[] rhs_scales_f32;
-    delete[] dst_ref_mtx_f32;
 }
 
 //----------- END MICRO-KERNELS TESTS

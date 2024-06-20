@@ -183,13 +183,14 @@ Once we know the size of the packed matrices, we allocate the memory for the pac
 Assuming you have filled the native LHS and RHS matrices with some random values, perform the RHS packing:
 
 ```c
-    struct kai_rhs_pack_nxk_qsi4cxp_qsu4cxs1s0_params params;
+    struct kai_rhs_pack_qsi4cxp_qsu4cxs1s0_params params;
     params.lhs_zero_point = 1;
     params.rhs_zero_point = 8;
 
     // RHS packing
     kai_run_rhs_pack_nxk_qsi4cxp_qsu4cxs1s0(
         1, n, k, nr, kr, sr,                    // Packing arguments
+        true,                                   // The RHS matrix is transposed
         (const uint8_t*)(rhs_native_mtx_qs4cx), // RHS
         NULL,                                   // Bias
         (const float*)(rhs_scales_f32),         // Scale
@@ -261,7 +262,7 @@ include_directories(
 # Files requires to build the executable
 add_executable(matmul_clamp_f32_qai8dxp_qsi4cxp
     matmul_clamp_f32_qai8dxp_qsi4cxp.cpp
-    ${MATMUL_PACK_PATH}/kai_rhs_pack_nxk_qsi4cxp_qsu4cxs1s0.c
+    ${MATMUL_PACK_PATH}/kai_rhs_pack_qsi4cxp_qsu4cxs1s0.c
     ${MATMUL_PACK_PATH}/kai_lhs_quant_pack_qai8dxp_f32.c
     ${MATMUL_PATH}/kai_matmul_clamp_f32_qai8dxp4x8_qsi4cxp8x8_8x8x32_neon_i8mm.c)
 ```

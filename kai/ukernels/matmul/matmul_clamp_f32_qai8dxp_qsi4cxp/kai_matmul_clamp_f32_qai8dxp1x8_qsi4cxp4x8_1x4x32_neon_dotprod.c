@@ -45,7 +45,7 @@ inline static size_t kai_rhs_packed_stride(size_t k) {
 
     KAI_ASSERT((k_internal % 2) == 0);
 
-    return kai_nr * ((k_internal / 2) + kai_num_bytes_multiplier_rhs + kai_num_bytes_sum_rhs);
+    return kai_nr * ((k_internal / 2) + kai_num_bytes_multiplier_rhs + kai_num_bytes_sum_rhs + kai_num_bytes_bias);
 }
 
 size_t kai_get_m_step_matmul_clamp_f32_qai8dxp1x8_qsi4cxp4x8_1x4x32_neon_dotprod(void) {
@@ -185,8 +185,9 @@ void kai_run_matmul_clamp_f32_qai8dxp1x8_qsi4cxp4x8_1x4x32_neon_dotprod(
             const float32x4_t rhs_scale = vld1q_f32((const float*)rhs_ptr);
             rhs_ptr += sizeof(float32x4_t);
 
-            // Skip the bias
-            rhs_ptr += kai_nr * kai_num_bytes_bias;
+            // Load the bias
+            const float32x4_t bias0 = vld1q_f32((const float*)rhs_ptr);
+            rhs_ptr += sizeof(float32x4_t);
 
             // Add the reduction sum
             iacc = vmlaq_s32(iacc, sum_n_s32, lhs_offset);
@@ -194,6 +195,9 @@ void kai_run_matmul_clamp_f32_qai8dxp1x8_qsi4cxp4x8_1x4x32_neon_dotprod(
             float32x4_t main_acc = vmulq_f32(vcvtq_f32_s32(iacc), rhs_scale);
 
             main_acc = vmulq_f32(main_acc, lhs_scale);
+
+            // Add the bias
+            main_acc = vaddq_f32(main_acc, bias0);
 
             // clamp (min-max) operation
             const float32x4_t vmin_f32 = vdupq_n_f32(scalar_min);

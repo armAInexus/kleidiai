@@ -3,7 +3,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 //
-#include "kai_rhs_pack_nxk_qsi4cxp_qsu4cxs1s0.h"
+#include "kai_rhs_pack_qsi4cxp_qsu4cxs1s0.h"
 
 #include <math.h>
 #include <stdint.h>
@@ -15,6 +15,8 @@ static const size_t kai_num_bytes_sum_rhs = sizeof(int32_t);
 static const size_t kai_num_bytes_multiplier_rhs = sizeof(float);
 static const size_t kai_num_bytes_bias = sizeof(float);
 
+#define kai_get_rhs_packed_stride kai_get_rhs_packed_stride_rhs_pack_qsi4cxp_qsu4cxs1s0
+
 inline static size_t kai_k_roundedup(size_t k, size_t kr, size_t sr) {
     // Since we pack a float and int32 value at the end of the row,
     // we must make sure that k is a multiple of 4 for alignment
@@ -22,7 +24,19 @@ inline static size_t kai_k_roundedup(size_t k, size_t kr, size_t sr) {
     return kai_roundup(k, kr_sr_roundedup4);
 }
 
-inline static size_t kai_rhs_packed_stride(size_t k, size_t kr, size_t nr, size_t sr) {
+size_t kai_get_n_step_rhs_pack_qsi4cxp_qsu4cxs1s0(size_t nr) {
+    return nr;
+}
+
+size_t kai_get_rhs_offset_rhs_pack_qsi4cxp_qsu4cxs1s0(size_t n_idx, bool is_rhs_nxk, size_t rhs_stride) {
+    if (is_rhs_nxk) {
+        return n_idx * rhs_stride;
+    } else {
+        return n_idx * sizeof(int8_t);
+    }
+}
+
+size_t kai_get_rhs_packed_stride_rhs_pack_qsi4cxp_qsu4cxs1s0(size_t k, size_t nr, size_t kr, size_t sr) {
     const size_t k_internal = kai_k_roundedup(k, kr, sr);
 
     KAI_ASSERT((k_internal % 2) == 0);
@@ -30,31 +44,22 @@ inline static size_t kai_rhs_packed_stride(size_t k, size_t kr, size_t nr, size_
     return nr * ((k_internal / 2) + kai_num_bytes_multiplier_rhs + kai_num_bytes_sum_rhs + kai_num_bytes_bias);
 }
 
-size_t kai_get_n_step_rhs_pack_nxk_qsi4cxp_qsu4cxs1s0(size_t nr) {
-    return nr;
-}
-
-size_t kai_get_rhs_offset_rhs_pack_nxk_qsi4cxp_qsu4cxs1s0(size_t n_idx, size_t rhs_stride) {
-    return n_idx * rhs_stride;
-}
-
-size_t kai_get_rhs_packed_offset_rhs_pack_nxk_qsi4cxp_qsu4cxs1s0(
-    size_t n_idx, size_t k, size_t nr, size_t kr, size_t sr) {
+size_t kai_get_rhs_packed_offset_rhs_pack_qsi4cxp_qsu4cxs1s0(size_t n_idx, size_t k, size_t nr, size_t kr, size_t sr) {
     KAI_ASSERT((n_idx % nr) == 0);
 
-    return (n_idx / nr) * kai_rhs_packed_stride(k, kr, nr, sr);
+    return (n_idx / nr) * kai_get_rhs_packed_stride(k, nr, kr, sr);
 }
 
-size_t kai_get_rhs_packed_size_rhs_pack_nxk_qsi4cxp_qsu4cxs1s0(size_t n, size_t k, size_t nr, size_t kr, size_t sr) {
+size_t kai_get_rhs_packed_size_rhs_pack_qsi4cxp_qsu4cxs1s0(size_t n, size_t k, size_t nr, size_t kr, size_t sr) {
     const size_t num_rows = kai_roundup(n, nr) / nr;
 
-    return num_rows * kai_rhs_packed_stride(k, kr, nr, sr);
+    return num_rows * kai_get_rhs_packed_stride(k, nr, kr, sr);
 }
 
-void kai_run_rhs_pack_nxk_qsi4cxp_qsu4cxs1s0(
-    size_t num_groups, size_t n, size_t k, size_t nr, size_t kr, size_t sr, const uint8_t* rhs, const int32_t* bias,
-    const float* scale, void* rhs_packed, size_t extra_bytes,
-    const struct kai_rhs_pack_nxk_qsi4cxp_qsu4cxs1s0_params* params) {
+void kai_run_rhs_pack_qsi4cxp_qsu4cxs1s0(
+    size_t num_groups, size_t n, size_t k, size_t nr, size_t kr, size_t sr, bool is_rhs_nxk, const uint8_t* rhs,
+    const float* bias, const float* scale, void* rhs_packed, size_t extra_bytes,
+    const struct kai_rhs_pack_qsi4cxp_qsu4cxs1s0_params* params) {
     KAI_ASSERT((k % 2) == 0);
     KAI_ASSERT(num_groups == 1);
     KAI_ASSERT(extra_bytes == 0);
@@ -67,15 +72,17 @@ void kai_run_rhs_pack_nxk_qsi4cxp_qsu4cxs1s0(
     KAI_ASSERT(params->lhs_zero_point == 1);
 
     // Note: The input matrix (rhs) is expected with:
-    // "k" columns and "n" rows (NxK)
+    // "k" columns and "n" rows (NxK) if is_rhs_nxk = true
+    // "n" columns and "k" rows (KxN) if is_rhs_nxk = false
 
     const size_t rhs_zero_point = params->rhs_zero_point;
-    const size_t rhs_stride = k / 2;
-    const size_t rhs_packed_stride = kai_rhs_packed_stride(k, kr, nr, sr);
+    const size_t rhs_n_step = is_rhs_nxk == true ? k / 2 : sizeof(int8_t);
+    const size_t rhs_k_step = is_rhs_nxk == true ? sizeof(int8_t) : n * sizeof(int8_t);
+    const size_t rhs_packed_stride = kai_get_rhs_packed_stride(k, nr, kr, sr);
     const size_t k_internal = kai_k_roundedup(k, kr, sr);
 
     for (size_t y = 0; y < n; y += nr) {
-        const uint8_t* src_row = rhs + y * rhs_stride;
+        const uint8_t* src_row = rhs + y * rhs_n_step;
         uint8_t* dst_row = (uint8_t*)rhs_packed + (y / nr) * rhs_packed_stride;
 
         int32_t* sums = (int32_t*)(dst_row + nr * (k_internal / 2));
@@ -92,8 +99,8 @@ void kai_run_rhs_pack_nxk_qsi4cxp_qsu4cxs1s0(
 
                         // Clamp the row index to avoid out-of-bound reads
                         const size_t src_row_idx = y + i >= n ? 0 : i;
-                        const size_t src_addr_byte0 = src_row_idx * rhs_stride + k_idx_start0;
-                        const size_t src_addr_byte1 = src_row_idx * rhs_stride + k_idx_start1;
+                        const size_t src_addr_byte0 = src_row_idx * rhs_n_step + k_idx_start0 * rhs_k_step;
+                        const size_t src_addr_byte1 = src_row_idx * rhs_n_step + k_idx_start1 * rhs_k_step;
 
                         uint8_t byte0 = rhs_zero_point | rhs_zero_point << 4;
                         uint8_t byte1 = rhs_zero_point | rhs_zero_point << 4;

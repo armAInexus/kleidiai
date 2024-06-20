@@ -20,7 +20,7 @@ include_directories(
 # Files requires to build the executable
 add_executable(matmul_clamp_f32_qai8dxp_qsi4cxp
     matmul_clamp_f32_qai8dxp_qsi4cxp.cpp
-    ${MATMUL_PACK_PATH}/kai_rhs_pack_nxk_qsi4cxp_qsu4cxs1s0.c
+    ${MATMUL_PACK_PATH}/kai_rhs_pack_qsi4cxp_qsu4cxs1s0.c
     ${MATMUL_PACK_PATH}/kai_lhs_quant_pack_qai8dxp_f32.c
     ${MATMUL_PATH}/kai_matmul_clamp_f32_qai8dxp1x8_qsi4cxp4x8_1x4x32_neon_dotprod.c
     ${MATMUL_PATH}/kai_matmul_clamp_f32_qai8dxp1x8_qsi4cxp8x8_1x8x32_neon_dotprod.c
