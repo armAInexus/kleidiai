@@ -23,6 +23,7 @@ include(FetchGTest)
 
 option(KLEIDIAI_BUILD_TESTS "Build unit tests." ON)
 option(KLEIDIAI_ENABLE_CLANG_TIDY "Build with Clang-Tidy checks." OFF)
+option(KLEIDIAI_BUILD_BENCHMARK "Build the benchmark tool." OFF)
 
 if(KLEIDIAI_ENABLE_CLANG_TIDY)
     set(CMAKE_C_CLANG_TIDY "clang-tidy")
@@ -150,4 +151,25 @@ if(KLEIDIAI_BUILD_TESTS)
     # Cross-compiling is a common use case which creates a conflict if DISCOVERY_MODE is set to POST_BUILD (by default)
     # since the host platform does not match the target. Setting the mode to PRE_TEST avoids this conflict.
     gtest_discover_tests(kleidiai_test DISCOVERY_MODE PRE_TEST)
+endif()
+
+if(KLEIDIAI_BUILD_BENCHMARK)
+    # https://github.com/google/benchmark/issues/351
+    if(NOT (${CMAKE_SYSTEM_PROCESSOR} MATCHES "ARM"))
+        set(CMAKE_CROSSCOMPILING TRUE CACHE INTERNAL "")
+        set(HAVE_POSIX_REGEX FALSE CACHE INTERNAL "")
+    endif()
+    include(FetchGBench)
+
+    add_executable(kleidiai_benchmark
+        benchmark/main.cpp)
+
+    target_link_libraries(
+        kleidiai_benchmark
+        kleidiai
+        benchmark::benchmark)
+
+    set(KLEIDIAI_BENCHMARK_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
+    target_include_directories(kleidiai_benchmark
+        PRIVATE KLEIDIAI_BENCHMARK_INCLUDE_DIR)
 endif()
