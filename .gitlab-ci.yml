@@ -59,6 +59,19 @@ build-gcc:
     - cmake -G Ninja -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++ -DCMAKE_BUILD_TYPE=Release -DKLEIDIAI_BUILD_TESTS=ON -S . -B build/
     - cmake --build ./build
 
+build-examples-clang-cov:
+  extends:
+    - .standard-rules
+  interruptible: true
+  stage: build
+  script:
+    - cmake -G Ninja -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=Release -DKLEIDIAI_BUILD_TESTS=ON -DCMAKE_C_FLAGS="--coverage" -DCMAKE_CXX_FLAGS="--coverage" -S ./examples/matmul_clamp_f32_qai8dxp_qsi4cxp -B build/examples/matmul_clamp_f32_qai8dxp_qsi4cxp
+    - cmake --build ./build/examples/matmul_clamp_f32_qai8dxp_qsi4cxp
+  artifacts:
+    expire_in: 1 day
+    paths:
+      - "build"
+
 clang-tidy-checks:
   extends:
     - .standard-rules
@@ -188,6 +201,22 @@ test-linux-aarch64-cov-fvp:
     paths:
       - "build/coverage/linux-aarch64-fvp.json"
 
+test-examples-linux-aarch64-cov:
+  extends:
+    - .standard-rules
+  interruptible: true
+  stage: test
+  dependencies:
+    - build-examples-clang-cov
+  script:
+    - ./build/examples/matmul_clamp_f32_qai8dxp_qsi4cxp/matmul_clamp_f32_qai8dxp_qsi4cxp
+    - mkdir -p build/coverage
+    - gcovr --gcov-executable="llvm-cov gcov" --exclude-unreachable-branches --exclude=build --exclude=test --exclude-lines-by-pattern=".*KAI_(?:ASSERT|ASSUME|ERROR).*" --exclude-branches-by-pattern=".*KAI_(?:ASSERT|ASSUME).*" --json=build/coverage/examples-matmul_clamp_f32_qai8dxp_qsi4cxp-linux-aarch64.json -j --root . build/examples/matmul_clamp_f32_qai8dxp_qsi4cxp
+  artifacts:
+    expire_in: 1 day
+    paths:
+      - "build/coverage/*.json"
+
 coverage:
   extends:
     - .standard-rules
@@ -196,6 +225,7 @@ coverage:
   dependencies:
     - test-linux-aarch64-cov
     - test-linux-aarch64-cov-fvp
+    - test-examples-linux-aarch64-cov
   script:
     - mkdir -p build/html/coverage
     - gcovr --json-add-tracefile "build/coverage/*.json" --print-summary --cobertura=build/coverage.xml --html-details=build/html/coverage/coverage_report.html --html-title="KleidiAI Coverage Report" -j

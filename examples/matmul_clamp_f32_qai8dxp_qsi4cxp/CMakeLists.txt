@@ -29,3 +29,6 @@ add_executable(matmul_clamp_f32_qai8dxp_qsi4cxp
     ${MATMUL_PATH}/kai_matmul_clamp_f32_qai8dxp4x8_qsi4cxp8x8_4x8x32_neon_i8mm.c
     ${MATMUL_PATH}/kai_matmul_clamp_f32_qai8dxp4x8_qsi4cxp8x8_8x8x32_neon_i8mm.c)
 
+target_compile_options(matmul_clamp_f32_qai8dxp_qsi4cxp
+    PRIVATE -march=armv8.2-a+dotprod+i8mm
+)
