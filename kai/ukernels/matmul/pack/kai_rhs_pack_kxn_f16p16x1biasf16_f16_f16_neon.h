@@ -35,11 +35,11 @@ size_t kai_get_bias_offset_rhs_pack_kxn_f16p16x1biasf16_f16_f16_neon(size_t n_id
 
 /// Gets the offset in bytes to the data element in the packed RHS buffer.
 ///
-/// @param[in] k Number of columns.
 /// @param[in] n_idx Row index.
+/// @param[in] k Number of columns.
 ///
 /// @return The offset in bytes to the data element.
-size_t kai_get_rhs_packed_offset_rhs_pack_kxn_f16p16x1biasf16_f16_f16_neon(size_t k, size_t n_idx);
+size_t kai_get_rhs_packed_offset_rhs_pack_kxn_f16p16x1biasf16_f16_f16_neon(size_t n_idx, size_t k);
 
 /// Gets the size in bytes of the packed RHS buffer.
 ///

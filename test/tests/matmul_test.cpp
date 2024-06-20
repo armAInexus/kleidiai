@@ -137,11 +137,11 @@ struct MatMulMethod {
 
     /// Gets the offset in bytes of the packed RHS matrix.
     ///
-    /// @param[in] k Size of the matrix in K dimension.
     /// @param[in] n_idx Coordinate of the matrix in N dimension.
+    /// @param[in] k Size of the matrix in K dimension.
     ///
     /// @return The offset in bytes.
-    std::function<size_t(size_t k, size_t n_idx)> fn_get_packed_rhs_offset;
+    std::function<size_t(size_t n_idx, size_t k)> fn_get_packed_rhs_offset;
 
     std::function<void(
         size_t num_groups, size_t n, size_t k, size_t nr, size_t kr, size_t sr, size_t rhs_stride, const void* rhs,
@@ -473,7 +473,7 @@ TEST_P(MatMulTest, PackedRhs) {
     const auto ref_packed_rhs_size = method.packed_rhs_format.default_size_in_bytes(packed_rhs_h, packed_rhs_w);
     ASSERT_EQ(packed_rhs_size, ref_packed_rhs_size);
 
-    const auto packed_rhs_offset = method.fn_get_packed_rhs_offset(info.k, rect.start_row());
+    const auto packed_rhs_offset = method.fn_get_packed_rhs_offset(rect.start_row(), info.k);
     const auto ref_packed_rhs_offset =
         method.packed_rhs_format.default_offset_in_bytes(rect.start_row(), rect.start_col(), packed_rhs_w);
     ASSERT_EQ(packed_rhs_offset, ref_packed_rhs_offset);
