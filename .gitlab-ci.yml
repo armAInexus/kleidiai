@@ -65,7 +65,7 @@ build-examples-clang-cov:
   interruptible: true
   stage: build
   script:
-    - cmake -G Ninja -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=Release -DKLEIDIAI_BUILD_TESTS=ON -DCMAKE_C_FLAGS="--coverage" -DCMAKE_CXX_FLAGS="--coverage" -S ./examples/matmul_clamp_f32_qai8dxp_qsi4cxp -B build/examples/matmul_clamp_f32_qai8dxp_qsi4cxp
+    - cmake -G Ninja -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_FLAGS="--coverage" -DCMAKE_CXX_FLAGS="--coverage" -S ./examples/matmul_clamp_f32_qai8dxp_qsi4cxp -B build/examples/matmul_clamp_f32_qai8dxp_qsi4cxp
     - cmake --build ./build/examples/matmul_clamp_f32_qai8dxp_qsi4cxp
   artifacts:
     expire_in: 1 day
