@@ -18,6 +18,7 @@ RUN apt-get update  \
     git \
     ninja-build \
     python3 \
+    python3-pip \
     reuse \
     pre-commit \
     gcovr \
