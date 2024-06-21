@@ -218,7 +218,8 @@ struct MatMulMethod {
     /// @return The size in bytes of the destination matrix buffer.
     std::function<size_t(size_t m, size_t n)> fn_get_dst_size;
 
-    /// Performs matrix multiplication.
+    /// Performs F16 matrix multiplication with RHS packing followed by
+    /// clamp operation.
     ///
     /// @param[in] m Size of the matrix in M dimension.
     /// @param[in] n Size of the matrix in N dimension.
@@ -236,9 +237,10 @@ struct MatMulMethod {
         const void* packed_rhs,                                   //
         void* dst, size_t dst_stride_row, size_t dst_stride_col,  //
         Float16 clamp_min, Float16 clamp_max)>
-        fn_main_hybrid_fp16;
+        fn_matmul_f16_f16_f16p;
 
-    /// Runs the matrix multiplication microkernel followed by a clamp operation.
+    /// Performs F32 matrix multiplication with LHS & RHS packing
+    /// followed by clamp operation.
     ///
     /// @param[in] m Number of output rows to be computed.
     /// @param[in] n Number of output columns to be computed.
@@ -253,7 +255,7 @@ struct MatMulMethod {
     std::function<void(
         size_t m, size_t n, size_t k, const void* lhs_packed, const void* rhs_packed, void* dst, size_t dst_stride_row,
         size_t dst_stride_col, float clamp_min, float clamp_max)>
-        fn_main_interleave_fp32;
+        fn_matmul_f32_f32p_f32p;
 
     /// Gets a value indicating whether pre-processing the RHS matrix is needed.
     [[nodiscard]] bool is_pack_rhs_needed() const {
@@ -290,7 +292,7 @@ struct MatMulMethod {
     }
 
     [[nodiscard]] bool has_main_kernel() const {
-        return fn_main_hybrid_fp16 != nullptr || fn_main_interleave_fp32 != nullptr;
+        return fn_matmul_f16_f16_f16p != nullptr || fn_matmul_f32_f32p_f32p != nullptr;
     }
 
     void main_kernel(
@@ -299,12 +301,12 @@ struct MatMulMethod {
         KAI_UNUSED(bias);
         KAI_UNUSED(rhs_stride);
 
-        if (fn_main_hybrid_fp16) {
-            fn_main_hybrid_fp16(
+        if (fn_matmul_f16_f16_f16p) {
+            fn_matmul_f16_f16_f16p(
                 m, n, k, lhs, lhs_stride, rhs, dst, dst_stride, sizeof(Float16), static_cast<Float16>(clamp_min),
                 static_cast<Float16>(clamp_max));
-        } else if (fn_main_interleave_fp32) {
-            fn_main_interleave_fp32(m, n, k, lhs, rhs, dst, dst_stride, sizeof(float), clamp_min, clamp_max);
+        } else if (fn_matmul_f32_f32p_f32p) {
+            fn_matmul_f32_f32p_f32p(m, n, k, lhs, rhs, dst, dst_stride, sizeof(float), clamp_min, clamp_max);
         } else {
             KAI_ERROR("Main kernel is not available!");
         }
@@ -357,8 +359,8 @@ static const std::array matmul_methods = {
         .fn_get_dst_offset = kai_get_dst_offset_matmul_clamp_f16_f16_f16p16x1biasf16_6x16x8_neon_mla,
         .fn_get_dst_size = kai_get_dst_size_matmul_clamp_f16_f16_f16p16x1biasf16_6x16x8_neon_mla,
 
-        .fn_main_hybrid_fp16 = kai_run_matmul_clamp_f16_f16_f16p16x1biasf16_6x16x8_neon_mla,
-        .fn_main_interleave_fp32 = nullptr,
+        .fn_matmul_f16_f16_f16p = kai_run_matmul_clamp_f16_f16_f16p16x1biasf16_6x16x8_neon_mla,
+        .fn_matmul_f32_f32p_f32p = nullptr,
     },
 
     MatMulMethod{
@@ -406,8 +408,8 @@ static const std::array matmul_methods = {
         .fn_get_dst_offset = kai_get_dst_offset_matmul_clamp_f32_f32p2vlx1_f32p2vlx1biasf32_sme2_mopa,
         .fn_get_dst_size = kai_get_dst_size_matmul_clamp_f32_f32p2vlx1_f32p2vlx1biasf32_sme2_mopa,
 
-        .fn_main_hybrid_fp16 = nullptr,
-        .fn_main_interleave_fp32 = kai_run_matmul_clamp_f32_f32p2vlx1_f32p2vlx1biasf32_sme2_mopa,
+        .fn_matmul_f16_f16_f16p = nullptr,
+        .fn_matmul_f32_f32p_f32p = kai_run_matmul_clamp_f32_f32p2vlx1_f32p2vlx1biasf32_sme2_mopa,
     },
 };
 
