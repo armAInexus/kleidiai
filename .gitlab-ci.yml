@@ -30,7 +30,7 @@ build-clang:
   interruptible: true
   stage: build
   script:
-    - cmake -G Ninja -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=Release -DKLEIDIAI_BUILD_TESTS=ON -S . -B build/
+    - cmake -G Ninja -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=Release -DKAI_BUILD_TESTS=ON -S . -B build/
     - cmake --build ./build
   artifacts:
     expire_in: 1 day
@@ -43,7 +43,7 @@ build-clang-cov:
   interruptible: true
   stage: build
   script:
-    - cmake -G Ninja -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=Release -DKLEIDIAI_BUILD_TESTS=ON -DCMAKE_C_FLAGS="--coverage" -DCMAKE_CXX_FLAGS="--coverage" -S . -B build
+    - cmake -G Ninja -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=Release -DKAI_BUILD_TESTS=ON -DCMAKE_C_FLAGS="--coverage" -DCMAKE_CXX_FLAGS="--coverage" -S . -B build
     - cmake --build ./build
   artifacts:
     expire_in: 1 day
@@ -56,7 +56,7 @@ build-gcc:
   interruptible: true
   stage: build
   script:
-    - cmake -G Ninja -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++ -DCMAKE_BUILD_TYPE=Release -DKLEIDIAI_BUILD_TESTS=ON -S . -B build/
+    - cmake -G Ninja -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++ -DCMAKE_BUILD_TYPE=Release -DKAI_BUILD_TESTS=ON -S . -B build/
     - cmake --build ./build
 
 clang-tidy-checks:
@@ -65,7 +65,7 @@ clang-tidy-checks:
   interruptible: true
   stage: build
   script:
-    - cmake -G Ninja -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=Release -DKLEIDIAI_BUILD_TESTS=ON -DKLEIDIAI_ENABLE_CLANG_TIDY=ON -S . -B build/
+    - cmake -G Ninja -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=Release -DKAI_BUILD_TESTS=ON -DKAI_ENABLE_CLANG_TIDY=ON -S . -B build/
     - cmake --build ./build
 
 pre-commit-hooks:
@@ -86,7 +86,7 @@ test-linux-aarch64:
   dependencies:
     - build-clang
   script:
-    - ./build/kleidiai_test --gtest_filter=*:-*sme*
+    - ./build/kai_test --gtest_filter=*:-*sme*
 
 test-linux-aarch64-cov:
   extends:
@@ -96,7 +96,7 @@ test-linux-aarch64-cov:
   dependencies:
     - build-clang-cov
   script:
-    - ./build/kleidiai_test --gtest_filter=*:-*sme*
+    - ./build/kai_test --gtest_filter=*:-*sme*
     - mkdir -p build/coverage
     - gcovr --gcov-executable="llvm-cov gcov" --exclude-unreachable-branches --exclude=build --exclude=test --exclude-lines-by-pattern=".*KAI_(?:ASSERT|ASSUME|ERROR).*" --exclude-branches-by-pattern=".*KAI_(?:ASSERT|ASSUME).*" --json=build/coverage/linux-aarch64.json -j --root . build
   artifacts:
@@ -122,7 +122,7 @@ test-linux-aarch64-cov-fvp:
 
         cd '$PWD'
         mkdir -p artifacts
-        GCOV_PREFIX=artifacts ./build/kleidiai_test --gtest_filter=*sme* && echo 'FINISHED WITHOUT ERROR'
+        GCOV_PREFIX=artifacts ./build/kai_test --gtest_filter=*sme* && echo 'FINISHED WITHOUT ERROR'
         tar cf artifacts.tar -C artifacts .
         sync
 
@@ -131,7 +131,7 @@ test-linux-aarch64-cov-fvp:
         echo '=================================================='
         " >> startup
     - e2cp -O 0 -G 0 -P 755 startup linux-rootfs.img:/root/startup
-    - e2cp -a -O 0 -G 0 -P 755 build/kleidiai_test linux-rootfs.img:"$PWD/build/kleidiai_test"
+    - e2cp -a -O 0 -G 0 -P 755 build/kai_test linux-rootfs.img:"$PWD/build/kai_test"
     - >
       /opt/devtools/fvp_base_aemva/models/Linux64_armv8l_GCC-9.3/FVP_Base_RevC-2xAEMvA \
         -C cache_state_modelled=0 \
