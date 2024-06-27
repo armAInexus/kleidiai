@@ -67,13 +67,13 @@ set(KLEIDIAI_MIN_GNU_VERSION 11)
 
 if(CMAKE_C_COMPILER_ID STREQUAL "Clang")
     if(CMAKE_C_COMPILER_VERSION VERSION_LESS ${KLEIDIAI_MIN_CLANG_VERSION})
-        message(WARNING "KleidiAI: Using non-supported Clang version. Expected ${KLEIDIAI_MIN_CLANG_VERSION} or newer, Received ${CMAKE_C_COMPILER_VERSION} ")
+        message(WARNING "KleidiAI: Using non-supported Clang version. Expected ${KLEIDIAI_MIN_CLANG_VERSION} or newer, received ${CMAKE_C_COMPILER_VERSION} ")
     endif()
 endif()
 
 if(CMAKE_C_COMPILER_ID STREQUAL "GNU")
     if(CMAKE_C_COMPILER_VERSION VERSION_LESS ${KLEIDIAI_MIN_GNU_VERSION})
-    message(WARNING "KleidiAI: Using non-supported Clang version. Expected ${KLEIDIAI_MIN_GNU_VERSION} or newer, Received ${CMAKE_C_COMPILER_VERSION} ")
+        message(WARNING "KleidiAI: Using non-supported Clang version. Expected ${KLEIDIAI_MIN_GNU_VERSION} or newer, received ${CMAKE_C_COMPILER_VERSION} ")
     endif()
 endif()
 
@@ -99,36 +99,22 @@ set(KLEIDIAI_FILES_NEON_I8MM
     kai/ukernels/matmul/matmul_clamp_f32_qai8dxp_qsi4cxp/kai_matmul_clamp_f32_qai8dxp4x8_qsi4cxp8x8_8x8x32_neon_i8mm.c
 )
 
-set(KLEIDIAI_MICROKERNEL_SRCS ${KLEIDIAI_FILES_SCALAR})
+add_library(kleidiai)
+target_sources(kleidiai PRIVATE ${KLEIDIAI_FILES_SCALAR})
 
 # MSVC compiler does not support inline assembly for Arm® processors hence it cannot be used to compile the optimized
 # KleidiAI micro-kernels. It can however still be used to compile scalar routines.
 # https://learn.microsoft.com/en-us/cpp/assembler/inline/inline-assembler?view=msvc-170
 if((CMAKE_SYSTEM_PROCESSOR STREQUAL "aarch64" OR CMAKE_SYSTEM_PROCESSOR STREQUAL "arm64") AND NOT MSVC)
-    list(APPEND KLEIDIAI_MICROKERNEL_SRCS ${KLEIDIAI_FILES_NEON_I8MM})
-    list(APPEND KLEIDIAI_MICROKERNEL_SRCS ${KLEIDIAI_FILES_NEON_DOTPROD})
-    list(APPEND KLEIDIAI_MICROKERNEL_SRCS ${KLEIDIAI_FILES_NEON_FP16})
+    target_sources(kleidiai PRIVATE ${KLEIDIAI_FILES_NEON_FP16})
+    target_sources(kleidiai PRIVATE ${KLEIDIAI_FILES_NEON_I8MM})
+    target_sources(kleidiai PRIVATE ${KLEIDIAI_FILES_NEON_DOTPROD})
 
-    foreach(KLEIDIAI_SOURCE_FILE IN LISTS KLEIDIAI_FILES_SCALAR)
-        set_property(SOURCE ${KLEIDIAI_SOURCE_FILE} PROPERTY COMPILE_OPTIONS -march=armv8-a)
-    endforeach()
-
-    foreach(KLEIDIAI_SOURCE_FILE IN LISTS KLEIDIAI_FILES_NEON_FP16)
-        set_property(SOURCE ${KLEIDIAI_SOURCE_FILE} PROPERTY COMPILE_OPTIONS -march=armv8.2-a+fp16)
-    endforeach()
-
-    foreach(KLEIDIAI_SOURCE_FILE IN LISTS KLEIDIAI_FILES_NEON_DOTPROD)
-        set_property(SOURCE ${KLEIDIAI_SOURCE_FILE} PROPERTY COMPILE_OPTIONS -march=armv8.2-a+dotprod)
-    endforeach()
-
-    foreach(KLEIDIAI_SOURCE_FILE IN LISTS KLEIDIAI_FILES_NEON_I8MM)
-        set_property(SOURCE ${KLEIDIAI_SOURCE_FILE} PROPERTY COMPILE_OPTIONS -march=armv8.2-a+i8mm)
-    endforeach()
+    set_source_files_properties(${KLEIDIAI_FILES_SCALAR} PROPERTIES COMPILE_OPTIONS -march=armv8-a)
+    set_source_files_properties(${KLEIDIAI_FILES_NEON_FP16} PROPERTIES COMPILE_OPTIONS -march=armv8.2-a+fp16)
+    set_source_files_properties(${KLEIDIAI_FILES_NEON_DOTPROD} PROPERTIES COMPILE_OPTIONS -march=armv8.2-a+dotprod)
+    set_source_files_properties(${KLEIDIAI_FILES_NEON_I8MM} PROPERTIES COMPILE_OPTIONS -march=armv8.2-a+i8mm)
 endif()
-
-add_library(kleidiai
-    ${KLEIDIAI_MICROKERNEL_SRCS}
-)
 
 target_include_directories(kleidiai
     PUBLIC  .
