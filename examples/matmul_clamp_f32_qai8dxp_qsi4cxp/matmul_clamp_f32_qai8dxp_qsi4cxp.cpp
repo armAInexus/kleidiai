@@ -136,8 +136,8 @@ static void ref_quant_qa8dx_f32(size_t m, size_t k, const float* lhs_f32, int8_t
 
     const size_t lhs_qa8dx_stride = k;
 
-    for (size_t n_idx = 0; n_idx < m; ++n_idx) {
-        const float* src_ptr = lhs_f32 + n_idx * lhs_qa8dx_stride;
+    for (size_t m_idx = 0; m_idx < m; ++m_idx) {
+        const float* src_ptr = lhs_f32 + m_idx * lhs_qa8dx_stride;
 
         float max0 = -FLT_MAX;
         float min0 = FLT_MAX;
@@ -177,7 +177,7 @@ static void ref_quant_qa8dx_f32(size_t m, size_t k, const float* lhs_f32, int8_t
         // Round to nearest integer
         const int32_t nudged_zero_point0 = lrintf(zero_point0);
 
-        int8_t* dst_ptr = (int8_t*)lhs_qa8dx + n_idx * dst_stride;
+        int8_t* dst_ptr = (int8_t*)lhs_qa8dx + m_idx * dst_stride;
 
         // LHS offset at the beginning of the row
         *((float*)(dst_ptr)) = recip_scale0;
