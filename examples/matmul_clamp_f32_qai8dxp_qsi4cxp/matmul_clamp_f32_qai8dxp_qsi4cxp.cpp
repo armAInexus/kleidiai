@@ -3,13 +3,14 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 //
-#if 0  //! defined(__ARM_FEATURE_DOTPROD) && !defined(__ARM_FEATURE_MATMUL_INT8)
+#if !defined(__ARM_FEATURE_DOTPROD) && !defined(__ARM_FEATURE_MATMUL_INT8)
 #error "Dotprod and I8mm extensions required to compile this example"
 #else
 #include <cassert>
 #include <cfloat>
 #include <cmath>
 #include <cstdint>
+#include <cstring>
 #include <iostream>
 #include <string>
 
@@ -111,10 +112,15 @@ kai_matmul_ukernel_f32_qa8dxp_qs4cxp ukernel_variants[] = {
      kai_get_dst_size_matmul_clamp_f32_qai8dxp4x8_qsi4cxp8x8_8x8x32_neon_i8mm,
      kai_run_matmul_clamp_f32_qai8dxp4x8_qsi4cxp8x8_8x8x32_neon_i8mm,
      "matmul_clamp_f32_qai8dxp4x8_qsi4cxp8x8_8x8x32_neon_i8mm"},
+
 };
 
 // Number of micro-kernel variants stored in the array
 const size_t num_ukernel_variants = sizeof(ukernel_variants) / sizeof(ukernel_variants[0]);
+
+static size_t roundup(size_t a, size_t b) {
+    return ((a + b - 1) / b) * b;
+}
 
 static void fill_uniform_random(size_t num_rows, size_t num_cols, float* dst, size_t seed) {
     std::srand(seed);
@@ -125,73 +131,13 @@ static void fill_uniform_random(size_t num_rows, size_t num_cols, float* dst, si
     }
 }
 
-static void quant_qs4cx_f32(
-    size_t n, size_t k, rhs_format format, const float* rhs_f32, uint8_t* rhs_qs4cx, float* rhs_scales_f32) {
-    const size_t dst_k_step = format == rhs_format::nxk ? sizeof(int8_t) : n * sizeof(int8_t);
-
-    const size_t dst_n_step = format == rhs_format::nxk ? (k / 2) * sizeof(int8_t) : sizeof(int8_t);
-
-    for (size_t row_idx = 0; row_idx < n; ++row_idx) {
-        const float* src_ptr = rhs_f32 + row_idx * k;
-
-        float max0 = -FLT_MAX;
-        float min0 = FLT_MAX;
-
-        // Find min/max for each channel
-        for (size_t k_idx = 0; k_idx < k; ++k_idx) {
-            const float src0_0 = src_ptr[k_idx];
-
-            max0 = std::max(src0_0, max0);
-            min0 = std::min(src0_0, min0);
-        }
-
-        // Maximum/minimum int8 values
-        const float qmin = (float)INT4_MIN;
-        const float qmax = (float)INT4_MAX;
-
-        const float rmin0 = std::min(0.0f, min0);
-        const float rmax0 = std::max(0.0f, max0);
-
-        const float scale0 = rmin0 == rmax0 ? 1.f : (qmax - qmin) / (rmax0 - rmin0);
-
-        // Reciprocal to quantize
-        const float recip_scale0 = scale0 ? 1.0f / scale0 : 0.0f;
-
-        uint8_t* dst_ptr = (uint8_t*)rhs_qs4cx + row_idx * dst_n_step;
-
-        // Quantize the channels
-        for (size_t k_idx = 0; k_idx < k; k_idx += 2) {
-            const float src0_0 = src_ptr[k_idx + 0];
-            const float src0_1 = src_ptr[k_idx + 1];
-
-            // Scale the values
-            int32_t v0_s32 = (int32_t)(round(src0_0 * scale0));
-            int32_t v1_s32 = (int32_t)(round(src0_1 * scale0));
-
-            // Maximum/minimum int4 values
-            v0_s32 = std::max(v0_s32, INT4_MIN);
-            v0_s32 = std::min(v0_s32, INT4_MAX);
-            v1_s32 = std::max(v1_s32, INT4_MIN);
-            v1_s32 = std::min(v1_s32, INT4_MAX);
-
-            int32_t v0_u8 = (uint8_t)(v0_s32 + 8);
-            int32_t v1_u8 = (uint8_t)(v1_s32 + 8);
-
-            const uint8_t rhs_v0 = (v1_u8 << 4) | v0_u8;
-
-            dst_ptr[0] = rhs_v0;
-            dst_ptr += dst_k_step;
-        }
-
-        rhs_scales_f32[row_idx] = recip_scale0;
-    }
-};
-
 static void ref_quant_qa8dx_f32(size_t m, size_t k, const float* lhs_f32, int8_t* lhs_qa8dx) {
     const size_t dst_stride = (k * sizeof(int8_t) + sizeof(float) + sizeof(int32_t));
 
-    for (size_t row_idx = 0; row_idx < m; ++row_idx) {
-        const float* src_ptr = lhs_f32 + row_idx * k;
+    const size_t lhs_qa8dx_stride = k;
+
+    for (size_t n_idx = 0; n_idx < m; ++n_idx) {
+        const float* src_ptr = lhs_f32 + n_idx * lhs_qa8dx_stride;
 
         float max0 = -FLT_MAX;
         float min0 = FLT_MAX;
@@ -231,7 +177,7 @@ static void ref_quant_qa8dx_f32(size_t m, size_t k, const float* lhs_f32, int8_t
         // Round to nearest integer
         const int32_t nudged_zero_point0 = lrintf(zero_point0);
 
-        int8_t* dst_ptr = (int8_t*)lhs_qa8dx + row_idx * dst_stride;
+        int8_t* dst_ptr = (int8_t*)lhs_qa8dx + n_idx * dst_stride;
 
         // LHS offset at the beginning of the row
         *((float*)(dst_ptr)) = recip_scale0;
@@ -255,25 +201,151 @@ static void ref_quant_qa8dx_f32(size_t m, size_t k, const float* lhs_f32, int8_t
     }
 };
 
-static void ref_matmul_f32_qa8dx_qs4cx(
-    size_t m, size_t n, size_t k, rhs_format format, const int8_t* lhs_qa8dx, const uint8_t* rhs_qs4cx,
-    const float* rhs_scales_f32, float* dst_f32, float scalar_min, float scalar_max) {
+static void quant_nxk_qs4cx_f32(size_t n, size_t k, const float* rhs_f32, uint8_t* rhs_qs4cx, float* rhs_scales_f32) {
+    const size_t rhs_qs4cx_stride = (roundup(k, 2) / 2);
+
+    // Make sure the output is filled with zeros
+    std::memset(rhs_qs4cx, 0, n * rhs_qs4cx_stride);
+
+    for (size_t n_idx = 0; n_idx < n; ++n_idx) {
+        const float* src_ptr = rhs_f32 + n_idx * k;
+
+        float max0 = -FLT_MAX;
+        float min0 = FLT_MAX;
+
+        // Find min/max for each channel
+        for (size_t k_idx = 0; k_idx < k; ++k_idx) {
+            const float src0_0 = src_ptr[k_idx];
+
+            max0 = std::max(src0_0, max0);
+            min0 = std::min(src0_0, min0);
+        }
+
+        // Maximum/minimum int8 values
+        const float qmin = (float)INT4_MIN;
+        const float qmax = (float)INT4_MAX;
+
+        const float rmin0 = std::min(0.0f, min0);
+        const float rmax0 = std::max(0.0f, max0);
+
+        const float scale0 = rmin0 == rmax0 ? 1.f : (qmax - qmin) / (rmax0 - rmin0);
+
+        // Reciprocal to quantize
+        const float recip_scale0 = scale0 ? 1.0f / scale0 : 0.0f;
+
+        // Quantize the channels
+        for (size_t k_idx = 0; k_idx < k; ++k_idx) {
+            const float src0_0 = src_ptr[k_idx];
+
+            // Scale the values
+            int32_t v0_s32 = (int32_t)(round(src0_0 * scale0));
+
+            // Maximum/minimum int4 values
+            v0_s32 = std::max(v0_s32, INT4_MIN);
+            v0_s32 = std::min(v0_s32, INT4_MAX);
+
+            const uint8_t v0_u8 = (uint8_t)(v0_s32 + 8);
+
+            const size_t dst_addr = (k_idx / 2) + n_idx * rhs_qs4cx_stride;
+            uint8_t rhs_v0 = rhs_qs4cx[dst_addr];
+
+            if ((k_idx % 2) == 0) {
+                rhs_v0 |= v0_u8;
+            } else {
+                rhs_v0 |= (v0_u8 << 4);
+            }
+            rhs_qs4cx[dst_addr] = rhs_v0;
+        }
+
+        rhs_scales_f32[n_idx] = recip_scale0;
+    }
+};
+
+static void quant_kxn_qs4cx_f32(size_t n, size_t k, const float* rhs_f32, uint8_t* rhs_qs4cx, float* rhs_scales_f32) {
+    const size_t rhs_qs4cx_stride = (roundup(n, 2) / 2);
+
+    // Make sure the output is filled with zeros
+    std::memset(rhs_qs4cx, 0, k * rhs_qs4cx_stride);
+
+    for (size_t n_idx = 0; n_idx < n; ++n_idx) {
+        const float* src_ptr = rhs_f32 + n_idx * k;
+
+        float max0 = -FLT_MAX;
+        float min0 = FLT_MAX;
+
+        // Find min/max for each channel
+        for (size_t k_idx = 0; k_idx < k; ++k_idx) {
+            const float src0_0 = src_ptr[k_idx];
+
+            max0 = std::max(src0_0, max0);
+            min0 = std::min(src0_0, min0);
+        }
+
+        // Maximum/minimum int8 values
+        const float qmin = (float)INT4_MIN;
+        const float qmax = (float)INT4_MAX;
+
+        const float rmin0 = std::min(0.0f, min0);
+        const float rmax0 = std::max(0.0f, max0);
+
+        const float scale0 = rmin0 == rmax0 ? 1.f : (qmax - qmin) / (rmax0 - rmin0);
+
+        // Reciprocal to quantize
+        const float recip_scale0 = scale0 ? 1.0f / scale0 : 0.0f;
+
+        // Quantize the channels
+        for (size_t k_idx = 0; k_idx < k; ++k_idx) {
+            const float src0_0 = src_ptr[k_idx];
+
+            // Scale the values
+            int32_t v0_s32 = (int32_t)(round(src0_0 * scale0));
+
+            // Maximum/minimum int4 values
+            v0_s32 = std::max(v0_s32, INT4_MIN);
+            v0_s32 = std::min(v0_s32, INT4_MAX);
+
+            const uint8_t v0_u8 = (uint8_t)(v0_s32 + 8);
+
+            const size_t dst_addr = (n_idx / 2) + k_idx * rhs_qs4cx_stride;
+            uint8_t rhs_v0 = rhs_qs4cx[dst_addr];
+
+            if ((n_idx % 2) == 0) {
+                rhs_v0 |= v0_u8;
+            } else {
+                rhs_v0 |= (v0_u8 << 4);
+            }
+            rhs_qs4cx[dst_addr] = rhs_v0;
+        }
+
+        rhs_scales_f32[n_idx] = recip_scale0;
+    }
+};
+
+static void quant_qs4cx_f32(
+    size_t n, size_t k, rhs_format format, const float* rhs_f32, uint8_t* rhs_qs4cx, float* rhs_scales_f32) {
+    if (rhs_format::nxk == format) {
+        quant_nxk_qs4cx_f32(n, k, rhs_f32, rhs_qs4cx, rhs_scales_f32);
+    } else {
+        quant_kxn_qs4cx_f32(n, k, rhs_f32, rhs_qs4cx, rhs_scales_f32);
+    }
+};
+
+static void ref_matmul_mxn_mxk_nxk_f32_qa8dx_qs4cx(
+    size_t m, size_t n, size_t k, const int8_t* lhs_qa8dx, const uint8_t* rhs_qs4cx, const float* rhs_scales_f32,
+    float* dst_f32, float scalar_min, float scalar_max) {
     const size_t lhs_stride = k * sizeof(int8_t) + sizeof(float) + sizeof(int32_t);
 
-    const size_t lhs_k_step = sizeof(int8_t) * 2;
+    const size_t rhs_qs4cx_stride = (roundup(k, 2) / 2);
 
-    const size_t rhs_k_step = format == rhs_format::nxk ? sizeof(int8_t) : n * sizeof(int8_t);
+    for (size_t m_idx = 0; m_idx < m; ++m_idx) {
+        const int8_t* lhs_ptr_start = lhs_qa8dx + m_idx * lhs_stride;
 
-    const size_t rhs_n_step = format == rhs_format::nxk ? (k / 2) * sizeof(int8_t) : sizeof(int8_t);
-
-    for (size_t row_idx = 0; row_idx < m; ++row_idx) {
-        const int8_t* lhs_ptr_start = lhs_qa8dx + row_idx * lhs_stride;
-        for (size_t col_idx = 0; col_idx < n; ++col_idx) {
+        for (size_t n_idx = 0; n_idx < n; ++n_idx) {
             // Main f32 accumulator
             int32_t iacc = 0;
 
             const int8_t* lhs_ptr = lhs_ptr_start;
-            const uint8_t* rhs_ptr = rhs_qs4cx + col_idx * rhs_n_step;
+            const uint8_t* rhs_ptr = rhs_qs4cx + n_idx * rhs_qs4cx_stride;
 
             // Get the LHS quantization parameters stored at the
             // beginning of each row
@@ -283,29 +355,32 @@ static void ref_matmul_f32_qa8dx_qs4cx(
             const int32_t lhs_offset = *(const int32_t*)lhs_ptr;
             lhs_ptr += sizeof(int32_t);
 
-            for (size_t b = 0; b < k; b += 2) {
+            for (size_t k_idx = 0; k_idx < k; ++k_idx) {
                 // Get the LHS values
                 const int32_t lhs_v0 = (int32_t)lhs_ptr[0];
-                const int32_t lhs_v1 = (int32_t)lhs_ptr[1];
 
                 // Get the RHS values
                 const uint8_t rhs_byte = rhs_ptr[0];
 
                 // Unpack the RHS values
-                const int32_t rhs_v0 = (((int32_t)(rhs_byte & 0x0F)) - 8);
-                const int32_t rhs_v1 = (((int32_t)(rhs_byte >> 4)) - 8);
+                int32_t rhs_v0 = 0;
+                if ((k_idx % 2) == 0) {
+                    rhs_v0 = (((int32_t)(rhs_byte & 0x0F)) - 8);
+                } else {
+                    rhs_v0 = (((int32_t)(rhs_byte >> 4)) - 8);
+                }
 
                 iacc += lhs_v0 * rhs_v0;
-                iacc += lhs_v1 * rhs_v1;
                 iacc += lhs_offset * rhs_v0;
-                iacc += lhs_offset * rhs_v1;
 
-                lhs_ptr += lhs_k_step;
-                rhs_ptr += rhs_k_step;
+                lhs_ptr += 1;
+
+                // Increment only when k_idx is not a multiple of 2
+                rhs_ptr += k_idx % 2;
             }
 
             // Get the RHS scale
-            const float rhs_scale = rhs_scales_f32[col_idx];
+            const float rhs_scale = rhs_scales_f32[n_idx];
 
             float main_acc = iacc * rhs_scale;
 
@@ -318,6 +393,86 @@ static void ref_matmul_f32_qa8dx_qs4cx(
             dst_f32[0] = main_acc;
             dst_f32 += 1;
         }
+    }
+};
+
+static void ref_matmul_mxn_mxk_kxn_f32_qa8dx_qs4cx(
+    size_t m, size_t n, size_t k, const int8_t* lhs_qa8dx, const uint8_t* rhs_qs4cx, const float* rhs_scales_f32,
+    float* dst_f32, float scalar_min, float scalar_max) {
+    const size_t lhs_stride = k * sizeof(int8_t) + sizeof(float) + sizeof(int32_t);
+
+    const size_t rhs_qs4cx_stride = (roundup(n, 2) / 2);
+
+    for (size_t m_idx = 0; m_idx < m; ++m_idx) {
+        const int8_t* lhs_ptr_start = lhs_qa8dx + m_idx * lhs_stride;
+
+        for (size_t n_idx = 0; n_idx < n; ++n_idx) {
+            // Main f32 accumulator
+            int32_t iacc = 0;
+
+            const int8_t* lhs_ptr = lhs_ptr_start;
+            const uint8_t* rhs_ptr = rhs_qs4cx + (n_idx / 2);
+
+            // Get the LHS quantization parameters stored at the
+            // beginning of each row
+            const float lhs_scale = *(const float*)lhs_ptr;
+            lhs_ptr += sizeof(float);
+
+            const int32_t lhs_offset = *(const int32_t*)lhs_ptr;
+            lhs_ptr += sizeof(int32_t);
+
+            for (size_t k_idx = 0; k_idx < k; ++k_idx) {
+                // Get the LHS values
+                const int32_t lhs_v0 = (int32_t)lhs_ptr[0];
+
+                // Get the RHS values
+                const uint8_t rhs_byte = rhs_ptr[0];
+
+                // Unpack the RHS values
+                int32_t rhs_v0 = 0;
+                if ((n_idx % 2) == 0) {
+                    rhs_v0 = (((int32_t)(rhs_byte & 0x0F)) - 8);
+                } else {
+                    rhs_v0 = (((int32_t)(rhs_byte >> 4)) - 8);
+                }
+
+                iacc += lhs_v0 * rhs_v0;
+                iacc += lhs_offset * rhs_v0;
+
+                lhs_ptr += 1;
+
+                // Increment only when k_idx is not a multiple of 2
+                rhs_ptr += rhs_qs4cx_stride;
+            }
+
+            // Get the RHS scale
+            const float rhs_scale = rhs_scales_f32[n_idx];
+
+            float main_acc = iacc * rhs_scale;
+
+            main_acc = main_acc * lhs_scale;
+
+            // Clamp (min-max) operation
+            main_acc = std::max(main_acc, scalar_min);
+            main_acc = std::min(main_acc, scalar_max);
+
+            dst_f32[0] = main_acc;
+            dst_f32 += 1;
+        }
+    }
+};
+
+static void ref_matmul_f32_qa8dx_qs4cx(
+    size_t m, size_t n, size_t k, rhs_format format, const int8_t* lhs_qa8dx, const uint8_t* rhs_qs4cx,
+    const float* rhs_scales_f32, float* dst_f32, float scalar_min, float scalar_max) {
+    const size_t lhs_stride = k * sizeof(int8_t) + sizeof(float) + sizeof(int32_t);
+
+    if (rhs_format::nxk == format) {
+        ref_matmul_mxn_mxk_nxk_f32_qa8dx_qs4cx(
+            m, n, k, lhs_qa8dx, rhs_qs4cx, rhs_scales_f32, dst_f32, scalar_min, scalar_max);
+    } else {
+        ref_matmul_mxn_mxk_kxn_f32_qa8dx_qs4cx(
+            m, n, k, lhs_qa8dx, rhs_qs4cx, rhs_scales_f32, dst_f32, scalar_min, scalar_max);
     }
 };
 
@@ -336,9 +491,9 @@ static bool is_output_correct(size_t num_rows, size_t num_cols, float tolerance,
 }
 
 int main(int argc, char** argv) {
-    const size_t m = 13;
-    const size_t n = 17;
-    const size_t k = 18;
+    const size_t m = 17;
+    const size_t n = 7;
+    const size_t k = 21;
     const size_t seed_lhs = 4568;
     const size_t seed_rhs = seed_lhs + 4;
 
@@ -348,7 +503,8 @@ int main(int argc, char** argv) {
 
         const size_t lhs_native_size_f32 = m * k * sizeof(float);
         const size_t rhs_native_size_f32 = n * k * sizeof(float);
-        const size_t rhs_native_size_qs4cx = n * (k / 2) * sizeof(uint8_t);
+        const size_t rhs_native_size_qs4cx = format == rhs_format::nxk ? n * (roundup(k, 2) / 2) * sizeof(uint8_t)
+                                                                       : k * (roundup(n, 2) / 2) * sizeof(uint8_t);
         const size_t rhs_scales_size_f32 = n * sizeof(float);
 
         // Allocate the memory
@@ -466,6 +622,7 @@ int main(int argc, char** argv) {
             } else {
                 printf("TEST[%ld] = FAILED\n", idx_variant);
             }
+
             delete[] lhs_packed_mtx_qa8dx;
             delete[] rhs_packed_mtx_qs4cx;
             delete[] dst_act_mtx_f32;
