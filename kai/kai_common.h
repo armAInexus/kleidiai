@@ -18,11 +18,11 @@ extern "C" {
 //   * cppcoreguidelines-avoid-do-while: do-while is necessary for macros.
 //   * cppcoreguidelines-pro-type-vararg: use of variadic arguments in fprintf is expected.
 //   * cert-err33-c: checking the output of fflush and fprintf is not necessary for error reporting.
-#define KAI_ERROR(msg)              \
-    do {                            \
-        fflush(stdout);             \
-        fprintf(stderr, "%s", msg); \
-        exit(EXIT_FAILURE);         \
+#define KAI_ERROR(msg)                                        \
+    do {                                                      \
+        fflush(stdout);                                       \
+        fprintf(stderr, "%s:%d %s", __FILE__, __LINE__, msg); \
+        exit(EXIT_FAILURE);                                   \
     } while (0)
 
 #define KAI_ASSERT_MSG(cond, msg) \
