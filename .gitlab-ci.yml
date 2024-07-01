@@ -14,6 +14,7 @@ default:
   image: registry.gitlab.arm.com/kleidi/kleidiai/image:latest
   tags:
     - arm64
+  interruptible: true
 
 .standard-rules:
   rules:
@@ -27,7 +28,6 @@ workflow:
 build-clang:
   extends:
     - .standard-rules
-  interruptible: true
   stage: build
   script:
     - cmake -G Ninja -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=Release -DKLEIDIAI_BUILD_TESTS=ON -S . -B build/
@@ -35,12 +35,11 @@ build-clang:
   artifacts:
     expire_in: 1 day
     paths:
-      - "build/"
+      - build/kleidiai_test
 
 build-clang-cov:
   extends:
     - .standard-rules
-  interruptible: true
   stage: build
   script:
     - cmake -G Ninja -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=Release -DKLEIDIAI_BUILD_TESTS=ON -DCMAKE_C_FLAGS="--coverage" -DCMAKE_CXX_FLAGS="--coverage" -S . -B build
@@ -48,68 +47,80 @@ build-clang-cov:
   artifacts:
     expire_in: 1 day
     paths:
-      - "build"
+      - build
 
 build-gcc:
   extends:
     - .standard-rules
-  interruptible: true
   stage: build
   script:
     - cmake -G Ninja -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++ -DCMAKE_BUILD_TYPE=Release -DKLEIDIAI_BUILD_TESTS=ON -S . -B build/
     - cmake --build ./build
+  artifacts:
+    expire_in: 1 day
+    paths:
+      - build/kleidiai_test
 
 clang-tidy-checks:
   extends:
     - .standard-rules
-  interruptible: true
   stage: build
   script:
     - cmake -G Ninja -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=Release -DKLEIDIAI_BUILD_TESTS=ON -DKLEIDIAI_ENABLE_CLANG_TIDY=ON -S . -B build/
     - cmake --build ./build
 
 pre-commit-hooks:
+  variables:
+    PRE_COMMIT_HOME: '/cache/pre-commit'
   extends:
     - .standard-rules
-  interruptible: true
   stage: build
-  before_script:
-    - pre-commit install
+  cache:
+    - key: cache-pre-commit
+      paths:
+      - $PRE_COMMIT_HOME
   script:
     - pre-commit run --all-files
 
 test-linux-aarch64:
   extends:
     - .standard-rules
-  interruptible: true
   stage: test
-  dependencies:
+  needs:
     - build-clang
   script:
-    - ./build/kleidiai_test --gtest_filter=*:-*sme*
+    - ./build/kleidiai_test --gtest_filter=*:-*sme* --gtest_output=xml:kleidiai_test_results.xml
+  artifacts:
+    when: always
+    expire_in: 1 day
+    paths:
+      - kleidiai_test_results.xml
+    reports:
+      junit: kleidiai_test_results.xml
 
 test-linux-aarch64-cov:
   extends:
     - .standard-rules
-  interruptible: true
   stage: test
-  dependencies:
+  needs:
     - build-clang-cov
   script:
-    - ./build/kleidiai_test --gtest_filter=*:-*sme*
+    - ./build/kleidiai_test --gtest_filter=*:-*sme* --gtest_output=xml:kleidiai_test_results.xml
     - mkdir -p build/coverage
     - gcovr --gcov-executable="llvm-cov gcov" --exclude-unreachable-branches --exclude=build --exclude=test --exclude-lines-by-pattern=".*KAI_(?:ASSERT|ASSUME|ERROR).*" --exclude-branches-by-pattern=".*KAI_(?:ASSERT|ASSUME).*" --json=build/coverage/linux-aarch64.json -j --root . build
   artifacts:
     expire_in: 1 day
     paths:
-      - "build/coverage/linux-aarch64.json"
+      - build/coverage/linux-aarch64.json
+      - kleidiai_test_results.xml
+    reports:
+      junit: kleidiai_test_results.xml
 
 test-linux-aarch64-cov-fvp:
   extends:
     - .standard-rules
-  interruptible: true
   stage: test
-  dependencies:
+  needs:
     - build-clang-cov
   script:
     - tar xJf /opt/devtools/linux-rootfs.img.xz
@@ -121,9 +132,9 @@ test-linux-aarch64-cov-fvp:
         echo '=================================================='
 
         cd '$PWD'
-        mkdir -p artifacts
-        GCOV_PREFIX=artifacts ./build/kleidiai_test --gtest_filter=*sme* && echo 'FINISHED WITHOUT ERROR'
-        tar cf artifacts.tar -C artifacts .
+        mkdir -p artifacts/$CI_PROJECT_DIR
+        GCOV_PREFIX=artifacts ./build/kleidiai_test --gtest_filter=*sme*  --gtest_output=xml:artifacts/$CI_PROJECT_DIR/kleidiai_test_results.xml && echo 'FINISHED WITHOUT ERROR'
+        tar cvf artifacts.tar -C artifacts .
         sync
 
         echo '=================================================='
@@ -180,20 +191,22 @@ test-linux-aarch64-cov-fvp:
         |& tee output.txt
     - grep -q "FINISHED WITHOUT ERROR" output.txt
     - e2cp linux-rootfs.img:"$PWD/artifacts.tar" .
-    - tar xf artifacts.tar -C /
+    - tar xvf artifacts.tar -C /
     - mkdir -p build/coverage
     - gcovr --gcov-executable="llvm-cov gcov" --exclude-unreachable-branches --exclude=build --exclude=test --exclude-lines-by-pattern=".*KAI_(?:ASSERT|ASSUME|ERROR).*" --exclude-branches-by-pattern=".*KAI_(?:ASSERT|ASSUME).*" --json=build/coverage/linux-aarch64-fvp.json -j --root . build
   artifacts:
     expire_in: 1 day
     paths:
-      - "build/coverage/linux-aarch64-fvp.json"
+      - build/coverage/linux-aarch64-fvp.json
+      - kleidiai_test_results.xml
+    reports:
+      junit: kleidiai_test_results.xml
 
 coverage:
   extends:
     - .standard-rules
-  interruptible: true
   stage: analyze
-  dependencies:
+  needs:
     - test-linux-aarch64-cov
     - test-linux-aarch64-cov-fvp
   script:
@@ -212,9 +225,8 @@ coverage:
 pages:
   rules:
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
-  interruptible: true
   stage: deploy
-  dependencies:
+  needs:
     - coverage
   script:
     - pwd > /dev/null
