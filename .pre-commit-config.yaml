@@ -60,6 +60,13 @@ repos:
       - id: black
         stages: [ commit ]
         name: "Python: Black Formatter"
+  - repo: https://github.com/Warchant/pre-commit-buildifier
+    rev: c3e9e6cbb6cab5bb2ff8faf63c31a26b31271fed
+    hooks:
+      - id: buildifier
+        args: [ '--version=v7.1.2' ]
+        stages: [ commit ]
+        name: "Bazel: Buildifier"
   - repo: local
     hooks:
       - id: signed-off-checker
@@ -72,11 +79,3 @@ repos:
         description: Ensures that latest commit has been signed-off with `--signoff`.
         pass_filenames: false
         stages: [ commit, push ]
-      - id: bazel-buildifier
-        name: "Bazel BUILD formatter"
-        entry: buildifier
-        description: "Lint Bazel build files"
-        stages: [ commit ]
-        language: system
-        pass_filenames: true
-        types: [ bazel ]
