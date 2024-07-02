@@ -89,7 +89,7 @@ test-linux-aarch64:
   needs:
     - build-clang
   script:
-    - ./build/kleidiai_test --gtest_filter=*:-*sme* --gtest_output=xml:kleidiai_test_results.xml
+    - ./build/kleidiai_test --gtest_output=xml:kleidiai_test_results.xml
   artifacts:
     when: always
     expire_in: 1 day
@@ -105,7 +105,7 @@ test-linux-aarch64-cov:
   needs:
     - build-clang-cov
   script:
-    - ./build/kleidiai_test --gtest_filter=*:-*sme* --gtest_output=xml:kleidiai_test_results.xml
+    - ./build/kleidiai_test --gtest_output=xml:kleidiai_test_results.xml
     - mkdir -p build/coverage
     - gcovr --gcov-executable="llvm-cov gcov" --exclude-unreachable-branches --exclude=build --exclude=test --exclude-lines-by-pattern=".*KAI_(?:ASSERT|ASSUME|ERROR).*" --exclude-branches-by-pattern=".*KAI_(?:ASSERT|ASSUME).*" --json=build/coverage/linux-aarch64.json -j --root . build
   artifacts:
@@ -133,7 +133,7 @@ test-linux-aarch64-cov-fvp:
 
         cd '$PWD'
         mkdir -p artifacts/$CI_PROJECT_DIR
-        GCOV_PREFIX=artifacts ./build/kleidiai_test --gtest_filter=*sme*  --gtest_output=xml:artifacts/$CI_PROJECT_DIR/kleidiai_test_results.xml && echo 'FINISHED WITHOUT ERROR'
+        GCOV_PREFIX=artifacts ./build/kleidiai_test --gtest_output=xml:artifacts/$CI_PROJECT_DIR/kleidiai_test_results.xml && echo 'FINISHED WITHOUT ERROR'
         tar cvf artifacts.tar -C artifacts .
         sync
 

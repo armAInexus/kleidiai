@@ -22,6 +22,7 @@
 
 #include "kai/kai_common.h"
 #include "test/common/compare.hpp"
+#include "test/common/cpu_info.hpp"
 #include "test/common/data_format.hpp"
 #include "test/common/data_type.hpp"
 #include "test/common/float16.hpp"
@@ -53,6 +54,8 @@ struct MatMulMethod {
 
     bool lhs_transposed;  ///< LHS matrix is transposed.
     bool rhs_transposed;  ///< RHS matrix is transposed.
+
+    bool is_sme2;  ///< Test is a sme2 test
 
     DataFormat dst_format;         ///< Data format of the destination matrix.
     DataFormat lhs_format;         ///< Data format of the LHS matrix.
@@ -326,6 +329,8 @@ static const std::array matmul_methods = {
         .lhs_transposed = false,
         .rhs_transposed = false,
 
+        .is_sme2 = false,
+
         .dst_format = DataFormat(DataType::FP16),
         .lhs_format = DataFormat(DataType::FP16),
         .packed_lhs_format = DataFormat(DataType::UNKNOWN),
@@ -371,6 +376,8 @@ static const std::array matmul_methods = {
 
         .lhs_transposed = false,
         .rhs_transposed = false,
+
+        .is_sme2 = true,
 
         .dst_format = DataFormat(DataType::FP32),
         .lhs_format = DataFormat(DataType::FP32),
@@ -548,6 +555,10 @@ TEST_P(MatMulTest, PackedLhs) {
     const auto& data = test_data();
     const auto& method = matmul_methods.at(method_no);
 
+    if (method.is_sme2 && !cpu_has_sme2()) {
+        GTEST_SKIP();
+    }
+
     if (!method.is_pack_lhs_needed()) {
         GTEST_SKIP();
     }
@@ -594,6 +605,10 @@ TEST_P(MatMulTest, PackedRhs) {
     const auto& [method_no, info, portion] = GetParam();
     const auto& data = test_data();
     const auto& method = matmul_methods.at(method_no);
+
+    if (method.is_sme2 && !cpu_has_sme2()) {
+        GTEST_SKIP();
+    }
 
     if (!method.is_pack_rhs_needed()) {
         GTEST_SKIP();
@@ -661,6 +676,10 @@ TEST_P(MatMulTest, Output) {
     const auto& [method_no, info, portion] = GetParam();
     const auto& data = test_data();
     const auto& method = matmul_methods.at(method_no);
+
+    if (method.is_sme2 && !cpu_has_sme2()) {
+        GTEST_SKIP();
+    }
 
     if (!method.has_main_kernel()) {
         GTEST_SKIP();
