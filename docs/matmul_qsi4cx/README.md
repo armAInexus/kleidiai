@@ -109,7 +109,7 @@ Since the int4 matmul micro-kernel requires both the LHS and RHS to be packed, p
 
 ### Step 2
 
-Inside the `main()` function, declare and initizialize three variables with the **M**, **N**, and **K** dimensions:
+Inside the `main()` function, declare and initialize three variables with the **M**, **N**, and **K** dimensions:
 
 ```c
     const size_t m = 13;
@@ -162,8 +162,8 @@ Allocate the memory for the LHS and RHS packed matrices:
     const size_t sr = kai_get_sr_matmul_clamp_f32_qai8dxp4x8_qsi4cxp8x8_8x8x32_neon_i8mm();
 
     // Get the size in bytes for the packed matrices
-    const size_t lhs_packed_size = kai_get_lhs_packed_size_lhs_quant_pack_qai8dxp_f32(m, k, mr, kr);
-    const size_t rhs_packed_size = kai_get_rhs_packed_size_rhs_pack_nxk_qsi4cxp_qsu4cxs1s0(n, k, nr, kr);
+    const size_t lhs_packed_size = kai_get_lhs_packed_size_lhs_quant_pack_qai8dxp_f32(m, k, mr, kr, sr);
+    const size_t rhs_packed_size = kai_get_rhs_packed_size_rhs_pack_nxk_qsi4cxp_qsu4cxs1s0(n, k, nr, kr, sr);
 
     // Allocate the matrices
     uint8_t* lhs_packed_mtx_qa8dx = new uint8_t[lhs_packed_size];
@@ -262,8 +262,12 @@ include_directories(
 add_executable(matmul_clamp_f32_qai8dxp_qsi4cxp
     matmul_clamp_f32_qai8dxp_qsi4cxp.cpp
     ${MATMUL_PACK_PATH}/kai_rhs_pack_nxk_qsi4cxp_qsu4cxs1s0.c
+    ${MATMUL_PACK_PATH}/kai_rhs_pack_kxn_qsi4cxp_qsu4cxs1s0.c
     ${MATMUL_PACK_PATH}/kai_lhs_quant_pack_qai8dxp_f32.c
     ${MATMUL_PATH}/kai_matmul_clamp_f32_qai8dxp4x8_qsi4cxp8x8_8x8x32_neon_i8mm.c)
+
+# Compile with DotProd and I8MM features enabled
+target_compile_options(matmul_clamp_f32_qai8dxp_qsi4cxp PRIVATE -march=armv8.2-a+dotprod+i8mm)
 ```
 
 As you can see from the preceeding CMake script, we include the following directory paths:

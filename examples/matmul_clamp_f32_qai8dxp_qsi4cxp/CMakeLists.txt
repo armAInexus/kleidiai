@@ -21,6 +21,7 @@ include_directories(
 add_executable(matmul_clamp_f32_qai8dxp_qsi4cxp
     matmul_clamp_f32_qai8dxp_qsi4cxp.cpp
     ${MATMUL_PACK_PATH}/kai_rhs_pack_nxk_qsi4cxp_qsu4cxs1s0.c
+    ${MATMUL_PACK_PATH}/kai_rhs_pack_kxn_qsi4cxp_qsu4cxs1s0.c
     ${MATMUL_PACK_PATH}/kai_lhs_quant_pack_qai8dxp_f32.c
     ${MATMUL_PATH}/kai_matmul_clamp_f32_qai8dxp1x8_qsi4cxp4x8_1x4x32_neon_dotprod.c
     ${MATMUL_PATH}/kai_matmul_clamp_f32_qai8dxp1x8_qsi4cxp8x8_1x8x32_neon_dotprod.c
@@ -29,3 +30,5 @@ add_executable(matmul_clamp_f32_qai8dxp_qsi4cxp
     ${MATMUL_PATH}/kai_matmul_clamp_f32_qai8dxp4x8_qsi4cxp8x8_4x8x32_neon_i8mm.c
     ${MATMUL_PATH}/kai_matmul_clamp_f32_qai8dxp4x8_qsi4cxp8x8_8x8x32_neon_i8mm.c)
 
+# Compile with DotProd and I8MM features enabled
+target_compile_options(matmul_clamp_f32_qai8dxp_qsi4cxp PRIVATE -march=armv8.2-a+dotprod+i8mm)

@@ -23,6 +23,7 @@ static const size_t kai_num_bytes_multiplier_lhs = sizeof(float);
 static const size_t kai_num_bytes_multiplier_rhs = sizeof(float);
 static const size_t kai_num_bytes_offset_lhs = sizeof(int32_t);
 static const size_t kai_num_bytes_sum_rhs = sizeof(int32_t);
+static const size_t kai_num_bytes_bias = sizeof(float);
 
 inline static size_t kai_k_roundedup(size_t k) {
     // Since we pack a float and int32 value at the end of the row,
@@ -44,7 +45,7 @@ inline static size_t kai_rhs_packed_stride(size_t k) {
 
     KAI_ASSERT((k_internal % 2) == 0);
 
-    return kai_nr * ((k_internal / 2) + kai_num_bytes_multiplier_rhs + kai_num_bytes_sum_rhs);
+    return kai_nr * ((k_internal / 2) + kai_num_bytes_multiplier_rhs + kai_num_bytes_sum_rhs + kai_num_bytes_bias);
 }
 
 size_t kai_get_m_step_matmul_clamp_f32_qai8dxp1x8_qsi4cxp8x8_1x8x32_neon_dotprod(void) {
@@ -211,6 +212,12 @@ void kai_run_matmul_clamp_f32_qai8dxp1x8_qsi4cxp8x8_1x8x32_neon_dotprod(
             const float32x4_t rhs_scale1 = vld1q_f32((const float*)rhs_ptr);
             rhs_ptr += sizeof(float32x4_t);
 
+            // Load the bias
+            const float32x4_t bias0 = vld1q_f32((const float*)rhs_ptr);
+            rhs_ptr += sizeof(float32x4_t);
+            const float32x4_t bias1 = vld1q_f32((const float*)rhs_ptr);
+            rhs_ptr += sizeof(float32x4_t);
+
             // Add the reduction sum
             iacc0 = vmlaq_s32(iacc0, sum_n_s32_0, lhs_offset);
             iacc1 = vmlaq_s32(iacc1, sum_n_s32_1, lhs_offset);
@@ -220,6 +227,10 @@ void kai_run_matmul_clamp_f32_qai8dxp1x8_qsi4cxp8x8_1x8x32_neon_dotprod(
 
             main_acc0 = vmulq_f32(main_acc0, lhs_scale);
             main_acc1 = vmulq_f32(main_acc1, lhs_scale);
+
+            // Add the bias
+            main_acc0 = vaddq_f32(main_acc0, bias0);
+            main_acc1 = vaddq_f32(main_acc1, bias1);
 
             // clamp (min-max) operation
             const float32x4_t vmin_f32 = vdupq_n_f32(scalar_min);

@@ -5,9 +5,6 @@
 //
 #pragma once
 
-#ifndef __cplusplus
-#include <stdbool.h>
-#endif
 #include <stddef.h>
 
 #ifdef __cplusplus
@@ -17,7 +14,7 @@ extern "C" {
 /// Micro-kernel dependencies
 ///
 /// -# kai_lhs_quant_pack_qai8dxp_f32 to dynamically quantize and pack the LHS matrix
-/// -# kai_rhs_pack_nxk_qsi4cxp_qsu4cxs1s0 to pack the RHS matrix
+/// -# kai_rhs_pack_kxn_qsi4cxp_qsu4cxs1s0 OR kai_rhs_pack_nxk_qsi4cxp_qsu4cxs1s0 to pack the RHS matrix
 
 /// --------------------------------------------------
 
