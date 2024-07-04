@@ -193,10 +193,6 @@ KleidiAI offers performance-critical operators for ML, like matrix multiplicatio
 
 <em>The micro-kernel does not use any internal threading mechanism</em>. However, the micro-kernel's API is designed to allow the computation to be carried out only on specific areas of the output tensor. Therefore, this mechanism is sufficient to split the workload on parallel threads. More information on dispatching the micro-kernels among different threads will be available soon.
 
-<h1> How to contribute </h1>
-
-KleidiAI is not currently accepting contributions during the bring up phase.
-
 <h1> License </h1>
 
 [Apache-2.0](LICENSES/Apache-2.0.txt).
