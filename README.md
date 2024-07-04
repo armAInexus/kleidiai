@@ -164,6 +164,10 @@ Some of the data types currently supported with the KleidiAI library are the fol
 </tr>
 </table>
 
+<h1> Support </h1>
+
+Please raise a [GitLab Issue](https://gitlab.arm.com/kleidi/kleidiai/-/issues/new) for technical support.
+
 <h1> Frequently Asked Questions (FAQ) </h1>
 
 <h2> What is the difference between the Compute Library for the Arm® Architecture (ACL) and KleidiAI? </h2>
