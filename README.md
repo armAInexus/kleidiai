@@ -164,6 +164,11 @@ Some of the data types currently supported with the KleidiAI library are the fol
 </tr>
 </table>
 
+<h1> Release Cadence </h1>
+The release is a tagged version of the source code.
+After the first official release (v0.1.0), releases will be made at least once every 3 months. The goal is a predictable and shorter time span between the releases. Until that point is
+achieved, please refer to the CHANGELOG.md to get information on the latest released versions.
+
 <h1> Support </h1>
 
 Please raise a [GitLab Issue](https://gitlab.arm.com/kleidi/kleidiai/-/issues/new) for technical support.
