@@ -13,12 +13,12 @@ KleidiAI follows the [Semantic Versioning](https://semver.org/) specification fo
 The first release of KleidiAI includes:
 
 - Micro-kernels to compute the matrix multiplication of:
-  - Dynamically quantized 8-bit integer activations (QAI8DX) and quantized 4-bit integer weights (QSI4CX) and the
+  - Dynamically quantized 8-bit integer (QAI8DX) activations and quantized 4-bit integer (QSI4CX) weights and the
     accumulation of the result into a single-precision (F32) output, optimized for Arm® Neon™ technology.
   - Half precision floating-point (F16) activations and weights and the accumulation of the result into an F16 output,
     optimized for Neon technology.
   - F32 activations and weights and the accumulation of the result into an F32 output, optimized for SME2 technology.
-- Tensor packing routines to prepare the activations and weights for input to the above matrix multiplication
+- Tensor packing micro-kernels to prepare the activations and weights for input to the above matrix multiplication
   micro-kernels.
 - Examples and documentation demonstrating the usage of the 4-bit integer and 16-bit floating point matrix
   multiplication micro-kernels.
