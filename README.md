@@ -164,6 +164,47 @@ Some of the data types currently supported with the KleidiAI library are the fol
 </tr>
 </table>
 
+<h1> How to build </h1>
+
+<h2> Prerequisites </h2>
+
+KleidiAI requires the following dependencies, obtainable via your preferred package manager, to be installed and available on your system to be able to build the project.
+
+- `build-essential`
+- `cmake >= 3.18`
+
+In addition, you may choose to use the following toolchains:
+
+- (Optional) `Arm GNU toolchain` available to download from the [Arm Developer](https://developer.arm.com/downloads/-/arm-gnu-toolchain-downloads) website.
+- (Optional) `Android NDK` available to download from the [Android Developer](https://developer.android.com/ndk/downloads/index.html) website.
+
+<h2> Compile natively on an Arm®-based system </h2>
+
+You can quickly compile KleidiAI on your system with an Arm® processor by using the following commands:
+
+```shell
+cmake -DCMAKE_BUILD_TYPE=Release -S . -B build/
+cmake --build ./build
+```
+
+<h2> Cross-compile to Android™ </h2>
+
+Cross-compiling for Android systems requires the Android NDK toolset. The downloaded NDK contains the CMake toolchain file necessary for cross-compiling the project and must be provided to CMake with the `-DCMAKE_TOOLCHAIN_FILE` option.
+
+```shell
+cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE=$NDK/build/cmake/android.toolchain.cmake -DANDROID_ABI=arm64-v8a -S . -B build/
+cmake --build ./build
+```
+
+<h2> Cross-compile to Linux® </h2>
+
+The Arm GNU toolchain can be used to cross-compile to a Linux system with an Arm® processor like a Raspberry Pi from an x86_64 Linux host machine. Ensure the toolchain is available on your PATH and provide to CMake the Arm GNU Toolchain CMakefile found in `cmake/toolchains` directory with the `-DCMAKE_TOOLCHAIN_FILE` option.
+
+```shell
+cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE=cmake/toolchains/aarch64-none-linux-gnu.toolchain.cmake -S . -B build/
+cmake --build ./build
+```
+
 <h1> Release Cadence </h1>
 The release is a tagged version of the source code.
 After the first official release (v0.1.0), releases will be made at least once every 3 months. The goal is a predictable and shorter time span between the releases. Until that point is
