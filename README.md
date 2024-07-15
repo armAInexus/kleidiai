@@ -12,7 +12,7 @@ These routines are tuned to exploit the capabilities of specific Arm® hardware 
 
 The KleidiAI library has been designed for ease of adoption into C or C++ machine learning (ML) and AI frameworks. Specifically, developers looking to incorporate specific micro-kernels into their projects can only include the corresponding <strong>.c</strong> and <strong>.h</strong> files associated with those micro-kernels and a common header file.
 
-> ⚠️ Since the project is currently in an experimental phase and actively evolving, it is essential to note that API modifications, including function name changes, and feature enhancements may occur without advance notice. The development team is committed to refining the library to meet production standards.
+> ⚠️ The project has not hit a 1.x.y release yet and it is essential to note that API modifications, including function name changes, and feature enhancements may occur without advance notice.
 
 <h1> Who is this library for? </h1>
 
