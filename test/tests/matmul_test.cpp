@@ -428,8 +428,8 @@ static const std::array matmul_methods = {
         .fn_get_dst_offset = kai_get_dst_offset_matmul_clamp_f32_f32_f32pbiasf32_6x8_neon_mla,
         .fn_get_dst_size = kai_get_dst_size_matmul_clamp_f32_f32_f32pbiasf32_6x8_neon_mla,
 
-        .fn_matmul_f32_f32_f32p = kai_run_matmul_clamp_f32_f32_f32pbiasf32_6x8_neon_mla,
         .fn_matmul_f16_f16_f16p = nullptr,
+        .fn_matmul_f32_f32_f32p = kai_run_matmul_clamp_f32_f32_f32pbiasf32_6x8_neon_mla,
         .fn_matmul_f32_f32p_f32p = nullptr,
     },
 
