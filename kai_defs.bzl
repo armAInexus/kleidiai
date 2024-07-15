@@ -94,23 +94,41 @@ def kai_cxxopts(ua_variant):
     })
 
 def kai_c_library(name, **kwargs):
+    """C native cc_library wrapper with custom parameters and defaults
+
+    Args:
+        name (string): name of target library
+        **kwargs (dict): other arguments like srcs, hdrs, deps
+    """
+    kwargs["copts"] = kwargs.get("copts", []) + kai_copts(kwargs.get("cpu_uarch", kai_cpu_scalar()))
+    kwargs["deps"] = ["//:common"] + kwargs.get("deps", [])
+    kwargs["linkstatic"] = kwargs.get("linkstatic", True)
+
+    # Remove custom cpu_uarch paramter before passing it to cc_library
+    if "cpu_uarch" in kwargs:
+        kwargs.pop("cpu_uarch")
+
     native.cc_library(
         name = name,
-        srcs = kwargs.get("srcs", []),
-        hdrs = kwargs.get("hdrs", []),
-        deps = ["//:common"] + kwargs.get("deps", []),
-        visibility = kwargs.get("visibility", None),
-        copts = kwargs.get("copts", []) + kai_copts(kwargs.get("cpu_uarch", kai_cpu_scalar())),
-        linkstatic = kwargs.get("linkstatic", True),
+        **kwargs
     )
 
 def kai_cxx_library(name, **kwargs):
+    """C++ native cc_library wrapper with custom parameters and defaults
+
+    Args:
+        name (string): name of target library
+        **kwargs (dict): other arguments like srcs, hdrs, deps
+    """
+    kwargs["copts"] = kwargs.get("copts", []) + kai_cxxopts(kwargs.get("cpu_uarch", kai_cpu_scalar()))
+    kwargs["deps"] = ["//:common"] + kwargs.get("deps", [])
+    kwargs["linkstatic"] = kwargs.get("linkstatic", True)
+
+    # Remove custom cpu_uarch paramter before passing it to cc_library
+    if "cpu_uarch" in kwargs:
+        kwargs.pop("cpu_uarch")
+
     native.cc_library(
         name = name,
-        srcs = kwargs.get("srcs", []),
-        hdrs = kwargs.get("hdrs", []),
-        deps = ["//:common"] + kwargs.get("deps", []),
-        visibility = kwargs.get("visibility", None),
-        copts = kwargs.get("copts", []) + kai_cxxopts(kwargs.get("cpu_uarch", kai_cpu_scalar())),
-        linkstatic = kwargs.get("linkstatic", True),
+        **kwargs
     )
