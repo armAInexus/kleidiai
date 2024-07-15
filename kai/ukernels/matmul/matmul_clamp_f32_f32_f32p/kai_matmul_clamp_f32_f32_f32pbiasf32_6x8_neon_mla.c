@@ -11,7 +11,6 @@
 #include <math.h>
 #include <stddef.h>
 #include <stdint.h>
-#include <stdio.h>
 
 #include "kai/kai_common.h"
 
@@ -109,10 +108,6 @@ void kai_run_matmul_clamp_f32_f32_f32pbiasf32_6x8_neon_mla(
     flags |= 0x2;
     ka.maxval = clamp_max;
     ka.minval = clamp_min;
-
-    printf(
-        "*******F32************* N: %zu , ka.output_offset: %zu, input_offset: %zu m:%zu, n:%zu \n", ka.N,
-        ka.output_offset, ka.input_offset, m, n);
 
     __asm__ __volatile__(
         "1:"  // Row loop
