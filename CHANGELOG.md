@@ -8,7 +8,7 @@
 
 KleidiAI follows the [Semantic Versioning](https://semver.org/) specification for releases.
 
-## 0.1.0 - not yet released
+## v0.1.0
 
 The first release of KleidiAI includes:
 
@@ -23,3 +23,4 @@ The first release of KleidiAI includes:
 - Examples and documentation demonstrating the usage of the 4-bit integer and 16-bit floating point matrix
   multiplication micro-kernels.
 - Testing suite.
+- CMake and Bazel build system for micro kernels.
