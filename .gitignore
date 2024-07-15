@@ -92,6 +92,7 @@ _deps
 # Build directory
 cmake-build-*/
 build/
+bazel-*
 
 ### Debug files
 *.dSYM/

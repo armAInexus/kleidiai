@@ -150,6 +150,7 @@ if(KLEIDIAI_BUILD_TESTS)
         test/common/compare.cpp
         test/common/matrix_portion.cpp
         test/common/rect.cpp
+        test/common/round.cpp
         test/common/bfloat16.cpp
         test/common/float16.cpp
         test/common/cpu_info.cpp
@@ -161,7 +162,6 @@ if(KLEIDIAI_BUILD_TESTS)
         test/reference/pack.cpp
         test/reference/quantize.cpp
         test/reference/reduce.cpp
-        test/reference/round.cpp
         test/reference/transpose.cpp
         test/reference/cast.cpp
     )

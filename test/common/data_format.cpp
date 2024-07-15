@@ -11,7 +11,7 @@
 
 #include "kai/kai_common.h"
 #include "test/common/data_type.hpp"
-#include "test/reference/round.hpp"
+#include "test/common/round.hpp"
 
 namespace kai::test {
 

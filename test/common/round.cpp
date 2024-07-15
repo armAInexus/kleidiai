@@ -4,7 +4,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-#include "test/reference/round.hpp"
+#include "test/common/round.hpp"
 
 #include <cstddef>
 #include <cstdint>

@@ -17,8 +17,8 @@
 #include "kai/kai_common.h"
 #include "test/common/data_format.hpp"
 #include "test/common/data_type.hpp"
+#include "test/common/round.hpp"
 #include "test/reference/quantize.hpp"
-#include "test/reference/round.hpp"
 
 namespace kai::test {
 
