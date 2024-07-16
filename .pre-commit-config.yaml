@@ -60,13 +60,15 @@ repos:
       - id: black
         stages: [ commit ]
         name: "Python: Black Formatter"
-  - repo: https://github.com/Warchant/pre-commit-buildifier
-    rev: c3e9e6cbb6cab5bb2ff8faf63c31a26b31271fed
+  - repo: https://github.com/keith/pre-commit-buildifier
+    rev: 5595ecae0b38f9450b7dddf00591c8591a9939bc
     hooks:
       - id: buildifier
-        args: [ '--version=v7.1.2', '--path' ]
+        name: "Bazel: Buildifier (fix)"
         stages: [ commit ]
-        name: "Bazel: Buildifier"
+      - id: buildifier-lint
+        name: "Bazel: Buildifier (lint)"
+        stages: [ commit ]
   - repo: local
     hooks:
       - id: signed-off-checker
