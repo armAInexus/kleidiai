@@ -54,22 +54,6 @@ void kai_run_rhs_pack_kxn_f32p8x1biasf32_f32_f32_neon(
     KAI_ASSUME(extra_bytes == 0);
     KAI_ASSUME(params == NULL);
 
-    printf(
-        "n:%zu, k:%zu, nr:%zu, kr:%zu, sr:%zu, rhs_stride:%zu, extra_bytes:%zu \n", n, k, nr, kr, sr, rhs_stride,
-        extra_bytes);
-
-    // float * rhs_f = (float*)rhs;
-    //     float *rhs_p = (float*) rhs_packed;
-
-    // for (size_t i = 0; i < n; i++)
-    // {
-    //     for (size_t j = 0; j < k; j++)
-    //     {
-    //         printf("%.1f ",rhs_f[i*k + j]);
-    //     }
-    //     printf("\n");
-    // }
-
     size_t height = k;
     const size_t width = n;
     const void* in = rhs;
@@ -237,17 +221,6 @@ void kai_run_rhs_pack_kxn_f32p8x1biasf32_f32_f32_neon(
         : [in_stride] "r"(in_stride), [out_stride] "r"(out_stride), [width] "r"(width)
         : "cc", "memory", "v16", "v17", "v18", "v19", "v20", "v21", "v22", "v23", "x20", "x21", "x22", "x23", "x24",
           "x25");
-
-    // printf("Post pack \n");
-
-    // for (size_t i = 0; i < 6; i++)
-    // {
-    //     for (size_t j = 0; j < kai_nr + n ; j++)
-    //     {
-    //         printf("%.1f ",rhs_p[i*(n + kai_nr) + j]);
-    //     }
-    //     printf("\n");
-    // }
 }
 
 #endif  // Architectural features check.
