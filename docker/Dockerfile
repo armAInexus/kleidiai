@@ -31,7 +31,9 @@ RUN apt-get update  \
     bison \
     bc \
     libssl-dev \
-    genext2fs
+    genext2fs \
+    curl
+
 
 RUN mkdir -p /opt/devtools
 WORKDIR /opt/devtools
