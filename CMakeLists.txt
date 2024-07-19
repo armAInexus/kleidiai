@@ -85,7 +85,7 @@ set(KLEIDIAI_FILES_NEON_FP16
     kai/ukernels/matmul/matmul_clamp_f16_f16_f16p/kai_matmul_clamp_f16_f16_f16p16x1biasf16_6x16x8_neon_mla.c
 )
 
-set(KLEIDIAI_FILES_NEON_FP32
+set(KLEIDIAI_FILES_NEON
     kai/ukernels/matmul/pack/kai_rhs_pack_kxn_f32p8x1biasf32_f32_f32_neon.c
     kai/ukernels/matmul/matmul_clamp_f32_f32_f32p/kai_matmul_clamp_f32_f32_f32pbiasf32_6x8_neon_mla.c
 )
@@ -121,7 +121,7 @@ target_sources(kleidiai PRIVATE ${KLEIDIAI_FILES_SCALAR})
 # https://learn.microsoft.com/en-us/cpp/assembler/inline/inline-assembler?view=msvc-170
 #
 if((CMAKE_SYSTEM_PROCESSOR STREQUAL "aarch64" OR CMAKE_SYSTEM_PROCESSOR STREQUAL "arm64") AND NOT MSVC)
-    target_sources(kleidiai PRIVATE ${KLEIDIAI_FILES_NEON_FP32})
+    target_sources(kleidiai PRIVATE ${KLEIDIAI_FILES_NEON})
     target_sources(kleidiai PRIVATE ${KLEIDIAI_FILES_NEON_FP16})
     target_sources(kleidiai PRIVATE ${KLEIDIAI_FILES_NEON_DOTPROD})
     target_sources(kleidiai PRIVATE ${KLEIDIAI_FILES_NEON_I8MM})
@@ -129,7 +129,7 @@ if((CMAKE_SYSTEM_PROCESSOR STREQUAL "aarch64" OR CMAKE_SYSTEM_PROCESSOR STREQUAL
     target_sources(kleidiai PRIVATE ${KLEIDIAI_FILES_SME2})
 
     set_source_files_properties(${KLEIDIAI_FILES_SCALAR}       PROPERTIES COMPILE_OPTIONS -march=armv8-a)
-    set_source_files_properties(${KLEIDIAI_FILES_NEON_FP32}    PROPERTIES COMPILE_OPTIONS -march=armv8.2-a)
+    set_source_files_properties(${KLEIDIAI_FILES_NEON}         PROPERTIES COMPILE_OPTIONS -march=armv8.2-a)
     set_source_files_properties(${KLEIDIAI_FILES_NEON_FP16}    PROPERTIES COMPILE_OPTIONS -march=armv8.2-a+fp16)
     set_source_files_properties(${KLEIDIAI_FILES_NEON_DOTPROD} PROPERTIES COMPILE_OPTIONS -march=armv8.2-a+dotprod)
     set_source_files_properties(${KLEIDIAI_FILES_NEON_I8MM}    PROPERTIES COMPILE_OPTIONS -march=armv8.2-a+i8mm)
