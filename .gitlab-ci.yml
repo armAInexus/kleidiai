@@ -49,6 +49,18 @@ build-clang-cov:
     paths:
       - build
 
+build-clang-sanitizer:
+  extends:
+    - .standard-rules
+  stage: build
+  script:
+    - cmake -G Ninja -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=Release -DKLEIDIAI_BUILD_TESTS=ON -DCMAKE_C_FLAGS="-fsanitize=address" -DCMAKE_CXX_FLAGS="-fsanitize=address" -S . -B build
+    - cmake --build ./build
+  artifacts:
+    expire_in: 1 day
+    paths:
+      - build
+
 build-gcc:
   extends:
     - .standard-rules
@@ -153,6 +165,21 @@ test-linux-aarch64-cov:
     expire_in: 1 day
     paths:
       - build/coverage/linux-aarch64.json
+      - kleidiai_test_results.xml
+    reports:
+      junit: kleidiai_test_results.xml
+
+test-linux-aarch64-sanitizer:
+  extends:
+    - .standard-rules
+  stage: test
+  needs:
+    - build-clang-sanitizer
+  script:
+    - ./build/kleidiai_test --gtest_output=xml:kleidiai_test_results.xml
+  artifacts:
+    expire_in: 1 day
+    paths:
       - kleidiai_test_results.xml
     reports:
       junit: kleidiai_test_results.xml
