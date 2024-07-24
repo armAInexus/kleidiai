@@ -6,6 +6,10 @@
 
 FROM ubuntu:24.04
 
+# These arguments are required to support multi-arch images via same Dockerfile
+ARG TARGETARCH
+ARG BUILDARCH
+
 RUN apt-get update  \
     && DEBIAN_FRONTEND=noninteractive apt-get -y --no-install-recommends install \
     build-essential \
@@ -32,8 +36,8 @@ RUN apt-get update  \
     bc \
     libssl-dev \
     genext2fs \
-    curl
-
+    curl \
+    unzip
 
 RUN mkdir -p /opt/devtools
 WORKDIR /opt/devtools
@@ -43,9 +47,10 @@ WORKDIR /opt/devtools
 # =============================================================================
 
 # Downloads the latest Fixed Virtual Platform.
-RUN mkdir FVP_Base_RevC-2xAEMvA_11.25_15_Linux64_armv8l && \
-    wget -O- "https://developer.arm.com/-/media/Files/downloads/ecosystem-models/FM_11_25/FVP_Base_RevC-2xAEMvA_11.25_15_Linux64_armv8l.tgz" | tar xz -C FVP_Base_RevC-2xAEMvA_11.25_15_Linux64_armv8l
-RUN ln -s /opt/devtools/FVP_Base_RevC-2xAEMvA_11.25_15_Linux64_armv8l/Base_RevC_AEMvA_pkg /opt/devtools/fvp_base_aemva
+RUN export ARCH_SUFFIX=$(test "${TARGETARCH}" = "arm64" && echo -n "_armv8l") && \
+    mkdir FVP_Base_RevC-2xAEMvA_11.25_15_Linux64${ARCH_SUFFIX} && \
+    ln -s /opt/devtools/FVP_Base_RevC-2xAEMvA_11.25_15_Linux64${ARCH_SUFFIX}/Base_RevC_AEMvA_pkg /opt/devtools/fvp_base_aemva && \
+    wget -O- "https://developer.arm.com/-/media/Files/downloads/ecosystem-models/FM_11_25/FVP_Base_RevC-2xAEMvA_11.25_15_Linux64${ARCH_SUFFIX}.tgz" | tar xz -C FVP_Base_RevC-2xAEMvA_11.25_15_Linux64${ARCH_SUFFIX}
 
 # Creates the root filesystem.
 RUN wget "https://cdimage.ubuntu.com/ubuntu-base/releases/24.04/release/ubuntu-base-24.04-base-arm64.tar.gz" && \
@@ -56,25 +61,31 @@ RUN wget "https://cdimage.ubuntu.com/ubuntu-base/releases/24.04/release/ubuntu-b
 # Compiles the latest Linux kernel and bootloader.
 COPY build_linux_bootloader.sh .
 RUN ./build_linux_bootloader.sh && \
-    rm ./build_linux_bootloader.sh
+    rm build_linux_bootloader.sh
 
 WORKDIR /
 
 ENV XDG_CACHE_HOME=/cache
 
 RUN mkdir -p ${XDG_CACHE_HOME} && \
-    wget "https://github.com/bazelbuild/bazelisk/releases/download/v1.20.0/bazelisk-linux-$(dpkg --print-architecture)" -O /usr/bin/bazelisk && \
+    wget "https://github.com/bazelbuild/bazelisk/releases/download/v1.20.0/bazelisk-linux-${TARGETARCH}" -O /usr/bin/bazelisk && \
     chmod a+x /usr/bin/bazelisk && \
     bazelisk && \
     chmod -R a+rw ${XDG_CACHE_HOME}
 
 ARG BAZEL_BUILD_TOOLS_VER=v7.1.2
 
-RUN wget "https://github.com/bazelbuild/buildtools/releases/download/${BAZEL_BUILD_TOOLS_VER}/buildifier-linux-$(dpkg --print-architecture)" -O /usr/bin/buildifier && \
-    chmod a+x /usr/bin/buildifier
+RUN wget "https://github.com/bazelbuild/buildtools/releases/download/${BAZEL_BUILD_TOOLS_VER}/buildifier-linux-${TARGETARCH}" -O /usr/bin/buildifier && \
+    wget "https://github.com/bazelbuild/buildtools/releases/download/${BAZEL_BUILD_TOOLS_VER}/buildozer-linux-${TARGETARCH}" -O /usr/bin/buildozer && \
+    wget "https://github.com/bazelbuild/buildtools/releases/download/${BAZEL_BUILD_TOOLS_VER}/unused_deps-linux-${TARGETARCH}" -O /usr/bin/unused_deps && \
+    chmod a+x /usr/bin/buildifier /usr/bin/buildozer /usr/bin/unused_deps
 
-RUN wget "https://github.com/bazelbuild/buildtools/releases/download/${BAZEL_BUILD_TOOLS_VER}/buildozer-linux-$(dpkg --print-architecture)" -O /usr/bin/buildozer && \
-    chmod a+x /usr/bin/buildozer
-
-RUN wget "https://github.com/bazelbuild/buildtools/releases/download/${BAZEL_BUILD_TOOLS_VER}/unused_deps-linux-$(dpkg --print-architecture)" -O /usr/bin/unused_deps && \
-    chmod a+x /usr/bin/unused_deps
+# Android NDK for amd64 only
+ARG NDK_VERSION=r25c
+RUN if [ "${TARGETARCH}" = "amd64" ] ; then \
+        wget "https://dl.google.com/android/repository/android-ndk-${NDK_VERSION}-linux.zip" && \
+        unzip android-ndk-${NDK_VERSION}-linux.zip -d /opt/devtools/ && \
+        rm -f android-ndk-${NDK_VERSION}-linux.zip && \
+        ln -s /opt/devtools/android-ndk-${NDK_VERSION} /opt/devtools/android-ndk; \
+    fi
+ENV ANDROID_NDK=/opt/devtools/android-ndk
