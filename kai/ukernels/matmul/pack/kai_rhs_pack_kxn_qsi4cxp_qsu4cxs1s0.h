@@ -46,12 +46,11 @@ size_t kai_get_rhs_offset_rhs_pack_kxn_qsi4cxp_qsu4cxs1s0(size_t n_idx, size_t r
 /// for n = 0; n < N; n+=nr
 ///    rhs_packed_offset = n * kai_get_rhs_packed_stride_rhs_pack_kxn_qsi4cxp_qsu4cxs1s0()
 /// @param[in] k     In the RHS matrix (not packed), K is the number of rows.
-/// @param[in] nr    The number of columns written by the matmul micro-kernel.
 /// @param[in] kr    The number of columns loaded in the single inner most loop of the matmul micro-kernel.
 /// @param[in] sr    The number of kr splits. It can be 1 (no splits) up to kr.
 ///
 /// @return the stride in bytes to the packed RHS matrix
-size_t kai_get_rhs_packed_stride_rhs_pack_kxn_qsi4cxp_qsu4cxs1s0(size_t k, size_t nr, size_t kr, size_t sr);
+size_t kai_get_rhs_packed_stride_rhs_pack_kxn_qsi4cxp_qsu4cxs1s0(size_t k, size_t kr, size_t sr);
 
 /// Gets the offset in bytes for the packed RHS matrix, which contains the packed 4-bit quantized symmetric per-channel
 /// (qsu4cx) values.
