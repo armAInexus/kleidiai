@@ -40,6 +40,10 @@ size_t kai_get_rhs_offset_rhs_pack_nxk_qsi4cxp_qsu4cxs1s0(size_t n_idx, size_t r
 
 /// Get the row stride in bytes to the packed RHS matrix
 ///
+/// This stride can be used to calculate the offset in bytes for the N values
+/// stored in the packed matrix, such as in the following example:
+/// for n = 0; n < N; n+=nr
+///    rhs_packed_offset = n * kai_get_rhs_packed_stride_rhs_pack_nxk_qsi4cxp_qsu4cxs1s0()
 /// @param[in] k     In the RHS matrix (not packed), K is the number of columns.
 /// @param[in] nr    The number of columns written by the matmul micro-kernel.
 /// @param[in] kr    The number of columns loaded in the single inner most loop of the matmul micro-kernel.
