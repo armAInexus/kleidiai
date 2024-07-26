@@ -30,7 +30,7 @@ size_t kai_get_rhs_offset_rhs_pack_nxk_qsi4cxp_qsu4cxs1s0(size_t n_idx, size_t r
     return n_idx * rhs_stride;
 }
 
-size_t kai_get_rhs_packed_stride_rhs_pack_nxk_qsi4cxp_qsu4cxs1s0(size_t k, size_t kr, size_t sr) {
+size_t kai_get_rhs_packed_stride_n_rhs_pack_nxk_qsi4cxp_qsu4cxs1s0(size_t k, size_t kr, size_t sr) {
     const size_t k_internal = kai_k_roundedup(k, kr, sr);
 
     KAI_ASSERT((k_internal % 2) == 0);
@@ -42,13 +42,13 @@ size_t kai_get_rhs_packed_offset_rhs_pack_nxk_qsi4cxp_qsu4cxs1s0(
     size_t n_idx, size_t k, size_t nr, size_t kr, size_t sr) {
     KAI_ASSERT((n_idx % nr) == 0);
 
-    return n_idx * kai_get_rhs_packed_stride_rhs_pack_nxk_qsi4cxp_qsu4cxs1s0(k, kr, sr);
+    return n_idx * kai_get_rhs_packed_stride_n_rhs_pack_nxk_qsi4cxp_qsu4cxs1s0(k, kr, sr);
 }
 
 size_t kai_get_rhs_packed_size_rhs_pack_nxk_qsi4cxp_qsu4cxs1s0(size_t n, size_t k, size_t nr, size_t kr, size_t sr) {
     const size_t num_rows = kai_roundup(n, nr) / nr;
 
-    return num_rows * nr * kai_get_rhs_packed_stride_rhs_pack_nxk_qsi4cxp_qsu4cxs1s0(k, kr, sr);
+    return num_rows * nr * kai_get_rhs_packed_stride_n_rhs_pack_nxk_qsi4cxp_qsu4cxs1s0(k, kr, sr);
 }
 
 void kai_run_rhs_pack_nxk_qsi4cxp_qsu4cxs1s0(
@@ -66,7 +66,7 @@ void kai_run_rhs_pack_nxk_qsi4cxp_qsu4cxs1s0(
     KAI_ASSERT(params->lhs_zero_point == 1);
 
     const size_t rhs_zero_point = params->rhs_zero_point;
-    const size_t rhs_packed_stride = nr * kai_get_rhs_packed_stride_rhs_pack_nxk_qsi4cxp_qsu4cxs1s0(k, kr, sr);
+    const size_t rhs_packed_stride = nr * kai_get_rhs_packed_stride_n_rhs_pack_nxk_qsi4cxp_qsu4cxs1s0(k, kr, sr);
     const size_t k_internal = kai_k_roundedup(k, kr, sr);
     const size_t dst_num_rows = kai_roundup(n, nr) / nr;
     const size_t dst_num_bytes_per_row = nr * (kai_k_roundedup(k, kr, sr) / 2);
