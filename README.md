@@ -206,9 +206,8 @@ cmake --build ./build
 ```
 
 <h1> Release Cadence </h1>
-The release is a tagged version of the source code.
-After the first official release (v0.1.0), releases will be made at least once every 3 months. The goal is a predictable and shorter time span between the releases. Until that point is
-achieved, please refer to the CHANGELOG.md to get information on the latest released versions.
+
+The release is a tagged version of the source code. We intend to make weekly releases.
 
 <h1> Support </h1>
 
