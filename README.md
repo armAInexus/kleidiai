@@ -97,11 +97,11 @@ All functions defined in the <strong>.h</strong> header file of the micro-kernel
 
 Some of the data types currently supported with the KleidiAI library are the following:
 
-| Data type      | Abbreviation | Notes |
-| ----------- | ----------- | ----------- |
-| Floating-point 32-bit | <b>f32</b> | |
-| Floating-point 16-bit | <b>f16</b> | |
-| Quantized (q) Symmetric (s) Signed (u) 4-bit (4) Per-Channel (cx) quantization parameters | <b>qsi4cx</b> | An <b>fp32</b> multiplier shared among all values of the same channel. `x` denotes the entirety of the channel |
+| Data type                                                                                                           | Abbreviation | Notes |
+|---------------------------------------------------------------------------------------------------------------------| ----------- | ----------- |
+| Floating-point 32-bit                                                                                               | <b>f32</b> | |
+| Floating-point 16-bit                                                                                               | <b>f16</b> | |
+| Quantized (q) Symmetric (s) Signed (i) 4-bit (4) Per-Channel (cx) quantization parameters                           | <b>qsi4cx</b> | An <b>fp32</b> multiplier shared among all values of the same channel. `x` denotes the entirety of the channel |
 | Quantized (q) Asymmetric (a) Signed (i) 8-bit (8) Per-Dimension (dx) (for example, Per-Row) quantization parameters | <b>qai8dx</b> | An <b>fp32</b> multiplier and a <b>int32</b> zero offset shared among all values of the same dimension. |
 
 > ℹ️ In some cases, we may append the letter `p` to the data type to specify that the tensor is expected to be <strong>packed</strong>. A packed tensor is a tensor that has been rearranged in our preferred data layout from the original data layout to improve the performance of the micro-kernel. In addition to the letter `p`, we may append other alphanumerical values to specify the attributes of the data packing (for example, the block packing size or the data type of for the additional packed arguments).
