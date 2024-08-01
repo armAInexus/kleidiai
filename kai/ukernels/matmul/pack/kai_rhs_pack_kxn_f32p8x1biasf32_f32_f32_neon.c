@@ -30,14 +30,10 @@ size_t kai_get_bias_offset_rhs_pack_kxn_f32p8x1biasf32_f32_f32_neon(size_t n_idx
     return n_idx * sizeof(uint32_t);
 }
 
-size_t kai_get_rhs_packed_stride_rhs_pack_kxn_f32p8x1biasf32_f32_f32_neon(size_t k) {
-    return (sizeof(uint32_t) + k * sizeof(uint32_t));
-}
-
 size_t kai_get_rhs_packed_offset_rhs_pack_kxn_f32p8x1biasf32_f32_f32_neon(size_t n_idx, size_t k) {
     KAI_ASSUME(n_idx % kai_nr == 0);
 
-    return n_idx * kai_get_rhs_packed_stride_rhs_pack_kxn_f32p8x1biasf32_f32_f32_neon(k);
+    return n_idx * (sizeof(uint32_t) + k * sizeof(uint32_t));
 }
 
 size_t kai_get_rhs_packed_size_rhs_pack_kxn_f32p8x1biasf32_f32_f32_neon(size_t n, size_t k) {

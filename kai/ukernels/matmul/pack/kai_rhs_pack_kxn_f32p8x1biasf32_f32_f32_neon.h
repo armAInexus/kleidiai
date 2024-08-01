@@ -41,13 +41,6 @@ size_t kai_get_bias_offset_rhs_pack_kxn_f32p8x1biasf32_f32_f32_neon(size_t n_idx
 /// @return The offset in bytes to the data element.
 size_t kai_get_rhs_packed_offset_rhs_pack_kxn_f32p8x1biasf32_f32_f32_neon(size_t n_idx, size_t k);
 
-/// Gets row stride in bytes to the packed RHS buffer.
-///
-/// @param[in] k Number of rows of unpacked RHS.
-///
-/// @return The row stride in bytes.
-size_t kai_get_rhs_packed_stride_rhs_pack_kxn_f32p8x1biasf32_f32_f32_neon(size_t k);
-
 /// Gets the size in bytes of the packed RHS buffer.
 ///
 /// @param[in] n Number of rows.
