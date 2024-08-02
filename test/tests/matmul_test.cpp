@@ -33,7 +33,7 @@
 #include "test/reference/pack.hpp"
 
 // matmul_nt_nt_fp16_fp16_fp16_6x16_neon_mla
-#include "kai/ukernels/matmul/matmul_clamp_f16_f16_f16p/kai_matmul_clamp_f16_f16_f16pbiasf16_6x16_neon_fp16_mla.c"
+#include "kai/ukernels/matmul/matmul_clamp_f16_f16_f16p/kai_matmul_clamp_f16_f16_f16pbiasf16_6x16_neon_fp16_mla.h"
 #include "kai/ukernels/matmul/pack/kai_rhs_pack_kxn_f16p16x1biasf16_f16_f16_neon.h"
 
 // matmul_nt_nt_fp32_fp32_fp32_2vlx2vl_sme2_mopa
