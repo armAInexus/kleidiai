@@ -25,8 +25,8 @@
 #include <iostream>
 
 // Include micro-kernel variants
-#include "kai_matmul_clamp_f16_f16_f16p16x1biasf16_6x16x8_neon_mla.h"
 #include "kai_matmul_clamp_f16_f16_f16p_interface.h"
+#include "kai_matmul_clamp_f16_f16_f16pbiasf16_6x16_neon_fp16_mla.c"
 #include "kai_rhs_pack_kxn_f16p16x1biasf16_f16_f16_neon.h"
 
 #define FLOAT16_MIN (-65504)
@@ -35,16 +35,16 @@
 namespace {
 /// Micro-kernel interface
 constexpr kai_matmul_clamp_f16_f16_f16p_ukernel ukernel{
-    kai_get_m_step_matmul_clamp_f16_f16_f16p16x1biasf16_6x16x8_neon_mla,
-    kai_get_n_step_matmul_clamp_f16_f16_f16p16x1biasf16_6x16x8_neon_mla,
-    kai_get_nr_matmul_clamp_f16_f16_f16p16x1biasf16_6x16x8_neon_mla,
-    kai_get_kr_matmul_clamp_f16_f16_f16p16x1biasf16_6x16x8_neon_mla,
-    kai_get_sr_matmul_clamp_f16_f16_f16p16x1biasf16_6x16x8_neon_mla,
-    kai_get_lhs_offset_matmul_clamp_f16_f16_f16p16x1biasf16_6x16x8_neon_mla,
-    kai_get_rhs_packed_offset_matmul_clamp_f16_f16_f16p16x1biasf16_6x16x8_neon_mla,
-    kai_get_dst_offset_matmul_clamp_f16_f16_f16p16x1biasf16_6x16x8_neon_mla,
-    kai_get_dst_size_matmul_clamp_f16_f16_f16p16x1biasf16_6x16x8_neon_mla,
-    kai_run_matmul_clamp_f16_f16_f16p16x1biasf16_6x16x8_neon_mla};
+    kai_get_m_step_matmul_clamp_f16_f16_f16pbiasf16_6x16_neon_fp16_mla,
+    kai_get_n_step_matmul_clamp_f16_f16_f16pbiasf16_6x16_neon_fp16_mla,
+    kai_get_nr_matmul_clamp_f16_f16_f16pbiasf16_6x16_neon_fp16_mla,
+    kai_get_kr_matmul_clamp_f16_f16_f16pbiasf16_6x16_neon_fp16_mla,
+    kai_get_sr_matmul_clamp_f16_f16_f16pbiasf16_6x16_neon_fp16_mla,
+    kai_get_lhs_offset_matmul_clamp_f16_f16_f16pbiasf16_6x16_neon_fp16_mla,
+    kai_get_rhs_packed_offset_matmul_clamp_f16_f16_f16pbiasf16_6x16_neon_fp16_mla,
+    kai_get_dst_offset_matmul_clamp_f16_f16_f16pbiasf16_6x16_neon_fp16_mla,
+    kai_get_dst_size_matmul_clamp_f16_f16_f16pbiasf16_6x16_neon_fp16_mla,
+    kai_run_matmul_clamp_f16_f16_f16pbiasf16_6x16_neon_fp16_mla};
 
 /// Reference implementation of matrix multiplication
 void run_matmul_ref(
@@ -209,7 +209,7 @@ int main() {
     const bool is_valid = is_output_correct(M, N, 0.0001, dst_ref, dst);
 
     std::cout << "TEST[matmul_clamp_f16_f16_f16p]\n";
-    std::cout << "- ukernel: matmul_clamp_f16_f16_f16p16x1biasf16_6x16x8_neon_mla\n";
+    std::cout << "- ukernel: matmul_clamp_f16_f16_f16pbiasf16_6x16_neon_fp16_mla\n";
     if (is_valid) {
         std::cout << "- Status: PASSED\n";
         std::cout << "- Performance: " << time_matmul.count() << "ns\n";

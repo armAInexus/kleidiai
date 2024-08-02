@@ -25,8 +25,8 @@ kai_c_library(
 
 kai_c_library(
     name = "clamp_f16_f16_f16p",
-    srcs = ["matmul_clamp_f16_f16_f16p/kai_matmul_clamp_f16_f16_f16p16x1biasf16_6x16x8_neon_mla.c"],
-    hdrs = ["matmul_clamp_f16_f16_f16p/kai_matmul_clamp_f16_f16_f16p16x1biasf16_6x16x8_neon_mla.h"],
+    srcs = ["matmul_clamp_f16_f16_f16p/kai_matmul_clamp_f16_f16_f16pbiasf16_6x16_neon_fp16_mla.c"],
+    hdrs = ["matmul_clamp_f16_f16_f16p/kai_matmul_clamp_f16_f16_f16pbiasf16_6x16_neon_fp16_mla.c"],
     cpu_uarch = kai_cpu_fp16(),
     deps = [
         ":clamp_f16_f16_f16p_interface",

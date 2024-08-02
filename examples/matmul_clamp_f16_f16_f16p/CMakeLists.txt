@@ -20,7 +20,7 @@ include_directories(
 # Files requires to build the executable
 add_executable(matmul_clamp_f16_f16_f16p
     matmul_clamp_f16_f16_f16p.cpp
-    ${MATMUL_PATH}/kai_matmul_clamp_f16_f16_f16p16x1biasf16_6x16x8_neon_mla.c
+    ${MATMUL_PATH}/kai_matmul_clamp_f16_f16_f16pbiasf16_6x16_neon_fp16_mla.c
     ${MATMUL_PACK_PATH}/kai_rhs_pack_kxn_f16p16x1biasf16_f16_f16_neon.c
 )
 
