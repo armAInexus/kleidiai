@@ -82,6 +82,7 @@ set(KLEIDIAI_FILES_SCALAR
 
 set(KLEIDIAI_FILES_NEON_FP16
     kai/ukernels/matmul/pack/kai_rhs_pack_kxn_f16p16x1biasf16_f16_f16_neon.c
+    kai/ukernels/matmul/matmul_clamp_f16_f16_f16p/kai_matmul_clamp_f16_f16_f16p16x1biasf16_1x16x8_neon_mla.c
     kai/ukernels/matmul/matmul_clamp_f16_f16_f16p/kai_matmul_clamp_f16_f16_f16p16x1biasf16_6x16x8_neon_mla.c
 )
 
