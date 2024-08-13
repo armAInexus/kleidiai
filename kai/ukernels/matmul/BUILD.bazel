@@ -11,7 +11,6 @@ load(
     "kai_cpu_fp16",
     "kai_cpu_i8mm",
     "kai_cpu_neon",
-    "kai_cpu_scalar",
     "kai_cpu_sme",
 )
 
@@ -119,7 +118,7 @@ kai_c_library(
     name = "lhs_quant_pack_qai8dxp_f32",
     srcs = ["pack/kai_lhs_quant_pack_qai8dxp_f32.c"],
     hdrs = ["pack/kai_lhs_quant_pack_qai8dxp_f32.h"],
-    cpu_uarch = kai_cpu_scalar(),
+    cpu_uarch = kai_cpu_neon(),
 )
 
 kai_c_library(
@@ -133,7 +132,7 @@ kai_c_library(
     name = "rhs_pack_kxn_f16p16x1biasf16_f16_f16_neon",
     srcs = ["pack/kai_rhs_pack_kxn_f16p16x1biasf16_f16_f16_neon.c"],
     hdrs = ["pack/kai_rhs_pack_kxn_f16p16x1biasf16_f16_f16_neon.h"],
-    cpu_uarch = kai_cpu_neon(),
+    cpu_uarch = kai_cpu_fp16(),
 )
 
 kai_c_library(
@@ -147,14 +146,14 @@ kai_c_library(
     name = "rhs_pack_nxk_qsi4cxp_qsu4cxs1s0",
     srcs = ["pack/kai_rhs_pack_nxk_qsi4cxp_qsu4cxs1s0.c"],
     hdrs = ["pack/kai_rhs_pack_nxk_qsi4cxp_qsu4cxs1s0.h"],
-    cpu_uarch = kai_cpu_scalar(),
+    cpu_uarch = kai_cpu_neon(),
 )
 
 kai_c_library(
     name = "rhs_pack_kxn_qsi4cxp_qsu4cxs1s0",
     srcs = ["pack/kai_rhs_pack_kxn_qsi4cxp_qsu4cxs1s0.c"],
     hdrs = ["pack/kai_rhs_pack_kxn_qsi4cxp_qsu4cxs1s0.h"],
-    cpu_uarch = kai_cpu_scalar(),
+    cpu_uarch = kai_cpu_neon(),
 )
 
 kai_c_library(

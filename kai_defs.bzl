@@ -59,16 +59,13 @@ def kai_cpu_fp16():
     return "+fp16"
 
 def kai_cpu_neon():
-    return "+simd"
+    return ""
 
 def kai_cpu_sme():
     return "+sve+sve2"
 
 def kai_cpu_sme2():
     return "+sve+sve2"
-
-def kai_cpu_scalar():
-    return ""
 
 # MSVC compiler options
 def kai_msvc_std_copts():
@@ -100,7 +97,7 @@ def kai_c_library(name, **kwargs):
         name (string): name of target library
         **kwargs (dict): other arguments like srcs, hdrs, deps
     """
-    kwargs["copts"] = kwargs.get("copts", []) + kai_copts(kwargs.get("cpu_uarch", kai_cpu_scalar()))
+    kwargs["copts"] = kwargs.get("copts", []) + kai_copts(kwargs.get("cpu_uarch", kai_cpu_neon()))
     kwargs["deps"] = ["//:common"] + kwargs.get("deps", [])
     kwargs["linkstatic"] = kwargs.get("linkstatic", True)
 
@@ -120,7 +117,7 @@ def kai_cxx_library(name, **kwargs):
         name (string): name of target library
         **kwargs (dict): other arguments like srcs, hdrs, deps
     """
-    kwargs["copts"] = kwargs.get("copts", []) + kai_cxxopts(kwargs.get("cpu_uarch", kai_cpu_scalar()))
+    kwargs["copts"] = kwargs.get("copts", []) + kai_cxxopts(kwargs.get("cpu_uarch", kai_cpu_neon()))
     kwargs["deps"] = ["//:common"] + kwargs.get("deps", [])
     kwargs["linkstatic"] = kwargs.get("linkstatic", True)
 
