@@ -149,6 +149,21 @@ Some of the data types currently supported with the KleidiAI library are the fol
     </td>
 </tr>
 <tr>
+    <td>Matrix-multiplication with RHS packed</td>
+    <td style="width:10%">matmul_clamp_f32_f32_f32p</td>
+    <td style="width:20%">
+        <b>DST</b>: f32 <br>
+        <b>LHS</b>: f32 <br>
+        <b>RHS</b>: f32p <br>
+    </td>
+    <td>
+        TensorFlow Lite <br>
+    </td>
+    <td>
+        The packing function for the RHS matrix is listed in the header file of the GEMM micro kernel. <br>
+    </td>
+</tr>
+<tr>
     <td>Dynamic quantization and LHS matrix packing</td>
     <td>kai_lhs_quant_pack_qai8dxp_f32</td>
     <td>

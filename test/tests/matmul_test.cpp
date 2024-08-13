@@ -44,6 +44,9 @@
 #include "kai/ukernels/matmul/pack/kai_lhs_pack_f32p2vlx1_f32_sme.h"
 #include "kai/ukernels/matmul/pack/kai_rhs_pack_kxn_f32p2vlx1biasf32_f32_f32_sme.h"
 
+// matmul_clamp_f32_f32_f32p
+#include "kai/ukernels/matmul/matmul_clamp_f32_f32_f32p/kai_matmul_clamp_f32_f32_f32p8x1biasf32_6x8x4_neon_mla.h"
+#include "kai/ukernels/matmul/pack/kai_rhs_pack_kxn_f32p8x1biasf32_f32_f32_neon.h"
 namespace kai::test {
 
 // NOLINTBEGIN(misc-non-private-member-variables-in-classes)
@@ -224,8 +227,8 @@ struct MatMulMethod {
     /// @return The size in bytes of the destination matrix buffer.
     std::function<size_t(size_t m, size_t n)> fn_get_dst_size;
 
-    /// Performs F16 matrix multiplication with RHS packing followed by
-    /// clamp operation.
+    /// Performs F16 or F32 matrix multiplication with RHS packing
+    /// followed by clamp operation.
     ///
     /// @param[in] m Size of the matrix in M dimension.
     /// @param[in] n Size of the matrix in N dimension.
@@ -244,6 +247,14 @@ struct MatMulMethod {
         void* dst, size_t dst_stride_row, size_t dst_stride_col,  //
         Float16 clamp_min, Float16 clamp_max)>
         fn_matmul_f16_f16_f16p;
+
+    std::function<void(
+        size_t m, size_t n, size_t k,                             //
+        const void* lhs, size_t lhs_stride,                       //
+        const void* packed_rhs,                                   //
+        void* dst, size_t dst_stride_row, size_t dst_stride_col,  //
+        float clamp_min, float clamp_max)>
+        fn_matmul_f32_f32_f32p;
 
     /// Performs F32 matrix multiplication with LHS & RHS packing
     /// followed by clamp operation.
@@ -298,7 +309,8 @@ struct MatMulMethod {
     }
 
     [[nodiscard]] bool has_main_kernel() const {
-        return fn_matmul_f16_f16_f16p != nullptr || fn_matmul_f32_f32p_f32p != nullptr;
+        return fn_matmul_f16_f16_f16p != nullptr || fn_matmul_f32_f32p_f32p != nullptr ||
+            fn_matmul_f32_f32_f32p != nullptr;
     }
 
     void main_kernel(
@@ -306,10 +318,13 @@ struct MatMulMethod {
         size_t rhs_stride, size_t dst_stride, float clamp_min, float clamp_max) const {
         KAI_UNUSED(bias);
         KAI_UNUSED(rhs_stride);
-
         if (fn_matmul_f16_f16_f16p) {
             fn_matmul_f16_f16_f16p(
-                m, n, k, lhs, lhs_stride, rhs, dst, dst_stride, sizeof(Float16), static_cast<Float16>(clamp_min),
+                m, n, k, lhs, lhs_stride, rhs, dst, dst_stride, sizeof(Float16), clamp_min,
+                static_cast<Float16>(clamp_max));
+        } else if (fn_matmul_f32_f32_f32p) {
+            fn_matmul_f32_f32_f32p(
+                m, n, k, lhs, lhs_stride, rhs, dst, dst_stride, sizeof(float), clamp_min,
                 static_cast<Float16>(clamp_max));
         } else if (fn_matmul_f32_f32p_f32p) {
             fn_matmul_f32_f32p_f32p(m, n, k, lhs, rhs, dst, dst_stride, sizeof(float), clamp_min, clamp_max);
@@ -368,6 +383,7 @@ static const std::array matmul_methods = {
         .fn_get_dst_size = kai_get_dst_size_matmul_clamp_f16_f16_f16p16x1biasf16_1x16x8_neon_mla,
 
         .fn_matmul_f16_f16_f16p = kai_run_matmul_clamp_f16_f16_f16p16x1biasf16_1x16x8_neon_mla,
+        .fn_matmul_f32_f32_f32p = nullptr,
         .fn_matmul_f32_f32p_f32p = nullptr,
     },
 
@@ -416,6 +432,56 @@ static const std::array matmul_methods = {
         .fn_get_dst_size = kai_get_dst_size_matmul_clamp_f16_f16_f16p16x1biasf16_6x16x8_neon_mla,
 
         .fn_matmul_f16_f16_f16p = kai_run_matmul_clamp_f16_f16_f16p16x1biasf16_6x16x8_neon_mla,
+        .fn_matmul_f32_f32_f32p = nullptr,
+        .fn_matmul_f32_f32p_f32p = nullptr,
+    },
+
+    MatMulMethod{
+        .name = "matmul_nt_nt_fp32_fp32_fp32_6x8_neon_mla",
+
+        .m0 = 6,
+        .n0 = 8,
+
+        .lhs_transposed = false,
+        .rhs_transposed = false,
+
+        .is_sme2 = false,
+
+        .dst_format = DataFormat(DataType::FP32),
+        .lhs_format = DataFormat(DataType::FP32),
+        .packed_lhs_format = DataFormat(DataType::UNKNOWN),
+        .rhs_format = DataFormat(DataType::FP32),
+        .packed_rhs_format = DataFormat(
+            DataType::FP32, 8, 0, DataFormat::PackFormat::BIAS_PER_ROW, DataType::FP32, DataType::UNKNOWN, 8, 1),
+        .bias_format = DataFormat(DataType::FP32),
+
+        .fn_get_mr = nullptr,
+        .fn_get_nr = kai_get_nr_matmul_clamp_f32_f32_f32p8x1biasf32_6x8x4_neon_mla,
+        .fn_get_kr = kai_get_kr_matmul_clamp_f32_f32_f32p8x1biasf32_6x8x4_neon_mla,
+        .fn_get_sr = kai_get_sr_matmul_clamp_f32_f32_f32p8x1biasf32_6x8x4_neon_mla,
+
+        .fn_get_main_m_step = kai_get_m_step_matmul_clamp_f32_f32_f32p8x1biasf32_6x8x4_neon_mla,
+        .fn_get_pack_rhs_n_step = kai_get_n_step_rhs_pack_kxn_f32p8x1biasf32_f32_f32_neon,
+        .fn_get_main_n_step = kai_get_n_step_matmul_clamp_f32_f32_f32p8x1biasf32_6x8x4_neon_mla,
+
+        .fn_get_lhs_offset = kai_get_lhs_offset_matmul_clamp_f32_f32_f32p8x1biasf32_6x8x4_neon_mla,
+        .fn_get_packed_lhs_size = nullptr,
+        .fn_get_packed_lhs_offset = nullptr,
+        .fn_pack_lhs = nullptr,
+
+        .fn_get_rhs_offset = kai_get_rhs_offset_rhs_pack_kxn_f32p8x1biasf32_f32_f32_neon,
+        .fn_get_packed_rhs_size = kai_get_rhs_packed_size_rhs_pack_kxn_f32p8x1biasf32_f32_f32_neon,
+        .fn_get_pack_rhs_packed_rhs_offset = kai_get_rhs_packed_offset_rhs_pack_kxn_f32p8x1biasf32_f32_f32_neon,
+        .fn_get_main_packed_rhs_offset = kai_get_rhs_packed_offset_matmul_clamp_f32_f32_f32p8x1biasf32_6x8x4_neon_mla,
+        .fn_pack_rhs = kai_run_rhs_pack_kxn_f32p8x1biasf32_f32_f32_neon,
+
+        .fn_get_bias_offset = kai_get_bias_offset_rhs_pack_kxn_f32p8x1biasf32_f32_f32_neon,
+
+        .fn_get_dst_offset = kai_get_dst_offset_matmul_clamp_f32_f32_f32p8x1biasf32_6x8x4_neon_mla,
+        .fn_get_dst_size = kai_get_dst_size_matmul_clamp_f32_f32_f32p8x1biasf32_6x8x4_neon_mla,
+
+        .fn_matmul_f16_f16_f16p = nullptr,
+        .fn_matmul_f32_f32_f32p = kai_run_matmul_clamp_f32_f32_f32p8x1biasf32_6x8x4_neon_mla,
         .fn_matmul_f32_f32p_f32p = nullptr,
     },
 
@@ -467,6 +533,7 @@ static const std::array matmul_methods = {
         .fn_get_dst_size = kai_get_dst_size_matmul_clamp_f32_f32p2vlx1_f32p2vlx1biasf32_sme2_mopa,
 
         .fn_matmul_f16_f16_f16p = nullptr,
+        .fn_matmul_f32_f32_f32p = nullptr,
         .fn_matmul_f32_f32p_f32p = kai_run_matmul_clamp_f32_f32p2vlx1_f32p2vlx1biasf32_sme2_mopa,
     },
 };
