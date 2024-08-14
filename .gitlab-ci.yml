@@ -129,32 +129,6 @@ pre-commit-hooks:
   script:
     - PRE_COMMIT_HOME=$PRE_COMMIT_HOME pre-commit run --all-files
 
-test-remote:
-  # Part of the pipeline is executed in a separate system.
-  #
-  # When the remote pipeline has been completed, this job is manually triggered
-  # with the information about the remote pipeline including whether it's passed or failed.
-  extends:
-    - .standard-rules
-  stage: test
-  needs: []
-  when: manual
-  allow_failure: false
-  variables:
-    REMOTE_PIPELINE_ID: 0
-    REMOTE_PIPELINE_PASSED: ""
-    REMOTE_PIPELINE_MESSAGE: ""
-  script:
-    - echo "REMOTE_PIPELINE_ID=${REMOTE_PIPELINE_ID}" |& tee remote_result.txt
-    - echo "REMOTE_PIPELINE_PASSED=${REMOTE_PIPELINE_PASSED}" |& tee -a remote_result.txt
-    - echo "REMOTE_PIPELINE_MESSAGE=${REMOTE_PIPELINE_MESSAGE}" |& tee -a remote_result.txt
-    - echo "${REMOTE_PIPELINE_PASSED}" | grep -q "true"
-  artifacts:
-    when: always
-    expire_in: 1 day
-    paths:
-      - remote_result.txt
-
 test-linux-aarch64:
   extends:
     - .standard-rules
