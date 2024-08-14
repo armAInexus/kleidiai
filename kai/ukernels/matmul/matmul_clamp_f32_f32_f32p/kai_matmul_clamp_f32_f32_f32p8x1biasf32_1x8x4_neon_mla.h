@@ -107,7 +107,7 @@ size_t kai_get_dst_size_matmul_clamp_f32_f32_f32p8x1biasf32_1x8x4_neon_mla(size_
 /// @param[in]  rhs_packed Packed RHS buffer.
 /// @param[out] dst Output matrix buffer.
 /// @param[in]  dst_stride_row Stride in bytes between two rows of the DST matrix.
-/// @param[in]  dst_stride_col Stride in bytes between two columns of the DST matrix. For now, it must be sizeof(__fp16)
+/// @param[in]  dst_stride_col Stride in bytes between two columns of the DST matrix. For now, it must be sizeof(float)
 /// @param[in]  clamp_min Minimum value to clamp the final result.
 /// @param[in]  clamp_max Maximum value to clamp the final result.
 void kai_run_matmul_clamp_f32_f32_f32p8x1biasf32_1x8x4_neon_mla(
