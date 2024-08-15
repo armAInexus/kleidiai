@@ -10,13 +10,14 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
-#include <iostream>
 #include <limits>
 #include <vector>
 
 #include "kai/kai_common.h"
 #include "test/common/data_format.hpp"
 #include "test/common/data_type.hpp"
+#include "test/common/float16.hpp"
+#include "test/common/memory.hpp"
 #include "test/common/round.hpp"
 #include "test/reference/quantize.hpp"
 
@@ -114,165 +115,10 @@ std::vector<uint8_t> pack_bias_per_row(
     return dst;
 }
 
-/// Packs the matrix from raw to quantized format.
-template <typename Output, typename Input, typename Scale, typename ZeroPoint>
-std::vector<uint8_t> pack_quant_per_row(
-    const void* src, size_t height, size_t width, size_t block_height, size_t block_width) {
-    const auto num_groups = (height + block_height - 1) / block_height;
-    const auto group_num_blocks = (width + block_width - 1) / block_width;
-
-    const auto group_zero_points_bytes = block_height * sizeof(ZeroPoint);
-    const auto group_scales_bytes = block_height * sizeof(Scale);
-    const auto block_data_bytes = block_height * block_width * sizeof(Output);
-    const auto group_bytes = group_zero_points_bytes + group_num_blocks * block_data_bytes + group_scales_bytes;
-    const auto dst_bytes = num_groups * group_bytes;
-
-    std::vector<uint8_t> dst;
-    dst.resize(dst_bytes);
-
-    const auto* src_ptr = reinterpret_cast<const Input*>(src);
-    auto* dst_ptr = dst.data();
-
-    std::vector<Scale> scales;
-    scales.resize(block_height);
-
-    std::vector<ZeroPoint> zero_points;
-    zero_points.resize(block_height);
-
-    for (size_t group_no = 0; group_no < num_groups; ++group_no) {
-        // Finds the range of values and calculates the quantization information.
-        for (size_t y = 0; y < block_height; ++y) {
-            auto min_value = std::numeric_limits<Input>::max();
-            auto max_value = std::numeric_limits<Input>::lowest();
-
-            for (size_t x = 0; x < width; ++x) {
-                const auto value = src_ptr[(group_no * block_height + y) * width + x];
-
-                if (value < min_value) {
-                    min_value = value;
-                }
-
-                if (value > max_value) {
-                    max_value = value;
-                }
-            }
-
-            std::tie(scales[y], zero_points[y]) = get_qai8_scale_zero_point_from_range(min_value, max_value);
-        }
-
-        // Packs the zero points.
-        memcpy(dst_ptr, zero_points.data(), group_zero_points_bytes);
-        dst_ptr += group_zero_points_bytes;
-
-        // Quantizes and packs the data.
-        for (size_t x_block = 0; x_block < group_num_blocks; ++x_block) {
-            for (size_t block_y = 0; block_y < block_height; ++block_y) {
-                for (size_t block_x = 0; block_x < block_width; ++block_x) {
-                    const auto value =
-                        src_ptr[(group_no * block_height + block_y) * width + x_block * block_width + block_x];
-                    const auto qvalue = quantize_i8_fp32(value, scales[block_y], zero_points[block_y]);
-                    *reinterpret_cast<int8_t*>(dst_ptr) = qvalue;
-                    ++dst_ptr;
-                }
-            }
-        }
-
-        // Packs the scales.
-        memcpy(dst_ptr, scales.data(), group_scales_bytes);
-        dst_ptr += group_scales_bytes;
-    }
-
-    KAI_ASSERT(reinterpret_cast<uintptr_t>(dst_ptr) - reinterpret_cast<uintptr_t>(dst.data()) == dst_bytes);
-
-    return dst;
-}
-
-/// Packs the matrix with per-row quantized format.
-///
-/// The source matrix is per-row quantized with separate quantization scale and zero-points data buffer.
-/// The destination data is per-row quantized with blocking and embedded quantization information.
-std::vector<uint8_t> pack_per_row_qs4(
-    const void* src, const void* scales, const void* zero_points, size_t height, size_t width, size_t block_height,
-    size_t block_width, size_t subblock_height, size_t subblock_width) {
-    // Number of elements in a sub-block in vertical and horizontal axes.
-    const auto num_element_rows = subblock_height;
-    const auto num_element_cols = subblock_width;
-    const auto src_element_row_stride = width / 2;
-
-    // Number of sub-blocks in a block in vertical and horizontal axes.
-    const auto num_subblock_rows = block_height / subblock_height;
-    const auto num_subblock_cols = block_width / subblock_width;
-    const auto src_subblock_col_stride = subblock_width / 4;
-    const auto src_subblock_row_stride = subblock_height * width / 2;
-
-    // Number of blocks in the matrix in vertical and horizontal axes.
-    const auto num_block_rows = (height + block_height - 1) / block_height;
-    const auto num_block_cols = (width + block_width - 1) / block_width;
-    const auto src_block_col_stride = block_width / 2;
-    const auto src_block_row_stride = block_height * width / 2;
-
-    const auto dst_block_row_scales_bytes = block_height * sizeof(float);
-    const auto dst_block_row_zero_points_bytes = block_height * sizeof(int32_t);
-    const auto dst_block_row_data_bytes = num_block_cols * block_height * block_width / 2;
-    const auto dst_bytes =
-        num_block_rows * (dst_block_row_zero_points_bytes + dst_block_row_data_bytes + dst_block_row_scales_bytes);
-
-    std::vector<uint8_t> dst;
-    dst.resize(dst_bytes);
-
-    const auto* src_ptr = reinterpret_cast<const uint8_t*>(src);
-    const auto* scales_ptr = reinterpret_cast<const float*>(scales);
-    const auto* zero_points_ptr = reinterpret_cast<const int32_t*>(zero_points);
-    auto* dst_ptr = dst.data();
-
-    for (size_t block_row = 0; block_row < num_block_rows; ++block_row) {
-        if (zero_points_ptr != nullptr) {
-            memcpy(dst_ptr, zero_points_ptr + block_row * block_height, dst_block_row_zero_points_bytes);
-        }
-
-        dst_ptr += dst_block_row_zero_points_bytes;
-
-        for (size_t block_col = 0; block_col < num_block_cols; ++block_col) {
-            for (size_t subblock_col = 0; subblock_col < num_subblock_cols; ++subblock_col) {
-                for (size_t subblock_row = 0; subblock_row < num_subblock_rows; ++subblock_row) {
-                    for (size_t element_col = 0; element_col < num_element_cols / 4; ++element_col) {
-                        for (size_t element_row = 0; element_row < num_element_rows; ++element_row) {
-                            const auto byte_lo = src_ptr[  //
-                                block_row * src_block_row_stride + block_col * src_block_col_stride +
-                                subblock_row * src_subblock_row_stride + subblock_col * src_subblock_col_stride +
-                                element_row * src_element_row_stride + element_col];
-                            const auto byte_hi = src_ptr[  //
-                                block_row * src_block_row_stride + block_col * src_block_col_stride +
-                                subblock_row * src_subblock_row_stride + subblock_col * src_subblock_col_stride +
-                                element_row * src_element_row_stride + element_col + block_width / 4];
-
-                            const auto packed_byte0 = (byte_lo & 0x0F) | (byte_hi << 4);
-                            const auto packed_byte1 = (byte_lo >> 4) | (byte_hi & 0xF0);
-
-                            dst_ptr[0] = packed_byte0;  // ^ 0x88;
-                            dst_ptr[1] = packed_byte1;  // ^ 0x88;
-                            dst_ptr += 2;
-                        }
-                    }
-                }
-            }
-        }
-
-        if (scales_ptr != nullptr) {
-            memcpy(dst_ptr, scales_ptr + block_row * block_height, dst_block_row_scales_bytes);
-        }
-        dst_ptr += dst_block_row_scales_bytes;
-    }
-
-    KAI_ASSERT(reinterpret_cast<uintptr_t>(dst_ptr) - reinterpret_cast<uintptr_t>(dst.data()) == dst_bytes);
-
-    return dst;
-}
-
 }  // namespace
 
 std::vector<uint8_t> pack(
-    const DataFormat& dst_format, const void* src, const void* scales, const void* zero_points,
+    const DataFormat& dst_format, const void* src, [[maybe_unused]] const void* scales, const void* zero_points,
     const DataFormat& src_format, size_t height, size_t width) {
     const auto dst_dt = dst_format.data_type();
     const auto dst_qf = dst_format.pack_format();
@@ -283,18 +129,6 @@ std::vector<uint8_t> pack(
     const auto block_width = dst_format.actual_block_width(width);
     const auto subblock_height = dst_format.actual_subblock_height(height);
     const auto subblock_width = dst_format.actual_subblock_width(width);
-
-    if (src_qf == DataFormat::PackFormat::NONE && dst_qf == DataFormat::PackFormat::QUANTIZE_PER_ROW) {
-        if (dst_dt == DataType::QAI8 && src_dt == DataType::FP32 && dst_format.scale_data_type() == DataType::FP32 &&
-            dst_format.zero_point_data_type() == DataType::I32) {
-            return pack_quant_per_row<int8_t, float, float, int32_t>(src, height, width, block_height, block_width);
-        } else if (
-            dst_dt == DataType::QSI4 && src_dt == DataType::QSU4 && dst_format.scale_data_type() == DataType::FP32 &&
-            dst_format.zero_point_data_type() == DataType::I32) {
-            return pack_per_row_qs4(
-                src, scales, zero_points, height, width, block_height, block_width, subblock_height, subblock_width);
-        }
-    }
 
     if (src_qf == DataFormat::PackFormat::NONE && dst_qf == DataFormat::PackFormat::BIAS_PER_ROW) {
         KAI_ASSUME(src_dt == dst_dt);
@@ -321,6 +155,184 @@ std::vector<uint8_t> pack(
     }
 
     KAI_ERROR("Unsupported operation!");
+}
+
+template <typename Data, typename Scale>
+std::vector<uint8_t> pack_data_scales(
+    const void* data, const void* scales, size_t height, size_t width, size_t quant_width) {
+    KAI_ASSUME_IF(size_in_bits<Data> < 8, quant_width % (8 / size_in_bits<Data>) == 0);
+    KAI_ASSUME_IF(size_in_bits<Data> < 8, width % (8 / size_in_bits<Data>) == 0);
+
+    const auto num_quant_packets_x = round_up_multiple(width, quant_width) / quant_width;
+
+    const auto data_bytes = height * width * size_in_bits<Data> / 8;
+    const auto scales_bytes = height * num_quant_packets_x * sizeof(Scale);
+
+    std::vector<uint8_t> dst(data_bytes + scales_bytes);
+
+    const auto* scales_ptr = reinterpret_cast<const Scale*>(scales);
+    auto* dst_ptr = dst.data();
+
+    for (size_t y = 0; y < height; ++y) {
+        for (size_t x_quant = 0; x_quant < width; x_quant += quant_width) {
+            write_array(dst_ptr, 0, *scales_ptr);
+            dst_ptr += sizeof(Scale);
+            ++scales_ptr;
+
+            const auto len = std::min(x_quant + quant_width, width) - x_quant;
+
+            for (size_t x_element = 0; x_element < len; ++x_element) {
+                const auto x = x_quant + x_element;
+                write_array(dst_ptr, x_element, read_array<Data>(data, y * width + x));
+            }
+
+            dst_ptr += len * size_in_bits<Data> / 8;
+        }
+    }
+
+    KAI_ASSERT(dst_ptr == &*dst.end());
+
+    return dst;
+}
+
+template <typename Data, typename Scale>
+std::vector<uint8_t> pack_data_scales_interleave_block(
+    const void* data, const void* scales, size_t height, size_t width, size_t quant_width) {
+    KAI_ASSUME_IF(size_in_bits<Data> < 8, quant_width % (8 / size_in_bits<Data>) == 0);
+    KAI_ASSUME_IF(size_in_bits<Data> < 8, width % (8 / size_in_bits<Data>) == 0);
+    KAI_ASSUME(width % quant_width == 0);
+    KAI_ASSUME(quant_width % 2 == 0);
+
+    const auto num_quant_packets_x = round_up_multiple(width, quant_width) / quant_width;
+
+    const auto data_bytes = height * width * size_in_bits<Data> / 8;
+    const auto scales_bytes = height * num_quant_packets_x * sizeof(Scale);
+
+    std::vector<uint8_t> dst(data_bytes + scales_bytes);
+
+    const auto* scales_ptr = reinterpret_cast<const Scale*>(scales);
+    auto* dst_ptr = dst.data();
+
+    for (size_t y = 0; y < height; ++y) {
+        for (size_t x_quant = 0; x_quant < width; x_quant += quant_width) {
+            write_array(dst_ptr, 0, *scales_ptr);
+            dst_ptr += sizeof(Scale);
+            ++scales_ptr;
+
+            for (size_t x_element = 0; x_element < quant_width; ++x_element) {
+                const auto x = x_quant + x_element / 2 + (x_element % 2 != 0 ? quant_width / 2 : 0);
+                write_array(dst_ptr, x_element, read_array<Data>(data, y * width + x));
+            }
+
+            dst_ptr += quant_width * size_in_bits<Data> / 8;
+        }
+    }
+
+    KAI_ASSERT(dst_ptr == &*dst.end());
+
+    return dst;
+}
+
+template std::vector<uint8_t> pack_data_scales_interleave_block<UInt4, Float16>(
+    const void* data, const void* scales, size_t height, size_t width, size_t quant_width);
+
+template <typename Data, typename ZeroPoint, typename Scale, typename Bias>
+std::vector<uint8_t> pack_block_data_zero_points_scale_bias(
+    const void* data, const void* zero_points, const void* scales, const void* biases, size_t height, size_t width,
+    size_t quant_height, size_t quant_width, size_t block_height, size_t block_width, size_t interleave_x_blocks) {
+    if (quant_width == width) {
+        quant_width = round_up_multiple(quant_width, block_width);
+    }
+
+    KAI_ASSERT(quant_height == block_height);
+    KAI_ASSERT(quant_width % block_width == 0);
+
+    if (interleave_x_blocks == 0) {
+        interleave_x_blocks = quant_width / block_width;
+    }
+
+    const auto has_zero_points = zero_points != nullptr;
+    const auto has_biases = biases != nullptr;
+
+    const auto num_quant_packets_y = round_up_division(height, quant_height);
+    const auto num_quant_packets_x = round_up_division(width, quant_width);
+
+    const auto quant_packet_data_bytes = quant_height * quant_width * size_in_bits<Data> / 8;
+    const auto quant_packet_zero_points_bytes = has_zero_points ? quant_height * sizeof(ZeroPoint) : 0;
+    const auto quant_packet_scales_bytes = quant_height * sizeof(Scale);
+    const auto quant_packet_bytes =
+        quant_packet_zero_points_bytes + quant_packet_data_bytes + quant_packet_scales_bytes;
+
+    const auto num_quant_packets_per_row = round_up_division(width, quant_width);
+    const auto biases_bytes = has_biases ? height * sizeof(Bias) : 0;
+
+    const auto dst_bytes = num_quant_packets_y * num_quant_packets_x * quant_packet_bytes + biases_bytes;
+    std::vector<uint8_t> dst(dst_bytes);
+
+    const auto* zero_points_ptr = reinterpret_cast<const ZeroPoint*>(zero_points);
+    const auto* scales_ptr = reinterpret_cast<const Scale*>(scales);
+    const auto* biases_ptr = reinterpret_cast<const Bias*>(biases);
+    auto* dst_ptr = dst.data();
+
+    for (size_t y_quant = 0; y_quant < height; y_quant += quant_height) {
+        for (size_t x_quant = 0; x_quant < width; x_quant += quant_width) {
+            size_t dst_index = 0;
+
+            // Packs the data.
+            for (size_t y_pack = 0; y_pack < quant_height; y_pack += block_height) {
+                for (size_t x_pack = 0; x_pack < block_width * interleave_x_blocks; x_pack += block_width) {
+                    for (size_t y_element = 0; y_element < block_height; ++y_element) {
+                        for (size_t x_element = 0; x_element < block_width; ++x_element) {
+                            for (size_t x_interleave = 0; x_interleave < quant_width;
+                                 x_interleave += block_width * interleave_x_blocks) {
+                                const auto y = y_quant + y_pack + y_element;
+                                const auto x = x_quant + x_pack + x_element + x_interleave;
+
+                                if (y < height && x < width) {
+                                    write_array(dst_ptr, dst_index, read_array<Data>(data, y * width + x));
+                                }
+
+                                ++dst_index;
+                            }
+                        }
+                    }
+                }
+            }
+
+            dst_ptr += dst_index * size_in_bits<Data> / 8;
+
+            // Packs the zero points.
+            if (has_zero_points) {
+                for (size_t y_element = 0; y_element < quant_height; ++y_element) {
+                    const auto y = y_quant + y_element;
+                    const auto x = x_quant / quant_width;
+                    memcpy(dst_ptr, &zero_points_ptr[y * num_quant_packets_per_row + x], sizeof(ZeroPoint));
+                    dst_ptr += sizeof(ZeroPoint);
+                }
+            }
+
+            // Packs the scales.
+            for (size_t y_element = 0; y_element < quant_height; ++y_element) {
+                const auto y = y_quant + y_element;
+                const auto x = x_quant / quant_width;
+                memcpy(dst_ptr, &scales_ptr[y * num_quant_packets_per_row + x], sizeof(Scale));
+                dst_ptr += sizeof(Scale);
+            }
+        }
+
+        // Packs the biases.
+        if (has_biases) {
+            for (size_t y_element = 0; y_element < quant_height; ++y_element) {
+                const auto y = y_quant + y_element;
+                memcpy(dst_ptr, &biases_ptr[y], sizeof(Bias));
+                dst_ptr += sizeof(Bias);
+            }
+        }
+    }
+
+    KAI_ASSERT(dst_ptr == &*dst.end());
+
+    return dst;
 }
 
 }  // namespace kai::test

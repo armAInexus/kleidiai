@@ -118,4 +118,11 @@ std::vector<uint8_t> fill_matrix_random(size_t height, size_t width, const DataF
     }
 }
 
+template <typename Value>
+std::vector<uint8_t> fill_random(size_t length, uint64_t seed) {
+    return fill_matrix_random_raw<Value>(1, length, seed);
+}
+
+template std::vector<uint8_t> fill_random<float>(size_t length, uint64_t seed);
+
 }  // namespace kai::test

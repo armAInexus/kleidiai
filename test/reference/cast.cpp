@@ -12,6 +12,7 @@
 #include "test/common/bfloat16.hpp"
 #include "test/common/data_type.hpp"
 #include "test/common/memory.hpp"
+#include "test/common/round.hpp"
 
 namespace kai::test {
 
@@ -39,6 +40,16 @@ std::vector<uint8_t> cast(const void* src, kai::test::DataType src_dt, DataType 
     }
 
     KAI_ERROR("Unsupported cast data type!");
+}
+
+std::vector<uint8_t> cast_qsu4_qsi4(const void* src, size_t length) {
+    std::vector<uint8_t> dst(round_up_division(length, 2));
+
+    for (size_t i = 0; i < length; ++i) {
+        write_array(dst.data(), i, static_cast<UInt4>(static_cast<int32_t>(read_array<Int4>(src, i)) + 8));
+    }
+
+    return dst;
 }
 
 }  // namespace kai::test

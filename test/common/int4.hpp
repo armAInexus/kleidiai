@@ -79,10 +79,10 @@ public:
     Int4& operator=(int value);
 
     /// Conversion operator.
-    explicit operator int32_t() const;
+    operator int32_t() const;
 
     /// Conversion operator.
-    explicit operator float() const;
+    operator float() const;
 
     /// Addition operator.
     [[nodiscard]] Int4 operator+(Int4 rhs) const;

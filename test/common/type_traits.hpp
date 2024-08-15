@@ -9,6 +9,8 @@
 #include <cstddef>
 #include <type_traits>
 
+#include "test/common/float16.hpp"
+
 namespace kai::test {
 
 class UInt4;
@@ -25,7 +27,7 @@ inline constexpr bool is_unsigned<UInt4> = true;
 
 /// `true` if `T` is unsigned numeric type.
 template <>
-inline constexpr bool is_unsigned<Int4> = true;
+inline constexpr bool is_unsigned<Int4> = false;
 
 /// `true` if `T` is unsigned numeric type.
 template <>
@@ -41,7 +43,7 @@ inline constexpr bool is_signed<UInt4> = false;
 
 /// `true` if `T` is signed numeric type.
 template <>
-inline constexpr bool is_signed<Int4> = false;
+inline constexpr bool is_signed<Int4> = true;
 
 /// `true` if `T` is signed numeric type.
 template <>
@@ -66,6 +68,10 @@ inline constexpr bool is_integral<BFloat16> = false;
 /// `true` if `T` is floating-point type.
 template <typename T>
 inline constexpr bool is_floating_point = std::is_floating_point_v<T>;
+
+/// `true` if `T` is floating-point type.
+template <>
+inline constexpr bool is_floating_point<Float16> = true;
 
 /// `true` if `T` is floating-point type.
 template <>

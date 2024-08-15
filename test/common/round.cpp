@@ -25,8 +25,22 @@ size_t round_to_nearest_even_usize(float value) {
     return rounded;
 }
 
+template <>
+int32_t round_to_nearest_even(float value) {
+    return round_to_nearest_even_i32(value);
+}
+
+template <>
+size_t round_to_nearest_even(float value) {
+    return round_to_nearest_even_usize(value);
+}
+
 size_t round_up_multiple(size_t a, size_t b) {
     return ((a + b - 1) / b) * b;
+}
+
+size_t round_up_division(size_t a, size_t b) {
+    return (a + b - 1) / b;
 }
 
 size_t round_down_multiple(size_t a, size_t b) {

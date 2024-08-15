@@ -65,4 +65,44 @@ std::vector<uint8_t> matmul(
     size_t m, size_t n, size_t k,                                                               //
     bool lhs_transposed, bool rhs_transposed);
 
+/// Matrix multiplication with quantized input and floating-point output.
+///
+/// The LHS matrix is non-transposed and the RHS matrix is transposed.
+///
+/// @tparam LhsData The data type of the LHS matrix.
+/// @tparam LhsScale The data type of the quantization scales of the LHS matrix.
+/// @tparam LhsZeroPoint The data type of the quantization zero points of the LHS matrix.
+/// @tparam Rhsdata The data type of the RHS matrix.
+/// @tparam RhsScale The data type of the quantization scales of the RHS matrix.
+/// @tparam RhsZeroPoint The data type of the quantization zero points of the RHS matrix.
+/// @tparam Bias The data type of the bias vector.
+/// @tparam IntAcc The data type of the intermediate integer accumulator.
+/// @tparam DstData The data type of the floating-point accumulator and the output matrix.
+///
+/// @param[in] m The LHS and output height.
+/// @param[in] n The RHS height and output width.
+/// @param[in] k The LHS and RHS width.
+/// @param[in] lhs_data The LHS data matrix.
+/// @param[in] lhs_scales The LHS quantization scales matrix.
+/// @param[in] lhs_zero_points The LHS quantization zero points matrix.
+/// @param[in] lhs_quant_width The LHS quantization block width.
+/// @param[in] rhs_data The RHS data matrix.
+/// @param[in] rhs_scales The RHS quantization scales matrix.
+/// @param[in] rhs_zero_points The RHS quantization zero points matrix.
+/// @param[in] rhs_quant_width The RHS quantization block width.
+/// @param[in] biases The biases vector.
+/// @param[in] min_value The minimum output value.
+/// @param[in] max_value The maximum output value.
+///
+/// @return The output matrix.
+template <
+    typename LhsData, typename LhsScale, typename LhsZeroPoint, typename RhsData, typename RhsScale,
+    typename RhsZeroPoint, typename Bias, typename IntAcc, typename DstData>
+std::vector<uint8_t> matmul_clamp_nt_t(
+    size_t m, size_t n, size_t k,                                                                       //
+    const void* lhs_data, const void* lhs_scales, const void* lhs_zero_points, size_t lhs_quant_width,  //
+    const void* rhs_data, const void* rhs_scales, const void* rhs_zero_points, size_t rhs_quant_width,  //
+    const void* biases,                                                                                 //
+    DstData min_value, DstData max_value);
+
 }  // namespace kai::test

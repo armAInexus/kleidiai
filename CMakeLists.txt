@@ -187,6 +187,7 @@ if(KLEIDIAI_BUILD_TESTS)
 
     add_executable(kleidiai_test
         test/tests/matmul_test.cpp
+        test/tests/matmul_clamp_f32_qai8dxp_qsi4cxp_test.cpp
     )
 
     target_link_libraries(kleidiai_test

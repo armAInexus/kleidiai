@@ -25,4 +25,13 @@ namespace kai::test {
 /// @return The result matrix containing data in the destination data type.
 std::vector<uint8_t> cast(const void* src, DataType src_dt, DataType dst_dt, size_t height, size_t width);
 
+/// Converts each element of the source data from 4-bit signed symmetric quantized
+/// to 4-bit unsigned symmetric quantized.
+///
+/// @param[in] src The source data.
+/// @param[in] length The number of elements.
+///
+/// @return A new data buffer with converted values.
+std::vector<uint8_t> cast_qsu4_qsi4(const void* src, size_t length);
+
 }  // namespace kai::test
