@@ -31,7 +31,7 @@ build-clang:
   stage: build
   script:
     - cmake -G Ninja -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=Release -DKLEIDIAI_BUILD_TESTS=ON -S . -B ${CI_JOB_NAME_SLUG}
-    - cmake --build ${CI_JOB_NAME_SLUG}
+    - cmake --build ${CI_JOB_NAME_SLUG} -j$(nproc)
   artifacts:
     expire_in: 1 day
     paths:
@@ -43,7 +43,7 @@ build-clang-cov:
   stage: build
   script:
     - cmake -G Ninja -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=Release -DKLEIDIAI_BUILD_TESTS=ON -DCMAKE_C_FLAGS="--coverage" -DCMAKE_CXX_FLAGS="--coverage" -S . -B build
-    - cmake --build ./build
+    - cmake --build ./build -j$(nproc)
   artifacts:
     expire_in: 1 day
     paths:
@@ -54,12 +54,12 @@ build-clang-sanitizer:
     - .standard-rules
   stage: build
   script:
-    - cmake -G Ninja -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=Release -DKLEIDIAI_BUILD_TESTS=ON -DCMAKE_C_FLAGS="-fsanitize=address" -DCMAKE_CXX_FLAGS="-fsanitize=address" -S . -B build
-    - cmake --build ./build
+    - cmake -G Ninja -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=Release -DKLEIDIAI_BUILD_TESTS=ON -DCMAKE_C_FLAGS="-fsanitize=address" -DCMAKE_CXX_FLAGS="-fsanitize=address" -S . -B ${CI_JOB_NAME_SLUG}
+    - cmake --build ${CI_JOB_NAME_SLUG} -j$(nproc)
   artifacts:
     expire_in: 1 day
     paths:
-      - build
+      - ${CI_JOB_NAME_SLUG}/kleidiai_test
 
 build-gcc:
   extends:
@@ -67,7 +67,7 @@ build-gcc:
   stage: build
   script:
     - cmake -G Ninja -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++ -DCMAKE_BUILD_TYPE=Release -DKLEIDIAI_BUILD_TESTS=ON -S . -B ${CI_JOB_NAME_SLUG}
-    - cmake --build ${CI_JOB_NAME_SLUG}
+    - cmake --build ${CI_JOB_NAME_SLUG} -j$(nproc)
   artifacts:
     expire_in: 1 day
     paths:
@@ -83,7 +83,7 @@ build-gcc-bazel:
       - /cache/bazelisk
   script:
     - bazelisk clean --expunge
-    - bazelisk build -k --verbose_failures //...
+    - bazelisk build --jobs=HOST_CPUS -k --verbose_failures --curses=no //...
     - mkdir -p ${CI_JOB_NAME_SLUG} && cp bazel-bin/test/kleidiai_test ${CI_JOB_NAME_SLUG}/
   artifacts:
     expire_in: 1 day
@@ -101,7 +101,7 @@ build-clang-bazel:
   script:
     - bazelisk clean --expunge
     # explicitly disable layering_check feature
-    - CC=clang bazelisk build -k --verbose_failures --compiler=clang --features=no-layering_check //...
+    - CC=clang bazelisk build --jobs=HOST_CPUS -k --verbose_failures --compiler=clang --features=no-layering_check --curses=no //...
     - mkdir -p ${CI_JOB_NAME_SLUG} && cp bazel-bin/test/kleidiai_test ${CI_JOB_NAME_SLUG}/
   artifacts:
     expire_in: 1 day
@@ -135,12 +135,13 @@ test-linux-aarch64:
   stage: test
   parallel:
     matrix:
-      - BUILD_JOB_PROVIDER: [ clang, gcc, clang-bazel, gcc-bazel ]
+      - BUILD_JOB_PROVIDER: [ clang, gcc, clang-bazel, gcc-bazel, clang-sanitizer ]
   needs:
     - build-gcc
     - build-gcc-bazel
     - build-clang
     - build-clang-bazel
+    - build-clang-sanitizer
   script:
     - ./build-${BUILD_JOB_PROVIDER}/kleidiai_test --gtest_output=xml:kleidiai_test_results-${BUILD_JOB_PROVIDER}.xml
   artifacts:
@@ -165,21 +166,6 @@ test-linux-aarch64-cov:
     expire_in: 1 day
     paths:
       - build/coverage/linux-aarch64.json
-      - kleidiai_test_results.xml
-    reports:
-      junit: kleidiai_test_results.xml
-
-test-linux-aarch64-sanitizer:
-  extends:
-    - .standard-rules
-  stage: test
-  needs:
-    - build-clang-sanitizer
-  script:
-    - ./build/kleidiai_test --gtest_output=xml:kleidiai_test_results.xml
-  artifacts:
-    expire_in: 1 day
-    paths:
       - kleidiai_test_results.xml
     reports:
       junit: kleidiai_test_results.xml
