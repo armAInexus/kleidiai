@@ -76,8 +76,10 @@ endif()
 
 set(KLEIDIAI_FILES_SCALAR
     kai/ukernels/matmul/pack/kai_lhs_quant_pack_qai8dxp_f32.c
+    kai/ukernels/matmul/pack/kai_lhs_quant_pack_qsi8d32p_f32.c
     kai/ukernels/matmul/pack/kai_rhs_pack_kxn_qsi4cxp_qsu4cxs1s0.c
     kai/ukernels/matmul/pack/kai_rhs_pack_nxk_qsi4cxp_qsu4cxs1s0.c
+    kai/ukernels/matmul/pack/kai_rhs_pack_nxk_qsi4c32pscalef16_qsu4c32s16s0.c
 )
 
 set(KLEIDIAI_FILES_NEON_FP16
@@ -94,6 +96,7 @@ set(KLEIDIAI_FILES_NEON
 set(KLEIDIAI_FILES_NEON_DOTPROD
     kai/ukernels/matmul/matmul_clamp_f32_qai8dxp_qsi4cxp/kai_matmul_clamp_f32_qai8dxp1x8_qsi4cxp4x8_1x4x32_neon_dotprod.c
     kai/ukernels/matmul/matmul_clamp_f32_qai8dxp_qsi4cxp/kai_matmul_clamp_f32_qai8dxp1x8_qsi4cxp8x8_1x8x32_neon_dotprod.c
+    kai/ukernels/matmul/matmul_clamp_f32_qsi8d32p_qsi4c32p/kai_matmul_clamp_f32_qsi8d32p1x8_qsi4c32p4x8_1x4x32_neon_dotprod.c
 )
 
 set(KLEIDIAI_FILES_NEON_I8MM
@@ -101,6 +104,7 @@ set(KLEIDIAI_FILES_NEON_I8MM
     kai/ukernels/matmul/matmul_clamp_f32_qai8dxp_qsi4cxp/kai_matmul_clamp_f32_qai8dxp4x8_qsi4cxp4x8_8x4x32_neon_i8mm.c
     kai/ukernels/matmul/matmul_clamp_f32_qai8dxp_qsi4cxp/kai_matmul_clamp_f32_qai8dxp4x8_qsi4cxp8x8_4x8x32_neon_i8mm.c
     kai/ukernels/matmul/matmul_clamp_f32_qai8dxp_qsi4cxp/kai_matmul_clamp_f32_qai8dxp4x8_qsi4cxp8x8_8x8x32_neon_i8mm.c
+    kai/ukernels/matmul/matmul_clamp_f32_qsi8d32p_qsi4c32p/kai_matmul_clamp_f32_qsi8d32p4x8_qsi4c32p4x8_8x4x32_neon_i8mm.c
 )
 
 set(KLEIDIAI_FILES_SME
@@ -188,6 +192,7 @@ if(KLEIDIAI_BUILD_TESTS)
     add_executable(kleidiai_test
         test/tests/matmul_test.cpp
         test/tests/matmul_clamp_f32_qai8dxp_qsi4cxp_test.cpp
+        test/tests/matmul_clamp_f32_qsi8d32p_qsi4c32p_test.cpp
     )
 
     target_link_libraries(kleidiai_test

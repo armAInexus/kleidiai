@@ -6,8 +6,10 @@
 #pragma once
 
 #include <stddef.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -47,6 +49,31 @@ extern "C" {
 #define KAI_UNUSED(x) (void)(x)
 #define KAI_MIN(a, b) (((a) < (b)) ? (a) : (b))
 #define KAI_MAX(a, b) (((a) > (b)) ? (a) : (b))
+
+/// Converts a scalar f16 value to f32
+/// @param[in] f16 The f16 value
+///
+/// @return the f32 value
+inline static float kai_cast_f32_f16(uint16_t f16) {
+#if defined(__ARM_NEON)
+    __fp16 f32 = 0;
+    memcpy(&f32, &f16, sizeof(uint16_t));
+    return (float)f32;
+#endif
+}
+
+/// Converts a scalar f32 value to f16
+/// @param[in] f32 The f32 value
+///
+/// @return the f16 value
+inline static uint16_t kai_cast_f16_f32(float f32) {
+#if defined(__ARM_NEON)
+    uint16_t f16 = 0;
+    __fp16 tmp = f32;
+    memcpy(&f16, &tmp, sizeof(uint16_t));
+    return f16;
+#endif
+}
 
 inline static size_t kai_roundup(size_t a, size_t b) {
     return ((a + b - 1) / b) * b;
