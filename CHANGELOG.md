@@ -8,7 +8,7 @@
 
 KleidiAI follows the [Semantic Versioning](https://semver.org/) specification for releases.
 
-## v0.2.0 - Upcoming Release
+## v0.2.0
 
 - Micro-kernels to compute the matrix multiplication of dynamically quantized symmetric signed 8-bit integer with
   per-block quantization (QSI8D32) activations and quantized symmetric 4-bit signed integer with per-block quantization
