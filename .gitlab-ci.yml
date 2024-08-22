@@ -112,6 +112,44 @@ build-clang-bazel:
     paths:
       - ${CI_JOB_NAME_SLUG}/kleidiai_test
 
+build-examples:
+  stage: build
+  extends:
+    - .standard-rules
+  parallel:
+    matrix:
+      - EXAMPLE:
+          - matmul_clamp_f16_f16_f16p
+          - matmul_clamp_f32_qai8dxp_qsi4cxp
+          - matmul_clamp_f32_qsi8d32p_qsi4c32p
+  script:
+    - mkdir -p build/$EXAMPLE
+    - cmake -G Ninja -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=Release -S examples/$EXAMPLE -B build/$EXAMPLE
+    - cmake --build build/$EXAMPLE -j$(nproc)
+  artifacts:
+    expire_in: 1 day
+    paths:
+      - build/$EXAMPLE/$EXAMPLE
+
+test-examples:
+  stage: test
+  extends:
+    - .standard-rules
+  needs:
+  - build-examples
+  parallel:
+    matrix:
+      - EXAMPLE:
+          - matmul_clamp_f16_f16_f16p
+          - matmul_clamp_f32_qai8dxp_qsi4cxp
+          - matmul_clamp_f32_qsi8d32p_qsi4c32p
+  script:
+    - build/${EXAMPLE}/${EXAMPLE} | tee -a ${EXAMPLE}.log
+  artifacts:
+    expire_in: 1 day
+    paths:
+      - ${EXAMPLE}.log
+
 clang-tidy-checks:
   extends:
     - .standard-rules
