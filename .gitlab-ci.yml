@@ -229,7 +229,7 @@ test-linux-aarch64-cov:
   script:
     - ./build/kleidiai_test --gtest_output=xml:kleidiai_test_results.xml
     - mkdir -p build/coverage
-    - gcovr --gcov-executable="llvm-cov gcov" --exclude-unreachable-branches --exclude=build --exclude=test --exclude-lines-by-pattern=".*KAI_(?:ASSERT|ASSUME|ERROR).*" --exclude-branches-by-pattern=".*KAI_(?:ASSERT|ASSUME).*" --json=build/coverage/linux-aarch64.json -j --root . build
+    - gcovr --gcov-executable="llvm-cov gcov" --exclude-unreachable-branches --exclude=build --exclude=test --exclude-lines-by-pattern=".*KAI_(?:ASSERT|ASSUME|ERROR).*" --exclude-branches-by-pattern=".*KAI_(?:ASSERT|ASSUME).*" --json=build/coverage/linux-aarch64.json -j --root . build --gcov-object-directory build
   artifacts:
     expire_in: 1 day
     paths:
@@ -315,7 +315,7 @@ test-linux-aarch64-cov-fvp:
     - e2cp linux-rootfs.img:"$PWD/artifacts.tar" .
     - tar xf artifacts.tar -C /
     - mkdir -p build/coverage
-    - gcovr --gcov-executable="llvm-cov gcov" --exclude-unreachable-branches --exclude=build --exclude=test --exclude-lines-by-pattern=".*KAI_(?:ASSERT|ASSUME|ERROR).*" --exclude-branches-by-pattern=".*KAI_(?:ASSERT|ASSUME).*" --json=build/coverage/linux-aarch64-fvp.json -j --root . build
+    - gcovr --gcov-executable="llvm-cov gcov" --exclude-unreachable-branches --exclude=build --exclude=test --exclude-lines-by-pattern=".*KAI_(?:ASSERT|ASSUME|ERROR).*" --exclude-branches-by-pattern=".*KAI_(?:ASSERT|ASSUME).*" --json=build/coverage/linux-aarch64-fvp.json -j --root . build --gcov-object-directory build
   artifacts:
     expire_in: 1 day
     paths:
