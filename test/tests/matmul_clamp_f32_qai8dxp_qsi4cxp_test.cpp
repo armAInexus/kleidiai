@@ -6,16 +6,25 @@
 
 #include <gtest/gtest.h>
 
+#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <cstdlib>
 #include <limits>
+#include <vector>
 
+#include "kai/ukernels/matmul/matmul_clamp_f32_qai8dxp_qsi4cxp/kai_matmul_clamp_f32_qai8dxp1x8_qsi4cxp4x8_1x4x32_neon_dotprod.h"
+#include "kai/ukernels/matmul/matmul_clamp_f32_qai8dxp_qsi4cxp/kai_matmul_clamp_f32_qai8dxp1x8_qsi4cxp8x8_1x8x32_neon_dotprod.h"
+#include "kai/ukernels/matmul/matmul_clamp_f32_qai8dxp_qsi4cxp/kai_matmul_clamp_f32_qai8dxp4x8_qsi4cxp4x8_4x4x32_neon_i8mm.h"
+#include "kai/ukernels/matmul/matmul_clamp_f32_qai8dxp_qsi4cxp/kai_matmul_clamp_f32_qai8dxp4x8_qsi4cxp4x8_8x4x32_neon_i8mm.h"
+#include "kai/ukernels/matmul/matmul_clamp_f32_qai8dxp_qsi4cxp/kai_matmul_clamp_f32_qai8dxp4x8_qsi4cxp8x8_4x8x32_neon_i8mm.h"
 #include "kai/ukernels/matmul/matmul_clamp_f32_qai8dxp_qsi4cxp/kai_matmul_clamp_f32_qai8dxp4x8_qsi4cxp8x8_8x8x32_neon_i8mm.h"
+#include "kai/ukernels/matmul/matmul_clamp_f32_qai8dxp_qsi4cxp/kai_matmul_clamp_f32_qai8dxp_qsi4cxp_interface.h"
 #include "kai/ukernels/matmul/pack/kai_lhs_quant_pack_qai8dxp_f32.h"
 #include "kai/ukernels/matmul/pack/kai_rhs_pack_nxk_qsi4cxp_qsu4cxs1s0.h"
 #include "test/common/int4.hpp"
 #include "test/common/memory.hpp"
+#include "test/common/test_suite.hpp"
 #include "test/reference/cast.hpp"
 #include "test/reference/fill.hpp"
 #include "test/reference/matmul.hpp"
@@ -23,17 +32,32 @@
 
 namespace kai::test {
 
-TEST(matmul_clamp_f32_qai8dxp_qai4cxp, EndToEnd) {
+static const std::array<UkernelVariant<kai_matmul_clamp_f32_qai8dxp_qsi4cxp_ukernel>, 6>
+    variants_kai_matmul_clamp_f32_qai8dxp_qsi4cxp = {{
+        UKERNEL_MATMUL_VARIANT(clamp_f32_qai8dxp1x8_qsi4cxp4x8_1x4x32_neon_dotprod),
+        UKERNEL_MATMUL_VARIANT(clamp_f32_qai8dxp1x8_qsi4cxp8x8_1x8x32_neon_dotprod),
+        UKERNEL_MATMUL_VARIANT(clamp_f32_qai8dxp4x8_qsi4cxp4x8_4x4x32_neon_i8mm),
+        UKERNEL_MATMUL_VARIANT(clamp_f32_qai8dxp4x8_qsi4cxp4x8_8x4x32_neon_i8mm),
+        UKERNEL_MATMUL_VARIANT(clamp_f32_qai8dxp4x8_qsi4cxp8x8_4x8x32_neon_i8mm),
+        UKERNEL_MATMUL_VARIANT(clamp_f32_qai8dxp4x8_qsi4cxp8x8_8x8x32_neon_i8mm),
+    }};
+
+class MatMulTest_f32_qai8dxp4x8_qsi4cxp8x8 : public UkernelVariantTest {};
+
+TEST_P(MatMulTest_f32_qai8dxp4x8_qsi4cxp8x8, EndToEnd) {
+    auto& [variant_index, matmul_shape] = GetParam();
+    const auto& ukernel_variant = variants_kai_matmul_clamp_f32_qai8dxp_qsi4cxp.at(variant_index);
+
     const uint64_t seed = 0;
 
-    const size_t M = 16;
-    const size_t N = 32;
-    const size_t K = 64;
+    const size_t M = matmul_shape.m;
+    const size_t N = matmul_shape.n;
+    const size_t K = matmul_shape.k;
 
-    const auto mr = kai_get_mr_matmul_clamp_f32_qai8dxp4x8_qsi4cxp8x8_8x8x32_neon_i8mm();
-    const auto nr = kai_get_nr_matmul_clamp_f32_qai8dxp4x8_qsi4cxp8x8_8x8x32_neon_i8mm();
-    const auto kr = kai_get_kr_matmul_clamp_f32_qai8dxp4x8_qsi4cxp8x8_8x8x32_neon_i8mm();
-    const auto sr = kai_get_sr_matmul_clamp_f32_qai8dxp4x8_qsi4cxp8x8_8x8x32_neon_i8mm();
+    const auto mr = ukernel_variant.interface.get_mr();
+    const auto nr = ukernel_variant.interface.get_nr();
+    const auto kr = ukernel_variant.interface.get_kr();
+    const auto sr = ukernel_variant.interface.get_sr();
 
     // Generates input data.
     const auto ref_lhs = fill_random<float>(M * K, seed + 0);
@@ -72,10 +96,10 @@ TEST(matmul_clamp_f32_qai8dxp_qai4cxp, EndToEnd) {
         reinterpret_cast<const float*>(ref_rhs_scales.data()), imp_packed_rhs.data(), 0, &params);
 
     // Runs the GEMM micro-kernel.
-    const auto imp_dst_size = kai_get_dst_size_matmul_clamp_f32_qai8dxp4x8_qsi4cxp8x8_8x8x32_neon_i8mm(M, N);
+    const auto imp_dst_size = ukernel_variant.interface.get_dst_size(M, N);
     ASSERT_EQ(imp_dst_size, ref_dst.size());
     std::vector<uint8_t> imp_dst(imp_dst_size);
-    kai_run_matmul_clamp_f32_qai8dxp4x8_qsi4cxp8x8_8x8x32_neon_i8mm(
+    ukernel_variant.interface.run_matmul(
         M, N, K, imp_packed_lhs.data(), imp_packed_rhs.data(), reinterpret_cast<float*>(imp_dst.data()),
         N * sizeof(float), sizeof(float), std::numeric_limits<float>::lowest(), std::numeric_limits<float>::max());
 
@@ -92,5 +116,11 @@ TEST(matmul_clamp_f32_qai8dxp_qai4cxp, EndToEnd) {
         }
     }
 }
+
+INSTANTIATE_TEST_SUITE_P(
+    MatMul, MatMulTest_f32_qai8dxp4x8_qsi4cxp8x8,
+    testing::Combine(
+        testing::Range<size_t>(0, variants_kai_matmul_clamp_f32_qai8dxp_qsi4cxp.size()),
+        testing::Values(MatMulShape{16, 32, 64})));
 
 }  // namespace kai::test
