@@ -21,16 +21,27 @@ TOOLCHAIN_VER=13.2.rel1
 TOOLCHAIN_TYPE=aarch64-none-elf
 TOOLCHAIN_DIR=$(pwd)/toolchain-${TOOLCHAIN_TYPE}/
 CROSS_COMPILE=${TOOLCHAIN_DIR}/bin/${TOOLCHAIN_TYPE}-
+KERNEL_VERSION=6.9.4
 
-# Downloads tools and source code.
+# Downloads Arm toolchain
 mkdir -p ${TOOLCHAIN_DIR}
 wget -O- "https://developer.arm.com/-/media/Files/downloads/gnu/${TOOLCHAIN_VER}/binrel/arm-gnu-toolchain-${TOOLCHAIN_VER}-${HOST_ARCH}-${TOOLCHAIN_TYPE}.tar.xz" | tar xJC ${TOOLCHAIN_DIR} --strip-components=1
-wget -O- "https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-6.9.4.tar.xz" | tar xJ
-git clone --depth 1 --branch autoconf-toolchain-fixes "https://git.kernel.org/pub/scm/linux/kernel/git/mark/boot-wrapper-aarch64.git"
-git clone --depth 1 --branch v6.9-dts "https://git.kernel.org/pub/scm/linux/kernel/git/devicetree/devicetree-rebasing.git"
+
+# Download Linux Kernel
+wget -O- "https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-${KERNEL_VERSION}.tar.xz" | tar xJ
+
+# Download booloader
+# Revision 1fea854771f9aee405c4ae204c0e0f912318da6f supports bare metal gcc, otherwise hosted toolchain should be used
+mkdir -p boot-wrapper-aarch64
+wget -O- "https://git.kernel.org/pub/scm/linux/kernel/git/mark/boot-wrapper-aarch64.git/snapshot/boot-wrapper-aarch64-1fea854771f9aee405c4ae204c0e0f912318da6f.tar.gz" | tar xzC boot-wrapper-aarch64 --strip-components=1
+
+# Download DTS tooling
+mkdir -p devicetree-rebasing
+wget -O- "https://git.kernel.org/pub/scm/linux/kernel/git/devicetree/devicetree-rebasing.git/snapshot/devicetree-rebasing-6.9-dts.tar.gz" | tar xzC devicetree-rebasing --strip-components=1
+
 
 # Builds the Linux kernel.
-cd linux-6.9.4
+cd linux-${KERNEL_VERSION}
 make ARCH=arm64 CROSS_COMPILE=${CROSS_COMPILE} defconfig
 make ARCH=arm64 CROSS_COMPILE=${CROSS_COMPILE} -j$(nproc) Image
 cd ..
@@ -47,7 +58,7 @@ autoreconf -i
 ./configure --host=${TOOLCHAIN_TYPE} \
     --enable-psci \
     --enable-gicv3 \
-    --with-kernel-dir=../linux-6.9.4 \
+    --with-kernel-dir=../linux-${KERNEL_VERSION} \
     --with-dtb=../devicetree-rebasing/src/arm64/arm/fvp-base-revc.dtb \
     --with-cmdline="console=ttyAMA0 earlycon=pl011,0x1c090000 panic=1 root=/dev/vda rw init=/bin/bash -- /root/startup"
 make -j$(nproc)
@@ -58,6 +69,6 @@ mv boot-wrapper-aarch64/linux-system.axf .
 # Cleans up.
 rm -rf \
     ${TOOLCHAIN_DIR} \
-    linux-6.9.4 \
+    linux-${KERNEL_VERSION} \
     devicetree-rebasing \
     boot-wrapper-aarch64
