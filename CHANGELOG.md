@@ -8,6 +8,10 @@
 
 KleidiAI follows the [Semantic Versioning](https://semver.org/) specification for releases.
 
+## v0.3.0 - Upcoming Release
+
+- Advanced SIMD FP32 GEMM and GEMV micro kernels
+
 ## v0.2.0
 
 - Micro-kernels to compute the matrix multiplication of dynamically quantized symmetric signed 8-bit integer with
