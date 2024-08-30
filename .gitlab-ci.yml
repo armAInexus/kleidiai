@@ -21,10 +21,6 @@ default:
     - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
 
-.merge-request-only:
-  rules:
-    - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
-
 workflow:
   auto_cancel:
     on_new_commit: interruptible
@@ -48,10 +44,14 @@ build-clang-cov:
   script:
     - cmake -G Ninja -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=Release -DKLEIDIAI_BUILD_TESTS=ON -DCMAKE_C_FLAGS="--coverage" -DCMAKE_CXX_FLAGS="--coverage" -S . -B build
     - cmake --build ./build -j$(nproc)
+    # save coverage build job path for later use since coverage processing requires files in exactly same location
+    - echo "COVERAGE_PROJECT_PATH=${PWD}" > build/coverage_path.env
   artifacts:
     expire_in: 1 day
     paths:
       - build
+    reports:
+      dotenv: build/coverage_path.env
 
 build-clang-sanitizer:
   extends:
@@ -176,8 +176,9 @@ test-remote:
   #
   # When the remote pipeline has been completed, this job is manually triggered
   # with the information about the remote pipeline including whether it's passed or failed.
-  extends:
-    - .merge-request-only
+  # Run the job only for a public pipeline
+  rules:
+    - if: $CI_PIPELINE_SOURCE == 'merge_request_event' && $CI_SERVER_HOST == 'gitlab.arm.com'
   stage: test
   needs: []
   when: manual
@@ -220,27 +221,64 @@ test-linux-aarch64:
     reports:
       junit: kleidiai_test_results-${BUILD_JOB_PROVIDER}.xml
 
+# This job template is used to mimic same location of source files used to build binary with coverage.
+# It is required because coverage post-processing tooling used expects source files to be in exactly
+# same location as during build. But it's not always possible in case of CI runner change or version
+# update.
+.coverage-post-processing:
+  before_script:
+    - >
+      if [ "${CI_PROJECT_DIR}" != "${COVERAGE_PROJECT_PATH}" ]; then
+        echo "Workaround for build location active"
+        echo "Cleanup old artifacts"
+        rm -rf ${COVERAGE_PROJECT_PATH}
+        echo "Copy current job files into path used to build coverage binary"
+        mkdir -vp ${COVERAGE_PROJECT_PATH}
+        cp -a -t ${COVERAGE_PROJECT_PATH}/ *
+      fi
+    - |
+      echo -e "
+      root=${COVERAGE_PROJECT_PATH}
+      exclude=${COVERAGE_PROJECT_PATH}/build
+      exclude=${COVERAGE_PROJECT_PATH}/test
+      gcov-executable=llvm-cov gcov
+      exclude-unreachable-branches=yes
+      exclude-lines-by-pattern=.*KAI_(?:ASSERT|ASSUME|ERROR).*
+      exclude-branches-by-pattern=.*KAI_(?:ASSERT|ASSUME).*" > gcovr.cfg
+  after_script:
+    - >
+      if [ "${CI_PROJECT_DIR}" != "${COVERAGE_PROJECT_PATH}" ]; then
+        echo "Cleanup workaround for build location"
+        rm -rf ${COVERAGE_PROJECT_PATH}
+        rm -f gcovr.cfg
+      fi
+
 test-linux-aarch64-cov:
   extends:
     - .standard-rules
+    - .coverage-post-processing
   stage: test
   needs:
     - build-clang-cov
   script:
     - ./build/kleidiai_test --gtest_output=xml:kleidiai_test_results.xml
     - mkdir -p build/coverage
-    - gcovr --gcov-executable="llvm-cov gcov" --exclude-unreachable-branches --exclude=build --exclude=test --exclude-lines-by-pattern=".*KAI_(?:ASSERT|ASSUME|ERROR).*" --exclude-branches-by-pattern=".*KAI_(?:ASSERT|ASSUME).*" --json=build/coverage/linux-aarch64.json -j --root . build
+    - gcovr --json=build/coverage/linux-aarch64.json -j --config gcovr.cfg
   artifacts:
     expire_in: 1 day
     paths:
-      - build/coverage/linux-aarch64.json
       - kleidiai_test_results.xml
+      - build/coverage/linux-aarch64.json
+      - build/coverage_path.env
     reports:
       junit: kleidiai_test_results.xml
+      # Reexport coverage information for final 'coverage' job
+      dotenv: build/coverage_path.env
 
 test-linux-aarch64-cov-fvp:
   extends:
     - .standard-rules
+    - .coverage-post-processing
   stage: test
   needs:
     - build-clang-cov
@@ -315,7 +353,7 @@ test-linux-aarch64-cov-fvp:
     - e2cp linux-rootfs.img:"$PWD/artifacts.tar" .
     - tar xf artifacts.tar -C /
     - mkdir -p build/coverage
-    - gcovr --gcov-executable="llvm-cov gcov" --exclude-unreachable-branches --exclude=build --exclude=test --exclude-lines-by-pattern=".*KAI_(?:ASSERT|ASSUME|ERROR).*" --exclude-branches-by-pattern=".*KAI_(?:ASSERT|ASSUME).*" --json=build/coverage/linux-aarch64-fvp.json -j --root . build
+    - gcovr --json=build/coverage/linux-aarch64-fvp.json -j --config gcovr.cfg
   artifacts:
     expire_in: 1 day
     paths:
@@ -327,6 +365,7 @@ test-linux-aarch64-cov-fvp:
 coverage:
   extends:
     - .standard-rules
+    - .coverage-post-processing
   stage: analyze
   needs:
     - test-linux-aarch64-cov
@@ -342,6 +381,7 @@ coverage:
         coverage_format: cobertura
         path: build/coverage.xml
     paths:
+      - build/coverage.xml
       - build/html/coverage
 
 pages:
