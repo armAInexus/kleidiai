@@ -43,7 +43,7 @@ wget -O- "https://git.kernel.org/pub/scm/linux/kernel/git/devicetree/devicetree-
 # Builds the Linux kernel.
 cd linux-${KERNEL_VERSION}
 make ARCH=arm64 CROSS_COMPILE=${CROSS_COMPILE} defconfig
-make ARCH=arm64 CROSS_COMPILE=${CROSS_COMPILE} -j$(nproc) Image
+make ARCH=arm64 CROSS_COMPILE=${CROSS_COMPILE} "-j$(nproc)" Image
 cd ..
 
 # Builds the device tree.
@@ -53,7 +53,8 @@ cd ..
 
 # Builds the bootloader.
 cd boot-wrapper-aarch64
-export PATH=$(dirname ${CROSS_COMPILE}gcc):$PATH
+PATH=$(dirname ${CROSS_COMPILE}gcc):$PATH
+export PATH
 autoreconf -i
 ./configure --host=${TOOLCHAIN_TYPE} \
     --enable-psci \
@@ -61,7 +62,7 @@ autoreconf -i
     --with-kernel-dir=../linux-${KERNEL_VERSION} \
     --with-dtb=../devicetree-rebasing/src/arm64/arm/fvp-base-revc.dtb \
     --with-cmdline="console=ttyAMA0 earlycon=pl011,0x1c090000 panic=1 root=/dev/vda rw init=/bin/bash -- /root/startup"
-make -j$(nproc)
+make "-j$(nproc)"
 cd ..
 
 mv boot-wrapper-aarch64/linux-system.axf .

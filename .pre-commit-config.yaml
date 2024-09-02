@@ -69,6 +69,12 @@ repos:
       - id: buildifier-lint
         name: "Bazel: Buildifier (lint)"
         stages: [ commit ]
+  - repo: https://github.com/shellcheck-py/shellcheck-py
+    rev: v0.10.0.1
+    hooks:
+      - id: shellcheck
+        stages: [ commit ]
+        args: [ "--severity=warning" ]
   - repo: local
     hooks:
       - id: signed-off-checker
