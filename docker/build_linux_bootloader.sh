@@ -6,15 +6,15 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 
-BUILDARCH=${BUILDARCH:-amd64}
+TARGETARCH=${TARGETARCH:-amd64}
 
 # This script is used by Dockerfile to create a Linux bootloader with the latest Linux kernel.
-if [ "${BUILDARCH}" = "amd64" ] ; then
+if [ "${TARGETARCH}" = "amd64" ] ; then
     HOST_ARCH=x86_64
-elif [ "${BUILDARCH}" = "arm64" ] ; then
+elif [ "${TARGETARCH}" = "arm64" ] ; then
     HOST_ARCH=aarch64
 else
-    echo "Unknown $BUILDARCH" && exit 1
+    echo "Unknown $TARGETARCH" && exit 1
 fi
 
 TOOLCHAIN_VER=13.2.rel1
