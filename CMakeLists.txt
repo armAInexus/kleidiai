@@ -19,7 +19,6 @@ set(CMAKE_CXX_STANDARD_REQUIRED OFF)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
-include(FetchGTest)
 
 option(KLEIDIAI_BUILD_TESTS       "Build unit tests."             ON)
 option(KLEIDIAI_BUILD_BENCHMARK   "Build the benchmark tool."     OFF)
@@ -152,6 +151,7 @@ target_compile_options(kleidiai
 )
 
 if(KLEIDIAI_BUILD_TESTS)
+    include(FetchGTest)
     enable_testing()
     include(GoogleTest)
 
