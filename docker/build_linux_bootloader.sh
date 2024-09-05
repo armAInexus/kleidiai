@@ -1,10 +1,22 @@
-#!/bin/bash -eu
+#!/bin/bash -eux
 
 #
 # SPDX-FileCopyrightText: Copyright 2024 Arm Limited and/or its affiliates <open-source-office@arm.com>
 #
 # SPDX-License-Identifier: Apache-2.0
 #
+
+BUILD_CACHE=${BUILD_CACHE:-${HOME}/.cache/kleidiai}
+download_and_extract()
+{
+    URL="$1"
+    FOLDER="$2"
+    ARCHIVE="${3:-$(basename $1)}"
+
+    wget -cO ${BUILD_CACHE}/${ARCHIVE} "$URL"
+    mkdir -p ${FOLDER}
+    tar -xa -f ${BUILD_CACHE}/${ARCHIVE} --strip-components=1 -C ${FOLDER}
+}
 
 TARGETARCH=${TARGETARCH:-amd64}
 
@@ -23,27 +35,34 @@ TOOLCHAIN_DIR=$(pwd)/toolchain-${TOOLCHAIN_TYPE}/
 CROSS_COMPILE=${TOOLCHAIN_DIR}/bin/${TOOLCHAIN_TYPE}-
 KERNEL_VERSION=6.9.4
 
-# Downloads Arm toolchain
-mkdir -p ${TOOLCHAIN_DIR}
-wget -O- "https://developer.arm.com/-/media/Files/downloads/gnu/${TOOLCHAIN_VER}/binrel/arm-gnu-toolchain-${TOOLCHAIN_VER}-${HOST_ARCH}-${TOOLCHAIN_TYPE}.tar.xz" | tar xJC ${TOOLCHAIN_DIR} --strip-components=1
+mkdir -p ${BUILD_CACHE}
+
+# Downloads tools and source code.
+# Download Arm toolchain
+download_and_extract \
+    "https://developer.arm.com/-/media/Files/downloads/gnu/${TOOLCHAIN_VER}/binrel/arm-gnu-toolchain-${TOOLCHAIN_VER}-${HOST_ARCH}-${TOOLCHAIN_TYPE}.tar.xz" \
+    "${TOOLCHAIN_DIR}"
 
 # Download Linux Kernel
-wget -O- "https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-${KERNEL_VERSION}.tar.xz" | tar xJ
+download_and_extract \
+    "https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-${KERNEL_VERSION}.tar.xz" \
+    "linux-${KERNEL_VERSION}"
 
 # Download booloader
 # Revision 1fea854771f9aee405c4ae204c0e0f912318da6f supports bare metal gcc, otherwise hosted toolchain should be used
-mkdir -p boot-wrapper-aarch64
-wget -O- "https://git.kernel.org/pub/scm/linux/kernel/git/mark/boot-wrapper-aarch64.git/snapshot/boot-wrapper-aarch64-1fea854771f9aee405c4ae204c0e0f912318da6f.tar.gz" | tar xzC boot-wrapper-aarch64 --strip-components=1
+download_and_extract \
+    "https://git.kernel.org/pub/scm/linux/kernel/git/mark/boot-wrapper-aarch64.git/snapshot/boot-wrapper-aarch64-1fea854771f9aee405c4ae204c0e0f912318da6f.tar.gz" \
+    boot-wrapper-aarch64
 
 # Download DTS tooling
-mkdir -p devicetree-rebasing
-wget -O- "https://git.kernel.org/pub/scm/linux/kernel/git/devicetree/devicetree-rebasing.git/snapshot/devicetree-rebasing-6.9-dts.tar.gz" | tar xzC devicetree-rebasing --strip-components=1
-
+download_and_extract \
+    "https://git.kernel.org/pub/scm/linux/kernel/git/devicetree/devicetree-rebasing.git/snapshot/devicetree-rebasing-$(echo $KERNEL_VERSION | cut -d '.' -f 1,2)-dts.tar.gz" \
+    devicetree-rebasing
 
 # Builds the Linux kernel.
 cd linux-${KERNEL_VERSION}
-make ARCH=arm64 CROSS_COMPILE=${CROSS_COMPILE} defconfig
-make ARCH=arm64 CROSS_COMPILE=${CROSS_COMPILE} "-j$(nproc)" Image
+CCACHE_DIR=${BUILD_CACHE}/ccache make ARCH=arm64 CROSS_COMPILE="ccache ${CROSS_COMPILE}" defconfig
+CCACHE_DIR=${BUILD_CACHE}/ccache make ARCH=arm64 CROSS_COMPILE="ccache ${CROSS_COMPILE}" "-j$(nproc)" Image
 cd ..
 
 # Builds the device tree.

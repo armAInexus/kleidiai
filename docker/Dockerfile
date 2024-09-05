@@ -10,7 +10,15 @@ FROM ubuntu:24.04
 ARG TARGETARCH
 ARG BUILDARCH
 
-RUN apt-get update  \
+ENV XDG_CACHE_HOME=/cache ANDROID_NDK=/opt/devtools/android-ndk BUILD_CACHE=/build_cache
+
+RUN mkdir -p /opt/devtools ${XDG_CACHE_HOME}
+# Bazel 6.5 cache config does not use XDG_CACHE_HOME and always ${HOME}/.cache/bazel
+# but HOME is not set in the container environment
+RUN ln -s ${XDG_CACHE_HOME} /.cache
+
+RUN --mount=type=cache,target=/var/cache/apt --mount=type=cache,target=/var/lib/apt \
+    apt-get update \
     && DEBIAN_FRONTEND=noninteractive apt-get -y --no-install-recommends install \
     build-essential \
     ca-certificates \
@@ -37,9 +45,9 @@ RUN apt-get update  \
     libssl-dev \
     genext2fs \
     curl \
-    unzip
+    unzip \
+    ccache
 
-RUN mkdir -p /opt/devtools
 WORKDIR /opt/devtools
 
 # =============================================================================
@@ -47,28 +55,27 @@ WORKDIR /opt/devtools
 # =============================================================================
 
 # Downloads the latest Fixed Virtual Platform.
-RUN export ARCH_SUFFIX=$(test "${TARGETARCH}" = "arm64" && echo -n "_armv8l") && \
+RUN --mount=type=cache,target=${BUILD_CACHE} \
+    export ARCH_SUFFIX=$(test "${TARGETARCH}" = "arm64" && echo -n "_armv8l") && \
     mkdir FVP_Base_RevC-2xAEMvA_11.25_15_Linux64${ARCH_SUFFIX} && \
     ln -s /opt/devtools/FVP_Base_RevC-2xAEMvA_11.25_15_Linux64${ARCH_SUFFIX}/Base_RevC_AEMvA_pkg /opt/devtools/fvp_base_aemva && \
-    wget -O- "https://developer.arm.com/-/media/Files/downloads/ecosystem-models/FM_11_25/FVP_Base_RevC-2xAEMvA_11.25_15_Linux64${ARCH_SUFFIX}.tgz" | tar xz -C FVP_Base_RevC-2xAEMvA_11.25_15_Linux64${ARCH_SUFFIX}
+    wget -cO ${BUILD_CACHE}/FVP_Base_RevC-2xAEMvA_11.25_15_Linux64${ARCH_SUFFIX}.tgz "https://developer.arm.com/-/media/Files/downloads/ecosystem-models/FM_11_25/FVP_Base_RevC-2xAEMvA_11.25_15_Linux64${ARCH_SUFFIX}.tgz" && \
+    tar xzC FVP_Base_RevC-2xAEMvA_11.25_15_Linux64${ARCH_SUFFIX} -f ${BUILD_CACHE}/FVP_Base_RevC-2xAEMvA_11.25_15_Linux64${ARCH_SUFFIX}.tgz
 
 # Creates the root filesystem.
-RUN wget "https://cdimage.ubuntu.com/ubuntu-base/releases/24.04/release/ubuntu-base-24.04-base-arm64.tar.gz" && \
-    genext2fs -a ubuntu-base-24.04-base-arm64.tar.gz -B 4096 -b 51200 linux-rootfs.img && \
-    tar cfJ linux-rootfs.img.xz linux-rootfs.img && \
-    rm ubuntu-base-24.04-base-arm64.tar.gz linux-rootfs.img
+RUN --mount=type=cache,target=${BUILD_CACHE} \
+    wget -cO ${BUILD_CACHE}/ubuntu-base-24.04-base-arm64.tar.gz "https://cdimage.ubuntu.com/ubuntu-base/releases/24.04/release/ubuntu-base-24.04-base-arm64.tar.gz" && \
+    genext2fs -a ${BUILD_CACHE}/ubuntu-base-24.04-base-arm64.tar.gz -B 4096 -b 51200 linux-rootfs.img && \
+    tar cJ --remove-files -f linux-rootfs.img.xz linux-rootfs.img
 
-# Compiles the latest Linux kernel and bootloader.
-COPY build_linux_bootloader.sh .
-RUN ./build_linux_bootloader.sh && \
-    rm build_linux_bootloader.sh
+# Compiles the latest Linux kernel, bootloader and root file system for FVP usage
+RUN --mount=type=cache,target=${BUILD_CACHE} \
+    --mount=type=bind,source=build_linux_bootloader.sh,target=build_linux_bootloader.sh \
+    ./build_linux_bootloader.sh
 
 WORKDIR /
 
-ENV XDG_CACHE_HOME=/cache
-
-RUN mkdir -p ${XDG_CACHE_HOME} && \
-    wget "https://github.com/bazelbuild/bazelisk/releases/download/v1.20.0/bazelisk-linux-${TARGETARCH}" -O /usr/bin/bazelisk && \
+RUN wget "https://github.com/bazelbuild/bazelisk/releases/download/v1.20.0/bazelisk-linux-${TARGETARCH}" -O /usr/bin/bazelisk && \
     chmod a+x /usr/bin/bazelisk && \
     bazelisk && \
     chmod -R a+rw ${XDG_CACHE_HOME}
@@ -82,10 +89,9 @@ RUN wget "https://github.com/bazelbuild/buildtools/releases/download/${BAZEL_BUI
 
 # Android NDK for amd64 only
 ARG NDK_VERSION=r25c
-RUN if [ "${TARGETARCH}" = "amd64" ] ; then \
-        wget "https://dl.google.com/android/repository/android-ndk-${NDK_VERSION}-linux.zip" && \
-        unzip android-ndk-${NDK_VERSION}-linux.zip -d /opt/devtools/ && \
-        rm -f android-ndk-${NDK_VERSION}-linux.zip && \
-        ln -s /opt/devtools/android-ndk-${NDK_VERSION} /opt/devtools/android-ndk; \
+RUN --mount=type=cache,target=${BUILD_CACHE} \
+    if [ "${TARGETARCH}" = "amd64" ] ; then \
+        wget -cO ${BUILD_CACHE}/android-ndk-${NDK_VERSION}-linux.zip "https://dl.google.com/android/repository/android-ndk-${NDK_VERSION}-linux.zip" && \
+        unzip ${BUILD_CACHE}/android-ndk-${NDK_VERSION}-linux.zip -d /opt/devtools/ && \
+        ln -s /opt/devtools/android-ndk-${NDK_VERSION} ${ANDROID_NDK}; \
     fi
-ENV ANDROID_NDK=/opt/devtools/android-ndk
