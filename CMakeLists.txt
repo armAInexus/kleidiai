@@ -125,7 +125,7 @@ target_sources(kleidiai PRIVATE ${KLEIDIAI_FILES_SCALAR})
 # optimized KleidiAI micro-kernels. It can however still be used to compile scalar routines.
 # https://learn.microsoft.com/en-us/cpp/assembler/inline/inline-assembler?view=msvc-170
 #
-if((CMAKE_SYSTEM_PROCESSOR STREQUAL "aarch64" OR CMAKE_SYSTEM_PROCESSOR STREQUAL "arm64") AND NOT MSVC)
+if((CMAKE_SYSTEM_PROCESSOR STREQUAL "aarch64" OR CMAKE_SYSTEM_PROCESSOR STREQUAL "arm64" OR CMAKE_SYSTEM_NAME STREQUAL "iOS") AND NOT MSVC)
     target_sources(kleidiai PRIVATE ${KLEIDIAI_FILES_NEON})
     target_sources(kleidiai PRIVATE ${KLEIDIAI_FILES_NEON_FP16})
     target_sources(kleidiai PRIVATE ${KLEIDIAI_FILES_NEON_DOTPROD})
