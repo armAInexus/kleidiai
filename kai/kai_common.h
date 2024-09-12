@@ -50,6 +50,30 @@ extern "C" {
 #define KAI_MIN(a, b) (((a) < (b)) ? (a) : (b))
 #define KAI_MAX(a, b) (((a) > (b)) ? (a) : (b))
 
+/// KleidiAI data types
+/// Format: <byte 3>(reserved)|<byte 2>(num-bytes)|<byte 1>(type)|<byte 0>(variant-type)
+enum kai_datatype {
+    kai_dt_unknown = 0x0000,
+    kai_dt_f32 = 0x0411,
+    kai_dt_f16 = 0x0212,
+    kai_dt_bf16 = 0x0213,
+    kai_dt_int32 = 0x0421,
+    kai_dt_int16 = 0x0222,
+    kai_dt_int8 = 0x0124,
+    kai_dt_uint32 = 0x0431,
+    kai_dt_uint16 = 0x0232,
+    kai_dt_uint8 = 0x0134,
+    kai_dt_bool = 0x0441
+};
+
+/// Gets number of bytes for a given data type
+/// @param[in] dt KleidiAI data type
+///
+/// @return the numbers of bytes for the data type
+inline static size_t kai_get_datatype_size_in_bytes(enum kai_datatype dt) {
+    return (size_t)(dt >> 8);
+}
+
 /// Converts a scalar f16 value to f32
 /// @param[in] f16 The f16 value
 ///
@@ -60,6 +84,27 @@ inline static float kai_cast_f32_f16(uint16_t f16) {
     memcpy(&f32, &f16, sizeof(uint16_t));
     return (float)f32;
 #endif
+}
+
+/// Converts a scalar bf16 value to f32
+/// @param[in] bf16 The f16 value
+///
+/// @return the f32 value
+inline static float kai_cast_f32_bf16(uint16_t bf16) {
+    const uint32_t i32 = (bf16 << 16);
+    float f32;
+    memcpy(&f32, &i32, sizeof(i32));
+    return f32;
+}
+
+/// Converts a f32 value to bf16
+/// @param[in] f32 The f32 value
+///
+/// @return the bf16 value
+inline static uint16_t kai_cast_bf16_f32(float f32) {
+    const uint32_t* i32 = (uint32_t*)(&f32);
+    uint16_t bf16 = (*i32 >> 16);
+    return bf16;
 }
 
 /// Converts a scalar f32 value to f16

@@ -38,10 +38,8 @@ public:
     BFloat16& operator=(BFloat16&&) = default;
 
     /// Creates a new object from the specified numeric value.
-    template <typename T, std::enable_if_t<is_arithmetic<T>, bool> = true>
-    explicit BFloat16(T value) : _data(0) {
-        const auto value_f32 = static_cast<float>(value);
-        asm("bfcvt %h[output], %s[input]" : [output] "=w"(_data) : [input] "w"(value_f32));
+    BFloat16(float value) : _data(0) {
+        asm("bfcvt %h[output], %s[input]" : [output] "=w"(_data) : [input] "w"(value));
     }
 
     /// Assigns to the specified numeric value which will be converted to `bfloat16_t`.
@@ -52,9 +50,8 @@ public:
         return *this;
     }
 
-    /// Converts to numeric type `T`.
-    template <typename T, std::enable_if_t<is_arithmetic<T>, bool> = true>
-    explicit operator T() const {
+    /// Converts to floating-point.
+    operator float() const {
         union {
             float f32;
             uint32_t u32;
@@ -62,7 +59,7 @@ public:
 
         data.u32 = static_cast<uint32_t>(_data) << 16;
 
-        return static_cast<T>(data.f32);
+        return data.f32;
     }
 
     /// Equality operator.

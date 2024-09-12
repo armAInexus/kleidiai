@@ -13,6 +13,7 @@
 #include <tuple>
 #include <vector>
 
+#include "test/common/bfloat16.hpp"
 #include "test/common/int4.hpp"
 #include "test/common/memory.hpp"
 #include "test/common/numeric_limits.hpp"
@@ -74,7 +75,7 @@ IntType quantize_asymmetric(FloatType value, FloatType scale, ZeroPointType zero
 
 template <typename SrcType, typename DstType, typename ScaleType>
 std::tuple<std::vector<uint8_t>, std::vector<uint8_t>> quantize_symmetric_per_block(
-    const void* src, size_t height, size_t width, size_t quant_width) {
+    const void* src, size_t height, size_t width, size_t quant_width, bool is_transposed) {
     static_assert(is_floating_point<SrcType>);
     static_assert(is_integral<DstType>);
     static_assert(is_floating_point<ScaleType>);
@@ -113,7 +114,11 @@ std::tuple<std::vector<uint8_t>, std::vector<uint8_t>> quantize_symmetric_per_bl
 
                 if (x < width) {
                     const auto quantized = quantize_symmetric<DstType>(src_ptr[y * width + x], scale);
-                    write_array(data.data(), y * width + x, quantized);
+                    if (is_transposed) {
+                        write_array(data.data(), y * width + x, quantized);
+                    } else {
+                        write_array(data.data(), x * height + y, quantized);
+                    }
                 }
             }
         }
@@ -123,11 +128,13 @@ std::tuple<std::vector<uint8_t>, std::vector<uint8_t>> quantize_symmetric_per_bl
 }
 
 template std::tuple<std::vector<uint8_t>, std::vector<uint8_t>> quantize_symmetric_per_block<float, Int4, Float16>(
-    const void* src, size_t height, size_t width, size_t quant_width);
+    const void* src, size_t height, size_t width, size_t quant_width, bool is_transposed);
 template std::tuple<std::vector<uint8_t>, std::vector<uint8_t>> quantize_symmetric_per_block<float, Int4, float>(
-    const void* src, size_t height, size_t width, size_t quant_width);
+    const void* src, size_t height, size_t width, size_t quant_width, bool is_transposed);
+template std::tuple<std::vector<uint8_t>, std::vector<uint8_t>> quantize_symmetric_per_block<float, Int4, BFloat16>(
+    const void* src, size_t height, size_t width, size_t quant_width, bool is_transposed);
 template std::tuple<std::vector<uint8_t>, std::vector<uint8_t>> quantize_symmetric_per_block<float, int8_t, Float16>(
-    const void* src, size_t height, size_t width, size_t quant_width);
+    const void* src, size_t height, size_t width, size_t quant_width, bool is_transposed);
 
 template <typename SrcType, typename DstType, typename ScaleType, typename ZeroPointType>
 std::tuple<std::vector<uint8_t>, std::vector<uint8_t>, std::vector<uint8_t>> quantize_asymmetric_per_block(
@@ -192,5 +199,7 @@ std::tuple<std::vector<uint8_t>, std::vector<uint8_t>, std::vector<uint8_t>> qua
 
 template std::tuple<std::vector<uint8_t>, std::vector<uint8_t>, std::vector<uint8_t>> quantize_asymmetric_per_block<
     float, int8_t, float, int32_t>(const void* src, size_t height, size_t width, size_t quant_width);
+template std::tuple<std::vector<uint8_t>, std::vector<uint8_t>, std::vector<uint8_t>> quantize_asymmetric_per_block<
+    float, int8_t, BFloat16, int32_t>(const void* src, size_t height, size_t width, size_t quant_width);
 
 }  // namespace kai::test

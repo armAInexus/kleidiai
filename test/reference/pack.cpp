@@ -206,7 +206,7 @@ std::vector<uint8_t> pack_data_scales_interleave_block(
     const auto num_quant_packets_x = round_up_multiple(width, quant_width) / quant_width;
 
     const auto data_bytes = height * width * size_in_bits<Data> / 8;
-    const auto scales_bytes = height * num_quant_packets_x * sizeof(Scale);
+    const auto scales_bytes = scales != nullptr ? height * num_quant_packets_x * sizeof(Scale) : 0;
 
     std::vector<uint8_t> dst(data_bytes + scales_bytes);
 
@@ -215,9 +215,11 @@ std::vector<uint8_t> pack_data_scales_interleave_block(
 
     for (size_t y = 0; y < height; ++y) {
         for (size_t x_quant = 0; x_quant < width; x_quant += quant_width) {
-            write_array(dst_ptr, 0, *scales_ptr);
-            dst_ptr += sizeof(Scale);
-            ++scales_ptr;
+            if (scales_ptr != nullptr) {
+                write_array(dst_ptr, 0, *scales_ptr);
+                dst_ptr += sizeof(Scale);
+                ++scales_ptr;
+            }
 
             for (size_t x_element = 0; x_element < quant_width; ++x_element) {
                 const auto x = x_quant + x_element / 2 + (x_element % 2 != 0 ? quant_width / 2 : 0);
@@ -234,6 +236,8 @@ std::vector<uint8_t> pack_data_scales_interleave_block(
 }
 
 template std::vector<uint8_t> pack_data_scales_interleave_block<UInt4, Float16>(
+    const void* data, const void* scales, size_t height, size_t width, size_t quant_width);
+template std::vector<uint8_t> pack_data_scales_interleave_block<UInt4, std::nullptr_t>(
     const void* data, const void* scales, size_t height, size_t width, size_t quant_width);
 
 template <typename Data, typename ZeroPoint, typename Scale, typename Bias>

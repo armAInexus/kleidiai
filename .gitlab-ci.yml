@@ -122,6 +122,7 @@ build-examples:
           - matmul_clamp_f16_f16_f16p
           - matmul_clamp_f32_qai8dxp_qsi4cxp
           - matmul_clamp_f32_qsi8d32p_qsi4c32p
+          - matmul_clamp_f32_qai8dxp_qsi4c32p
   script:
     - mkdir -p build/$EXAMPLE
     - cmake -G Ninja -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=Release -S examples/$EXAMPLE -B build/$EXAMPLE
@@ -143,6 +144,7 @@ test-examples:
           - matmul_clamp_f16_f16_f16p
           - matmul_clamp_f32_qai8dxp_qsi4cxp
           - matmul_clamp_f32_qsi8d32p_qsi4c32p
+          - matmul_clamp_f32_qai8dxp_qsi4c32p
   script:
     - build/${EXAMPLE}/${EXAMPLE} | tee -a ${EXAMPLE}.log
   artifacts:

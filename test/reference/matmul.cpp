@@ -12,6 +12,7 @@
 #include <vector>
 
 #include "kai/kai_common.h"
+#include "test/common/bfloat16.hpp"
 #include "test/common/data_format.hpp"
 #include "test/common/data_type.hpp"
 #include "test/common/float16.hpp"
@@ -249,6 +250,92 @@ template std::vector<uint8_t> matmul_clamp_nt_t<int8_t, float, int32_t, Int4, fl
 
 template std::vector<uint8_t>
 matmul_clamp_nt_t<int8_t, Float16, int32_t, Int4, Float16, int32_t, float, int32_t, float>(
+    size_t m, size_t n, size_t k,                                                                       //
+    const void* lhs_data, const void* lhs_scales, const void* lhs_zero_points, size_t lhs_quant_width,  //
+    const void* rhs_data, const void* rhs_scales, const void* rhs_zero_points, size_t rhs_quant_width,  //
+    const void* biases,                                                                                 //
+    float min_value, float max_value);
+
+template std::vector<uint8_t> matmul_clamp_nt_t<int8_t, float, int32_t, Int4, BFloat16, int32_t, float, int32_t, float>(
+    size_t m, size_t n, size_t k,                                                                       //
+    const void* lhs_data, const void* lhs_scales, const void* lhs_zero_points, size_t lhs_quant_width,  //
+    const void* rhs_data, const void* rhs_scales, const void* rhs_zero_points, size_t rhs_quant_width,  //
+    const void* biases,                                                                                 //
+    float min_value, float max_value);
+
+template <
+    typename LhsData, typename LhsScale, typename LhsZeroPoint, typename RhsData, typename RhsScale,
+    typename RhsZeroPoint, typename Bias, typename IntAcc, typename DstData>
+std::vector<uint8_t> matmul_clamp_nt_nt(
+    size_t m, size_t n, size_t k,                                                                       //
+    const void* lhs_data, const void* lhs_scales, const void* lhs_zero_points, size_t lhs_quant_width,  //
+    const void* rhs_data, const void* rhs_scales, const void* rhs_zero_points, size_t rhs_quant_width,  //
+    const void* biases,                                                                                 //
+    DstData min_value, DstData max_value) {
+    const auto lhs_num_quant_per_row = round_up_division(k, lhs_quant_width);
+    const auto rhs_num_quant_per_row = round_up_division(k, rhs_quant_width);
+
+    std::vector<uint8_t> dst(m * n * sizeof(DstData));
+
+    const auto* lhs_scales_ptr = reinterpret_cast<const LhsScale*>(lhs_scales);
+    const auto* rhs_scales_ptr = reinterpret_cast<const RhsScale*>(rhs_scales);
+    const auto* lhs_zero_points_ptr = reinterpret_cast<const LhsZeroPoint*>(lhs_zero_points);
+    const auto* rhs_zero_points_ptr = reinterpret_cast<const RhsZeroPoint*>(rhs_zero_points);
+    const auto* biases_ptr = reinterpret_cast<const Bias*>(biases);
+    auto* dst_ptr = reinterpret_cast<DstData*>(dst.data());
+
+    for (size_t y = 0; y < m; ++y) {
+        for (size_t x = 0; x < n; ++x) {
+            DstData acc = 0;
+
+            for (size_t i = 0; i < k; ++i) {
+                const auto lhs_value = read_array<LhsData>(lhs_data, y * k + i);
+                const auto lhs_scale = lhs_scales_ptr[y * lhs_num_quant_per_row + i / lhs_quant_width];
+                const auto lhs_zero_point = lhs_zero_points_ptr != nullptr
+                    ? lhs_zero_points_ptr[y * lhs_num_quant_per_row + i / lhs_quant_width]
+                    : 0;
+
+                const auto rhs_value = read_array<RhsData>(rhs_data, x + i * n);
+                const auto rhs_scale = rhs_scales_ptr[x * rhs_num_quant_per_row + i / rhs_quant_width];
+                const auto rhs_zero_point = rhs_zero_points_ptr != nullptr
+                    ? rhs_zero_points_ptr[y * rhs_num_quant_per_row + i / rhs_quant_width]
+                    : 0;
+
+                acc += static_cast<DstData>(
+                           (static_cast<IntAcc>(lhs_value) + static_cast<IntAcc>(lhs_zero_point)) *
+                           (static_cast<IntAcc>(rhs_value) + static_cast<IntAcc>(rhs_zero_point))) *
+                    static_cast<DstData>(lhs_scale) * static_cast<DstData>(rhs_scale);
+            }
+
+            if (biases_ptr != nullptr) {
+                acc += static_cast<DstData>(biases_ptr[x]);
+            }
+
+            acc = std::clamp(acc, min_value, max_value);
+            dst_ptr[y * n + x] = acc;
+        }
+    }
+
+    return dst;
+}
+
+template std::vector<uint8_t> matmul_clamp_nt_nt<int8_t, float, int32_t, Int4, float, int32_t, float, int32_t, float>(
+    size_t m, size_t n, size_t k,                                                                       //
+    const void* lhs_data, const void* lhs_scales, const void* lhs_zero_points, size_t lhs_quant_width,  //
+    const void* rhs_data, const void* rhs_scales, const void* rhs_zero_points, size_t rhs_quant_width,  //
+    const void* biases,                                                                                 //
+    float min_value, float max_value);
+
+template std::vector<uint8_t>
+matmul_clamp_nt_nt<int8_t, Float16, int32_t, Int4, Float16, int32_t, float, int32_t, float>(
+    size_t m, size_t n, size_t k,                                                                       //
+    const void* lhs_data, const void* lhs_scales, const void* lhs_zero_points, size_t lhs_quant_width,  //
+    const void* rhs_data, const void* rhs_scales, const void* rhs_zero_points, size_t rhs_quant_width,  //
+    const void* biases,                                                                                 //
+    float min_value, float max_value);
+
+template std::vector<uint8_t>
+matmul_clamp_nt_nt<int8_t, float, int32_t, Int4, BFloat16, int32_t, float, int32_t, float>(
     size_t m, size_t n, size_t k,                                                                       //
     const void* lhs_data, const void* lhs_scales, const void* lhs_zero_points, size_t lhs_quant_width,  //
     const void* rhs_data, const void* rhs_scales, const void* rhs_zero_points, size_t rhs_quant_width,  //
