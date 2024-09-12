@@ -133,13 +133,13 @@ if((CMAKE_SYSTEM_PROCESSOR STREQUAL "aarch64" OR CMAKE_SYSTEM_PROCESSOR STREQUAL
     target_sources(kleidiai PRIVATE ${KLEIDIAI_FILES_SME})
     target_sources(kleidiai PRIVATE ${KLEIDIAI_FILES_SME2})
 
-    set_source_files_properties(${KLEIDIAI_FILES_SCALAR}       PROPERTIES COMPILE_OPTIONS -march=armv8-a)
-    set_source_files_properties(${KLEIDIAI_FILES_NEON}         PROPERTIES COMPILE_OPTIONS -march=armv8-a)
-    set_source_files_properties(${KLEIDIAI_FILES_NEON_FP16}    PROPERTIES COMPILE_OPTIONS -march=armv8.2-a+fp16)
-    set_source_files_properties(${KLEIDIAI_FILES_NEON_DOTPROD} PROPERTIES COMPILE_OPTIONS -march=armv8.2-a+dotprod)
-    set_source_files_properties(${KLEIDIAI_FILES_NEON_I8MM}    PROPERTIES COMPILE_OPTIONS -march=armv8.2-a+i8mm)
-    set_source_files_properties(${KLEIDIAI_FILES_SME}          PROPERTIES COMPILE_OPTIONS -march=armv8.2-a+sve+sve2)
-    set_source_files_properties(${KLEIDIAI_FILES_SME2}         PROPERTIES COMPILE_OPTIONS -march=armv8.2-a+sve+sve2)
+    set_source_files_properties(${KLEIDIAI_FILES_SCALAR}       PROPERTIES COMPILE_OPTIONS -march=armv8-a${KLEIDIAI_INTERNAL_EXTRA_ARCH})
+    set_source_files_properties(${KLEIDIAI_FILES_NEON}         PROPERTIES COMPILE_OPTIONS -march=armv8-a${KLEIDIAI_INTERNAL_EXTRA_ARCH})
+    set_source_files_properties(${KLEIDIAI_FILES_NEON_FP16}    PROPERTIES COMPILE_OPTIONS -march=armv8.2-a+fp16${KLEIDIAI_INTERNAL_EXTRA_ARCH})
+    set_source_files_properties(${KLEIDIAI_FILES_NEON_DOTPROD} PROPERTIES COMPILE_OPTIONS -march=armv8.2-a+dotprod${KLEIDIAI_INTERNAL_EXTRA_ARCH})
+    set_source_files_properties(${KLEIDIAI_FILES_NEON_I8MM}    PROPERTIES COMPILE_OPTIONS -march=armv8.2-a+i8mm${KLEIDIAI_INTERNAL_EXTRA_ARCH})
+    set_source_files_properties(${KLEIDIAI_FILES_SME}          PROPERTIES COMPILE_OPTIONS -march=armv8.2-a+sve+sve2${KLEIDIAI_INTERNAL_EXTRA_ARCH})
+    set_source_files_properties(${KLEIDIAI_FILES_SME2}         PROPERTIES COMPILE_OPTIONS -march=armv8.2-a+sve+sve2${KLEIDIAI_INTERNAL_EXTRA_ARCH})
 endif()
 
 target_include_directories(kleidiai
@@ -181,10 +181,10 @@ if(KLEIDIAI_BUILD_TESTS)
 
     target_compile_options(kleidiai_test_framework
         PUBLIC ${KLEIDIAI_WARNING_FLAGS}
-        PUBLIC -march=armv8.2-a+fp16+bf16
+        PUBLIC -march=armv8.2-a+fp16+bf16${KLEIDIAI_INTERNAL_EXTRA_ARCH}
     )
 
-    set_source_files_properties(test/common/sme.cpp PROPERTIES COMPILE_OPTIONS -march=armv8.2-a+sve)
+    set_source_files_properties(test/common/sme.cpp PROPERTIES COMPILE_OPTIONS -march=armv8.2-a+sve${KLEIDIAI_INTERNAL_EXTRA_ARCH})
 
     target_link_libraries(kleidiai_test_framework
         PUBLIC  kleidiai
