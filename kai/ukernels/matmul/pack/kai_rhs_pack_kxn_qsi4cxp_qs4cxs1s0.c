@@ -5,7 +5,6 @@
 //
 #include "kai_rhs_pack_kxn_qsi4cxp_qs4cxs1s0.h"
 
-#include <math.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <string.h>

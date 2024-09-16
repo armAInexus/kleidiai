@@ -142,13 +142,15 @@ test-examples:
     paths:
       - ${EXAMPLE}.log
 
-clang-tidy-checks:
+test-clang-tidy:
   extends:
     - .standard-rules
-  stage: build
+  stage: test
+  needs: []
   script:
-    - cmake -G Ninja -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=Release -DKLEIDIAI_BUILD_TESTS=ON -DKLEIDIAI_ENABLE_CLANG_TIDY=ON -S . -B ${CI_JOB_NAME_SLUG}
-    - cmake --build ${CI_JOB_NAME_SLUG}
+    - cmake -G Ninja -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=Release -DKLEIDIAI_BUILD_TESTS=ON -DKLEIDIAI_BUILD_BENCHMARK=ON -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -B build/${CI_JOB_NAME_SLUG}
+    # Only test the main library.
+    - run-clang-tidy -header-filter ".*" -warnings-as-errors "*" -p build/${CI_JOB_NAME_SLUG} kai
 
 pre-commit-hooks:
   variables:

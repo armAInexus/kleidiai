@@ -11,7 +11,6 @@
 
 #include "kai_matmul_clamp_f16_f16_f16p16x1biasf16_6x16x8_neon_mla.h"
 
-#include <math.h>
 #include <stddef.h>
 #include <stdint.h>
 

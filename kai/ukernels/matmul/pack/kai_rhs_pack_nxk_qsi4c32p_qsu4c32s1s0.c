@@ -5,7 +5,6 @@
 //
 #include "kai_rhs_pack_nxk_qsi4c32p_qsu4c32s1s0.h"
 
-#include <math.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <string.h>
@@ -251,8 +250,8 @@ void kai_run_rhs_pack_nxk_qsi4c32p_qsu4c32s1s0(
                         break;
                 }
 
-                sums[nr_idx] += ((int32_t)src_x0_lo - rhs_zero_point) * d;
-                sums[nr_idx] += ((int32_t)src_x0_hi - rhs_zero_point) * d;
+                sums[nr_idx] += (float)((int32_t)src_x0_lo - rhs_zero_point) * d;
+                sums[nr_idx] += (float)((int32_t)src_x0_hi - rhs_zero_point) * d;
 
                 const uint8_t dst_qs0 = src_x0_lo | (src_x0_hi << 4);
 
@@ -277,6 +276,6 @@ void kai_run_rhs_pack_nxk_qsi4c32p_qsu4c32s1s0(
         }
 
         // Move the pointer after the biases
-        dst_row += kai_num_bytes_bias * nr;
+        // dst_row += kai_num_bytes_bias * nr;
     }
 }
