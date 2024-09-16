@@ -102,8 +102,13 @@ inline static float kai_cast_f32_bf16(uint16_t bf16) {
 ///
 /// @return the bf16 value
 inline static uint16_t kai_cast_bf16_f32(float f32) {
+    uint16_t bf16 = 0;
+#ifdef __ARM_FEATURE_BF16
+    asm("bfcvt %h[output], %s[input]" : [output] "=w"(bf16) : [input] "w"(f32));
+#else
     const uint32_t* i32 = (uint32_t*)(&f32);
-    uint16_t bf16 = (*i32 >> 16);
+    bf16 = (*i32 >> 16);
+#endif
     return bf16;
 }
 

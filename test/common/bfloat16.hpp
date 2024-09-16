@@ -39,14 +39,24 @@ public:
 
     /// Creates a new object from the specified numeric value.
     BFloat16(float value) : _data(0) {
+#ifdef __ARM_FEATURE_BF16
         asm("bfcvt %h[output], %s[input]" : [output] "=w"(_data) : [input] "w"(value));
+#else
+        const uint32_t* value_i32 = reinterpret_cast<const uint32_t*>(&value);
+        _data = (*value_i32 >> 16);
+#endif
     }
 
     /// Assigns to the specified numeric value which will be converted to `bfloat16_t`.
     template <typename T, std::enable_if_t<is_arithmetic<T>, bool> = true>
     BFloat16& operator=(T value) {
         const auto value_f32 = static_cast<float>(value);
+#ifdef __ARM_FEATURE_BF16
         asm("bfcvt %h[output], %s[input]" : [output] "=w"(_data) : [input] "w"(value_f32));
+#else
+        const uint32_t* value_i32 = reinterpret_cast<const uint32_t*>(&value_f32);
+        _data = (*value_i32 >> 16);
+#endif
         return *this;
     }
 
