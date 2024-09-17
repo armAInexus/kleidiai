@@ -219,6 +219,10 @@ if(KLEIDIAI_BUILD_BENCHMARK)
         set(CMAKE_CROSSCOMPILING TRUE CACHE INTERNAL "")
         set(HAVE_POSIX_REGEX FALSE CACHE INTERNAL "")
     endif()
+
+    set(BENCHMARK_DOWNLOAD_DEPENDENCIES "OFF")
+    set(BENCHMARK_ENABLE_GTEST_TESTS "OFF")
+
     include(FetchGBench)
 
     add_executable(kleidiai_benchmark
