@@ -54,7 +54,7 @@ size_t kai_get_rhs_offset_rhs_pack_kxn_qsi4c32p_qsu4c32s1s0(
 /// @param[in] scale_dt Block scale data type
 ///
 /// @return the stride in bytes to the packed RHS matrix
-size_t kai_get_rhs_packed_stride_rhs_pack_kxn_qsi4cxp_qsu4cxs1s0(
+size_t kai_get_rhs_packed_stride_rhs_pack_kxn_qsi4c32p_qsu4c32s1s0(
     size_t k,                     //
     size_t nr,                    //
     size_t kr,                    //
