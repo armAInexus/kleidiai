@@ -6,11 +6,14 @@
 
 #include <gtest/gtest.h>
 
+#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <cstdlib>
 #include <limits>
+#include <vector>
 
+#include "kai/kai_common.h"
 #include "kai/ukernels/matmul/matmul_clamp_f32_qai8dxp_qsi4c32p/kai_matmul_clamp_f32_qai8dxp1x8_qsi4c32p4x8_1x4x32_neon_dotprod.h"
 #include "kai/ukernels/matmul/matmul_clamp_f32_qai8dxp_qsi4c32p/kai_matmul_clamp_f32_qai8dxp1x8_qsi4c32p8x8_1x8x32_neon_dotprod.h"
 #include "kai/ukernels/matmul/matmul_clamp_f32_qai8dxp_qsi4c32p/kai_matmul_clamp_f32_qai8dxp4x8_qsi4c32p4x8_8x4x32_neon_i8mm.h"
@@ -20,6 +23,7 @@
 #include "kai/ukernels/matmul/pack/kai_rhs_pack_kxn_qsi4c32p_qsu4c32s1s0.h"
 #include "kai/ukernels/matmul/pack/kai_rhs_pack_nxk_qsi4c32p_qsu4c32s1s0.h"
 #include "test/common/bfloat16.hpp"
+#include "test/common/data_type.hpp"
 #include "test/common/int4.hpp"
 #include "test/common/memory.hpp"
 #include "test/common/round.hpp"
@@ -27,8 +31,8 @@
 #include "test/reference/cast.hpp"
 #include "test/reference/fill.hpp"
 #include "test/reference/matmul.hpp"
-#include "test/reference/pack.hpp"
 #include "test/reference/quantize.hpp"
+#include "test/reference/transpose.hpp"
 
 namespace kai::test {
 
@@ -43,10 +47,10 @@ static const std::array<UkernelVariant<kai_matmul_clamp_f32_qai8dxp_qsi4c32p_uke
 class MatMulTest_f32_qmatmul_clamp_f32_qai8dxp_qsi4c32p : public UkernelVariantTest {};
 
 TEST_P(MatMulTest_f32_qmatmul_clamp_f32_qai8dxp_qsi4c32p, EndToEnd_RHS_Transposed) {
-    auto& [variant_index, matmul_shape] = GetParam();
+    const auto& [variant_index, matmul_shape] = GetParam();
     const auto& ukernel_variant = variants_kai_matmul_clamp_f32_qai8dxp_qsi4c32p.at(variant_index);
 
-    const uint64_t seed = 0;
+    constexpr uint64_t seed = 0;
 
     const size_t M = matmul_shape.m;
     const size_t N = matmul_shape.n;
@@ -57,7 +61,7 @@ TEST_P(MatMulTest_f32_qmatmul_clamp_f32_qai8dxp_qsi4c32p, EndToEnd_RHS_Transpose
     const auto kr = ukernel_variant.interface.get_kr();
     const auto sr = ukernel_variant.interface.get_sr();
 
-    const size_t bl = 32;
+    constexpr size_t bl = 32;
 
     // Generates input data.
     const auto ref_lhs = fill_random<float>(M * K, seed + 0);
@@ -94,7 +98,7 @@ TEST_P(MatMulTest_f32_qmatmul_clamp_f32_qai8dxp_qsi4c32p, EndToEnd_RHS_Transpose
     const auto imp_packed_rhs_size =
         kai_get_rhs_packed_size_rhs_pack_nxk_qsi4c32p_qsu4c32s1s0(N, K, nr, kr, sr, bl, kai_datatype::kai_dt_bf16);
     std::vector<uint8_t> imp_packed_rhs(imp_packed_rhs_size);
-    const kai_rhs_pack_nxk_qsi4c32p_qsu4c32s1s0_params params{
+    constexpr kai_rhs_pack_nxk_qsi4c32p_qsu4c32s1s0_params params{
         .lhs_zero_point = 1, .rhs_zero_point = 8, .scale_dt = kai_datatype::kai_dt_bf16};
     kai_run_rhs_pack_nxk_qsi4c32p_qsu4c32s1s0(
         1, N, K, nr, kr, sr, bl, ref_rhs_qsu4.data(), ref_rhs_qsu4_stride, nullptr,
@@ -112,8 +116,8 @@ TEST_P(MatMulTest_f32_qmatmul_clamp_f32_qai8dxp_qsi4c32p, EndToEnd_RHS_Transpose
     // Compares the output of the micro-kernels against the output of the reference implementation.
     for (size_t y = 0; y < M; ++y) {
         for (size_t x = 0; x < N; ++x) {
-            const auto imp_value = read_array<float>(imp_dst.data(), y * N + x);
-            const auto ref_value = read_array<float>(ref_dst.data(), y * N + x);
+            const auto imp_value = read_array<float>(imp_dst.data(), (y * N) + x);
+            const auto ref_value = read_array<float>(ref_dst.data(), (y * N) + x);
             const auto rel_error = ref_value != 0 ? std::abs((imp_value - ref_value) / ref_value) : std::abs(imp_value);
 
             if (rel_error > 0.0001F) {
@@ -124,7 +128,7 @@ TEST_P(MatMulTest_f32_qmatmul_clamp_f32_qai8dxp_qsi4c32p, EndToEnd_RHS_Transpose
 }
 
 TEST_P(MatMulTest_f32_qmatmul_clamp_f32_qai8dxp_qsi4c32p, EndToEnd_RHS_NonTransposed) {
-    auto& [variant_index, matmul_shape] = GetParam();
+    const auto& [variant_index, matmul_shape] = GetParam();
     const auto& ukernel_variant = variants_kai_matmul_clamp_f32_qai8dxp_qsi4c32p.at(variant_index);
 
     const uint64_t seed = 0;
@@ -138,11 +142,12 @@ TEST_P(MatMulTest_f32_qmatmul_clamp_f32_qai8dxp_qsi4c32p, EndToEnd_RHS_NonTransp
     const auto kr = ukernel_variant.interface.get_kr();
     const auto sr = ukernel_variant.interface.get_sr();
 
-    const size_t bl = 32;
+    constexpr size_t bl = 32;
 
     // Generates input data.
     const auto ref_lhs = fill_random<float>(M * K, seed + 0);
-    const auto ref_rhs = fill_random<float>(N * K, seed + 1);
+    const auto ref_rhs_transposed = fill_random<float>(N * K, seed + 1);
+    const auto ref_rhs = transpose(ref_rhs_transposed.data(), DataType::FP32, N, K);
 
     // Runs the reference implementation.
     //   * Quantizes the LHS matrix using 8-bit asymmetric quantization.
@@ -151,7 +156,7 @@ TEST_P(MatMulTest_f32_qmatmul_clamp_f32_qai8dxp_qsi4c32p, EndToEnd_RHS_NonTransp
     const auto [ref_lhs_qvalues, ref_lhs_scales, ref_lhs_zero_points] =
         quantize_asymmetric_per_block<float, int8_t, float, int32_t>(ref_lhs.data(), M, K, K);
     const auto [ref_rhs_qsi4, ref_rhs_scales] =
-        quantize_symmetric_per_block<float, Int4, BFloat16>(ref_rhs.data(), N, K, bl, false /* is_transposed */);
+        quantize_symmetric_per_block<float, Int4, BFloat16>(ref_rhs.data(), K, N, bl);
 
     const auto ref_dst = matmul_clamp_nt_nt<int8_t, float, int32_t, Int4, BFloat16, int32_t, float, int32_t, float>(
         M, N, K, ref_lhs_qvalues.data(), ref_lhs_scales.data(), ref_lhs_zero_points.data(), K, ref_rhs_qsi4.data(),
@@ -175,12 +180,11 @@ TEST_P(MatMulTest_f32_qmatmul_clamp_f32_qai8dxp_qsi4c32p, EndToEnd_RHS_NonTransp
     const auto imp_packed_rhs_size =
         kai_get_rhs_packed_size_rhs_pack_kxn_qsi4c32p_qsu4c32s1s0(N, K, nr, kr, sr, bl, kai_datatype::kai_dt_bf16);
     std::vector<uint8_t> imp_packed_rhs(imp_packed_rhs_size);
-    const kai_rhs_pack_kxn_qsi4c32p_qsu4c32s1s0_params params{
+    constexpr kai_rhs_pack_kxn_qsi4c32p_qsu4c32s1s0_params params{
         .lhs_zero_point = 1, .rhs_zero_point = 8, .scale_dt = kai_datatype::kai_dt_bf16};
     kai_run_rhs_pack_kxn_qsi4c32p_qsu4c32s1s0(
-        1, N, K, nr, kr, sr, bl, ref_rhs_qsu4.data(), ref_rhs_qsu4_stride, nullptr,
-        reinterpret_cast<const float*>(ref_rhs_scales.data()), ref_rhs_scales_stride, imp_packed_rhs.data(), 0,
-        &params);
+        1, N, K, nr, kr, sr, bl, ref_rhs_qsu4.data(), ref_rhs_qsu4_stride, nullptr, ref_rhs_scales.data(),
+        ref_rhs_scales_stride, imp_packed_rhs.data(), 0, &params);
 
     // Runs the GEMM micro-kernel.
     const auto imp_dst_size = ukernel_variant.interface.get_dst_size(M, N);
@@ -193,8 +197,8 @@ TEST_P(MatMulTest_f32_qmatmul_clamp_f32_qai8dxp_qsi4c32p, EndToEnd_RHS_NonTransp
     // Compares the output of the micro-kernels against the output of the reference implementation.
     for (size_t y = 0; y < M; ++y) {
         for (size_t x = 0; x < N; ++x) {
-            const auto imp_value = read_array<float>(imp_dst.data(), y * N + x);
-            const auto ref_value = read_array<float>(ref_dst.data(), y * N + x);
+            const auto imp_value = read_array<float>(imp_dst.data(), (y * N) + x);
+            const auto ref_value = read_array<float>(ref_dst.data(), (y * N) + x);
             const auto rel_error = ref_value != 0 ? std::abs((imp_value - ref_value) / ref_value) : std::abs(imp_value);
 
             if (rel_error > 0.0001F) {
