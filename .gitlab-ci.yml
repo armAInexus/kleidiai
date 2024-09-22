@@ -20,6 +20,7 @@ default:
   rules:
     - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - if: $CI_COMMIT_TAG
 
 workflow:
   auto_cancel:
@@ -169,6 +170,7 @@ test-remote:
   # Run the job only for a public pipeline
   rules:
     - if: $CI_PIPELINE_SOURCE == 'merge_request_event' && $CI_SERVER_HOST == 'gitlab.arm.com'
+    - if: $CI_COMMIT_TAG && $CI_SERVER_HOST == 'gitlab.arm.com'
   stage: test
   needs: []
   when: manual
