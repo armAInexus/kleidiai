@@ -16,9 +16,9 @@ indent_style = space
 insert_final_newline = true
 trim_trailing_whitespace = true
 
-# Override settings.
+# Avoid conflict with formatters.
 [*.{c,h,cpp,hpp,md}]
-indent_size = unset  # Avoid conflict with formatters.
+indent_size = unset
 
 # Override settings.
 [*.{json,yml,yaml}]
