@@ -15,6 +15,8 @@
 
 static const size_t kai_nr = 2;
 static const size_t kai_kr = 1;
+static const size_t kai_num_bytes_data = sizeof(uint32_t);
+static const size_t kai_num_bytes_bias = sizeof(uint32_t);
 
 size_t kai_get_n_step_rhs_pack_kxn_f32p2vlx1biasf32_f32_f32_sme(void) {
     return kai_nr * kai_get_sme_vector_length_u32();
@@ -23,17 +25,21 @@ size_t kai_get_n_step_rhs_pack_kxn_f32p2vlx1biasf32_f32_f32_sme(void) {
 size_t kai_get_rhs_offset_rhs_pack_kxn_f32p2vlx1biasf32_f32_f32_sme(size_t n_idx) {
     KAI_ASSUME(n_idx % (kai_nr * kai_get_sme_vector_length_u32()) == 0);
 
-    return n_idx * sizeof(uint32_t);
+    return n_idx * kai_num_bytes_data;
 }
 
 size_t kai_get_bias_offset_rhs_pack_kxn_f32p2vlx1biasf32_f32_f32_sme(size_t n_idx) {
-    return n_idx * sizeof(uint32_t);
+    return n_idx * kai_num_bytes_bias;
+}
+
+size_t kai_get_rhs_packed_stride_rhs_pack_kxn_f32p2vlx1biasf32_f32_f32_sme(size_t k) {
+    return kai_nr * kai_get_sme_vector_length_u32() * (kai_num_bytes_bias + k * kai_num_bytes_data);
 }
 
 size_t kai_get_rhs_packed_offset_rhs_pack_kxn_f32p2vlx1biasf32_f32_f32_sme(size_t n_idx, size_t k) {
     KAI_ASSUME(n_idx % (kai_nr * kai_get_sme_vector_length_u32()) == 0);
 
-    return n_idx * (sizeof(uint32_t) + k * sizeof(uint32_t));
+    return n_idx * (kai_num_bytes_bias + k * kai_num_bytes_data);
 }
 
 size_t kai_get_rhs_packed_size_rhs_pack_kxn_f32p2vlx1biasf32_f32_f32_sme(size_t n, size_t k) {
@@ -60,7 +66,7 @@ void kai_run_rhs_pack_kxn_f32p2vlx1biasf32_f32_f32_sme(
     const void* in = rhs;
     void* out = rhs_packed;
     const size_t in_stride = rhs_stride;
-    size_t out_stride = kai_nr * kai_get_sme_vector_length_u8() * (height + sizeof(uint32_t) / sizeof(uint32_t));
+    size_t out_stride = kai_get_rhs_packed_stride_rhs_pack_kxn_f32p2vlx1biasf32_f32_f32_sme(height);
 
     __asm__ __volatile__(
         ".inst 0xd503477f  // SMSTART ZA\n"

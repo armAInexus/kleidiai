@@ -33,6 +33,13 @@ size_t kai_get_rhs_offset_rhs_pack_kxn_f32p2vlx1biasf32_f32_f32_sme(size_t n_idx
 /// @return The offset in bytes to the data element.
 size_t kai_get_bias_offset_rhs_pack_kxn_f32p2vlx1biasf32_f32_f32_sme(size_t n_idx);
 
+/// Get the row stride in bytes to the packed RHS matrix
+///
+/// @param[in] k In the RHS matrix (not packed), K is the number of columns.
+///
+/// @return The stride in bytes to the packed RHS matrix
+size_t kai_get_rhs_packed_stride_rhs_pack_kxn_f32p2vlx1biasf32_f32_f32_sme(size_t k);
+
 /// Gets the offset in bytes to the data element in the packed RHS buffer.
 ///
 /// @param[in] n_idx Row index.
