@@ -23,7 +23,7 @@ extern "C" {
 #define KAI_ERROR(msg)                                        \
     do {                                                      \
         fflush(stdout);                                       \
-        fprintf(stderr, "%s:%d %s", __FILE__, __LINE__, msg); \
+        fprintf(stderr, "%s:%d %s\n", __FILE__, __LINE__, msg); \
         exit(EXIT_FAILURE);                                   \
     } while (0)
 
@@ -104,7 +104,7 @@ inline static float kai_cast_f32_bf16(uint16_t bf16) {
 inline static uint16_t kai_cast_bf16_f32(float f32) {
     uint16_t bf16 = 0;
 #ifdef __ARM_FEATURE_BF16
-    asm("bfcvt %h[output], %s[input]" : [output] "=w"(bf16) : [input] "w"(f32));
+    __asm("bfcvt %h[output], %s[input]" : [output] "=w"(bf16) : [input] "w"(f32));
 #else
     const uint32_t* i32 = (uint32_t*)(&f32);
     bf16 = (*i32 >> 16);
