@@ -88,6 +88,12 @@ set(KLEIDIAI_FILES_NEON_FP16
     kai/ukernels/matmul/matmul_clamp_f16_f16_f16p/kai_matmul_clamp_f16_f16_f16p16x1biasf16_6x16x8_neon_mla.c
 )
 
+set(KLEIDIAI_FILES_NEON_BF16
+    kai/ukernels/matmul/pack/kai_lhs_pack_8x4_f32_bf16_neon.c
+    kai/ukernels/matmul/pack/kai_matmul_transpose_pack_rhs_bias_bf16p16x4zf32_bf16_f32_neon_nr_12.c
+    kai/ukernels/matmul/matmul_clamp_bf16_bf16_f32p/kai_matmul_clamp_bf16_bf16_f32p12x1biasf32_8x12x4_neon_mmla.c
+)
+
 set(KLEIDIAI_FILES_NEON
     kai/ukernels/matmul/pack/kai_rhs_pack_kxn_f32p8x1biasf32_f32_f32_neon.c
     kai/ukernels/matmul/matmul_clamp_f32_f32_f32p/kai_matmul_clamp_f32_f32_f32p8x1biasf32_6x8x4_neon_mla.c
@@ -137,6 +143,7 @@ target_sources(kleidiai PRIVATE ${KLEIDIAI_FILES_SCALAR})
 if((CMAKE_SYSTEM_PROCESSOR STREQUAL "aarch64" OR CMAKE_SYSTEM_PROCESSOR STREQUAL "arm64" OR CMAKE_SYSTEM_NAME STREQUAL "iOS") AND NOT MSVC)
     target_sources(kleidiai PRIVATE ${KLEIDIAI_FILES_NEON})
     target_sources(kleidiai PRIVATE ${KLEIDIAI_FILES_NEON_FP16})
+    target_sources(kleidiai PRIVATE ${KLEIDIAI_FILES_NEON_BF16})
     target_sources(kleidiai PRIVATE ${KLEIDIAI_FILES_NEON_DOTPROD})
     target_sources(kleidiai PRIVATE ${KLEIDIAI_FILES_NEON_I8MM})
     target_sources(kleidiai PRIVATE ${KLEIDIAI_FILES_SME})
@@ -145,6 +152,7 @@ if((CMAKE_SYSTEM_PROCESSOR STREQUAL "aarch64" OR CMAKE_SYSTEM_PROCESSOR STREQUAL
     set_source_files_properties(${KLEIDIAI_FILES_SCALAR}       PROPERTIES COMPILE_OPTIONS -march=armv8-a${KLEIDIAI_INTERNAL_EXTRA_ARCH})
     set_source_files_properties(${KLEIDIAI_FILES_NEON}         PROPERTIES COMPILE_OPTIONS -march=armv8-a${KLEIDIAI_INTERNAL_EXTRA_ARCH})
     set_source_files_properties(${KLEIDIAI_FILES_NEON_FP16}    PROPERTIES COMPILE_OPTIONS -march=armv8.2-a+fp16${KLEIDIAI_INTERNAL_EXTRA_ARCH})
+    set_source_files_properties(${KLEIDIAI_FILES_NEON_BF16}    PROPERTIES COMPILE_OPTIONS -march=armv8.2-a+bf16${KLEIDIAI_INTERNAL_EXTRA_ARCH})
     set_source_files_properties(${KLEIDIAI_FILES_NEON_DOTPROD} PROPERTIES COMPILE_OPTIONS -march=armv8.2-a+dotprod${KLEIDIAI_INTERNAL_EXTRA_ARCH})
     set_source_files_properties(${KLEIDIAI_FILES_NEON_I8MM}    PROPERTIES COMPILE_OPTIONS -march=armv8.2-a+i8mm${KLEIDIAI_INTERNAL_EXTRA_ARCH})
     set_source_files_properties(${KLEIDIAI_FILES_SME}          PROPERTIES COMPILE_OPTIONS -march=armv8.2-a+sve+sve2${KLEIDIAI_INTERNAL_EXTRA_ARCH})
