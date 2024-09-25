@@ -10,7 +10,7 @@ KleidiAI follows the [Semantic Versioning](https://semver.org/) specification fo
 
 ## v0.3.0 - Upcoming Release
 
-- Advanced SIMD FP32 GEMM and GEMV micro kernels
+- Advanced SIMD FP32 GEMM micro-kernel.
 - Micro-kernels to compute the matrix multiplication of dynamically quantized asymmetric signed 8-bit integer with per-row quantization (QAI8DX) LHS and quantized symmetric 4-bit signed integer with per-block quantization (QSI4C32) RHS. The destination matrix data type is single-precision floating-point (F32). The micro-kernels have been optimized using the Arm® CPU feature FEAT_I8MM for the matrix-by-matrix cases and the FEAT_DotProd for the vector-by-matrix cases.
 - RHS matrix packing micro-kernels to pack the RHS matrix holding the QSI4C32 values.
 - Unit test and example for integer micro-kernels.
