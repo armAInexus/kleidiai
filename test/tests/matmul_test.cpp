@@ -32,9 +32,6 @@
 #include "test/reference/fill.hpp"
 #include "test/reference/pack.hpp"
 
-// matmul_nt_nt_fp16_fp16_fp16_1x16_neon_mla
-#include "kai/ukernels/matmul/matmul_clamp_f16_f16_f16p/kai_matmul_clamp_f16_f16_f16p16x1biasf16_1x16x8_neon_mla.h"
-
 // matmul_nt_nt_fp16_fp16_fp16_6x16_neon_mla
 #include "kai/ukernels/matmul/matmul_clamp_f16_f16_f16p/kai_matmul_clamp_f16_f16_f16p16x1biasf16_6x16x8_neon_mla.h"
 #include "kai/ukernels/matmul/pack/kai_rhs_pack_kxn_f16p16x1biasf16_f16_f16_neon.h"
@@ -338,55 +335,6 @@ struct MatMulMethod {
 
 /// List of supported matrix multiplication methods.
 static const std::array matmul_methods = {
-    MatMulMethod{
-        .name = "matmul_nt_nt_fp16_fp16_fp16_1x16_neon_mla",
-
-        .m0 = 1,
-        .n0 = 16,
-
-        .lhs_transposed = false,
-        .rhs_transposed = false,
-
-        .is_sme2 = false,
-
-        .dst_format = DataFormat(DataType::FP16),
-        .lhs_format = DataFormat(DataType::FP16),
-        .packed_lhs_format = DataFormat(DataType::UNKNOWN),
-        .rhs_format = DataFormat(DataType::FP16),
-        .packed_rhs_format = DataFormat(
-            DataType::FP16, 16, 0, DataFormat::PackFormat::BIAS_PER_ROW, DataType::FP16, DataType::UNKNOWN, 16, 1),
-        .bias_format = DataFormat(DataType::FP16),
-
-        .fn_get_mr = nullptr,
-        .fn_get_nr = kai_get_nr_matmul_clamp_f16_f16_f16p16x1biasf16_1x16x8_neon_mla,
-        .fn_get_kr = kai_get_kr_matmul_clamp_f16_f16_f16p16x1biasf16_1x16x8_neon_mla,
-        .fn_get_sr = kai_get_sr_matmul_clamp_f16_f16_f16p16x1biasf16_1x16x8_neon_mla,
-
-        .fn_get_main_m_step = kai_get_m_step_matmul_clamp_f16_f16_f16p16x1biasf16_1x16x8_neon_mla,
-        .fn_get_pack_rhs_n_step = kai_get_n_step_rhs_pack_kxn_f16p16x1biasf16_f16_f16_neon,
-        .fn_get_main_n_step = kai_get_n_step_matmul_clamp_f16_f16_f16p16x1biasf16_1x16x8_neon_mla,
-
-        .fn_get_lhs_offset = kai_get_lhs_offset_matmul_clamp_f16_f16_f16p16x1biasf16_1x16x8_neon_mla,
-        .fn_get_packed_lhs_size = nullptr,
-        .fn_get_packed_lhs_offset = nullptr,
-        .fn_pack_lhs = nullptr,
-
-        .fn_get_rhs_offset = kai_get_rhs_offset_rhs_pack_kxn_f16p16x1biasf16_f16_f16_neon,
-        .fn_get_packed_rhs_size = kai_get_rhs_packed_size_rhs_pack_kxn_f16p16x1biasf16_f16_f16_neon,
-        .fn_get_pack_rhs_packed_rhs_offset = kai_get_rhs_packed_offset_rhs_pack_kxn_f16p16x1biasf16_f16_f16_neon,
-        .fn_get_main_packed_rhs_offset = kai_get_rhs_packed_offset_matmul_clamp_f16_f16_f16p16x1biasf16_1x16x8_neon_mla,
-        .fn_pack_rhs = kai_run_rhs_pack_kxn_f16p16x1biasf16_f16_f16_neon,
-
-        .fn_get_bias_offset = kai_get_bias_offset_rhs_pack_kxn_f16p16x1biasf16_f16_f16_neon,
-
-        .fn_get_dst_offset = kai_get_dst_offset_matmul_clamp_f16_f16_f16p16x1biasf16_1x16x8_neon_mla,
-        .fn_get_dst_size = kai_get_dst_size_matmul_clamp_f16_f16_f16p16x1biasf16_1x16x8_neon_mla,
-
-        .fn_matmul_f16_f16_f16p = kai_run_matmul_clamp_f16_f16_f16p16x1biasf16_1x16x8_neon_mla,
-        .fn_matmul_f32_f32_f32p = nullptr,
-        .fn_matmul_f32_f32p_f32p = nullptr,
-    },
-
     MatMulMethod{
         .name = "matmul_nt_nt_fp16_fp16_fp16_6x16_neon_mla",
 
