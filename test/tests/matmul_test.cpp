@@ -839,6 +839,8 @@ INSTANTIATE_TEST_SUITE_P(
     testing::Combine(
         testing::Range<size_t>(0, matmul_methods.size()),
         testing::Values(
+            MatMulShape{1, 16, 16},   //
+            MatMulShape{20, 1, 20},   //
             MatMulShape{6, 16, 32},   //
             MatMulShape{12, 32, 17},  //
             MatMulShape{13, 33, 23}   //
