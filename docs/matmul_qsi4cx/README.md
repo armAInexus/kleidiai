@@ -41,7 +41,7 @@ As you can see from the preceeding image, the LHS matrix is dynamically quantize
 
 The int4 matmul per-channel micro-kernels are all available in the **[matmul_clamp_f32_qai8dxp_qsi4cxp](../../kai/ukernels/matmul/matmul_clamp_f32_qai8dxp_qsi4cxp/)** folder.
 
-The specific micro-kernel variant we will be running in this guide is **[kai_matmul_clamp_f32_qai8dxp4x8_qsu4cxp8x8_8x8x32_neon_i8mm](../../kai/ukernels/matmul/matmul_clamp_f32_qai8dxp_qsi4cxp/kai_matmul_clamp_f32_qai8dxp4x8_qsi4cxp8x8_8x8x32_neon_i8mm.c)**.
+The specific micro-kernel variant we will be running in this guide is **[kai_matmul_clamp_f32_qai8dxp4x8_qsi4cxp8x8_8x8x32_neon_i8mm](../../kai/ukernels/matmul/matmul_clamp_f32_qai8dxp_qsi4cxp/kai_matmul_clamp_f32_qai8dxp4x8_qsi4cxp8x8_8x8x32_neon_i8mm.c)**.
 
 The filename might seem intimidating at first glance. However, the filename actually describes what the micro-kernel accomplishes. So, our first step is to dissect it to better understand how the computation is executed.
 
@@ -64,10 +64,10 @@ You might have observed that the LHS and RHS matrices also include additional in
 In the header of the matrix multiplication micro-kernel we report the additional micro-kernels required to leverage the computation. For this specific case, the additional micro-kernels are the following:
 
 - [kai_lhs_quant_pack_qai8dxp_f32](../../kai/ukernels/matmul/pack/kai_lhs_quant_pack_qai8dxp_f32.c)
-- [kai_rhs_pack_nxk_qsu4cxp_qsu4cxs1s0](../../kai/ukernels/matmul/pack/kai_rhs_pack_nxk_qsu4cxp_qsu4cxs1s0.c)
+- [kai_rhs_pack_kxn_qsi4cxp_qsu4cxs1s0](../../kai/ukernels/matmul/pack/kai_rhs_pack_kxn_qsi4cxp_qsu4cxs1s0.c) or [kai_rhs_pack_nxk_qsi4cxp_qsu4cxs1s0](../../kai/ukernels/matmul/pack/kai_rhs_pack_nxk_qsi4cxp_qsu4cxs1s0.c)
 
 The **kai_lhs_quant_pack_qai8dxp_f32** micro-kernel performs the dynamic quantization of the LHS matrix from f32 to int8 and packs the value to improve the cache locality during the matrix multiplication routine.
-Instead, the **kai_rhs_pack_nxk_qsu4cxp_qsu4cxs1s0** packs the original integer 4-bit RHS matrix to improve the cache locality during the matrix multiplication routine
+Instead, the **kai_rhs_pack_nxk_qsi4cxp_qsu4cxs1s0 or kai_rhs_pack_kxn_qsi4cxp_qsu4cxs1s0** packs the original integer 4-bit RHS matrix to improve the cache locality during the matrix multiplication routine.
 
 The packing arguments required to run the preceeding micro-kernels, such as **mr**, **kr**, and **sr**, are obtained using the helper methods provided in the matrix multiplication micro-kernel.
 
@@ -88,7 +88,7 @@ int main(int argc, char** argv) {
 }
 ```
 
-Then, follow the following steps to run the int4 matmul micro-kernel on an Arm® CPU with i8mm extension.
+Then, perform the following steps to run the int4 matmul micro-kernel on an Arm® CPU with i8mm extension. Consider RHS is n x k format.
 
 ### Step 1
 
@@ -96,7 +96,7 @@ Include the micro-kernels' headers files:
 
 ```c
 #include "kai_lhs_quant_pack_qai8dxp_f32.h"
-#include "kai_rhs_pack_nxk_qsi4cxp_qsi4cxs1s0.h"
+#include "kai_rhs_pack_nxk_qsi4cxp_qsu4cxs1s0.h"
 #include "kai_matmul_clamp_f32_qai8dxp4x8_qsi4cxp8x8_8x8x32_neon_i8mm.h"
 ```
 
@@ -219,7 +219,7 @@ Perform the matrix multiplication:
 
 ```c
     const size_t dst_stride = n * sizeof(float);
-    kai_run_matmul_clamp_f32_qai8dxp4x8_qsu4cxp8x8_8x8x32_neon_i8mm(
+    kai_run_matmul_clamp_f32_qai8dxp4x8_qsi4cxp8x8_8x8x32_neon_i8mm(
         m, n, k,                            // Dimensions
         (const void*)lhs_packed_mtx_qa8dx,  // LHS packed
         (const void*)rhs_packed_mtx_qs4cx,  // RHS packed
