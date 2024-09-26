@@ -14,6 +14,7 @@
 #include "kai/ukernels/matmul/matmul_clamp_f32_qsi8d32p_qsi4c32p/kai_matmul_clamp_f32_qsi8d32p4x8_qsi4c32p4x8_8x4x32_neon_i8mm.h"
 #include "kai/ukernels/matmul/pack/kai_lhs_quant_pack_qsi8d32p_f32.h"
 #include "kai/ukernels/matmul/pack/kai_rhs_pack_nxk_qsi4c32pscalef16_qsu4c32s16s0.h"
+#include "test/common/cpu_info.hpp"
 #include "test/common/float16.hpp"
 #include "test/common/int4.hpp"
 #include "test/common/memory.hpp"
@@ -26,6 +27,10 @@
 namespace kai::test {
 
 TEST(matmul_clamp_f32_qsi8d32p4x8_qsi4c32p4x8_8x4x32_neon_i8mm, EndToEnd) {
+    if (!cpu_has_i8mm()) {
+        GTEST_SKIP();
+    }
+
     const std::uint64_t seed = 0;
 
     const size_t M = 32;
@@ -94,6 +99,10 @@ TEST(matmul_clamp_f32_qsi8d32p4x8_qsi4c32p4x8_8x4x32_neon_i8mm, EndToEnd) {
 }
 
 TEST(matmul_clamp_f32_qsi8d32p1x8_qsi4c32p4x8_1x4x32_neon_dotprod, EndToEnd) {
+    if (!cpu_has_dotprod()) {
+        GTEST_SKIP();
+    }
+
     const std::uint64_t seed = 0;
 
     const size_t M = 32;

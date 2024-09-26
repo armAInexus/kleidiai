@@ -58,14 +58,17 @@ struct MatMulMethod {
     bool lhs_transposed;  ///< LHS matrix is transposed.
     bool rhs_transposed;  ///< RHS matrix is transposed.
 
-    bool is_sme2;  ///< Test is a sme2 test
-
     DataFormat dst_format;         ///< Data format of the destination matrix.
     DataFormat lhs_format;         ///< Data format of the LHS matrix.
     DataFormat packed_lhs_format;  ///< Data format of the packed LHS matrix.
     DataFormat rhs_format;         ///< Data format of the RHS matrix.
     DataFormat packed_rhs_format;  ///< Data format of the packed RHS matrix.
     DataFormat bias_format;        ///< Data format of the bias vector.
+
+    /// Check if CPU supports required features.
+    ///
+    /// @return Supported (true) or not supported (false).
+    std::function<bool(void)> fn_is_supported;
 
     /// Gets mr value.
     ///
@@ -344,8 +347,6 @@ static const std::array matmul_methods = {
         .lhs_transposed = false,
         .rhs_transposed = false,
 
-        .is_sme2 = false,
-
         .dst_format = DataFormat(DataType::FP16),
         .lhs_format = DataFormat(DataType::FP16),
         .packed_lhs_format = DataFormat(DataType::UNKNOWN),
@@ -354,6 +355,7 @@ static const std::array matmul_methods = {
             DataType::FP16, 16, 0, DataFormat::PackFormat::BIAS_PER_ROW, DataType::FP16, DataType::UNKNOWN, 16, 1),
         .bias_format = DataFormat(DataType::FP16),
 
+        .fn_is_supported = cpu_has_fp16,
         .fn_get_mr = nullptr,
         .fn_get_nr = kai_get_nr_matmul_clamp_f16_f16_f16p16x1biasf16_6x16x8_neon_mla,
         .fn_get_kr = kai_get_kr_matmul_clamp_f16_f16_f16p16x1biasf16_6x16x8_neon_mla,
@@ -393,8 +395,6 @@ static const std::array matmul_methods = {
         .lhs_transposed = false,
         .rhs_transposed = false,
 
-        .is_sme2 = false,
-
         .dst_format = DataFormat(DataType::FP32),
         .lhs_format = DataFormat(DataType::FP32),
         .packed_lhs_format = DataFormat(DataType::UNKNOWN),
@@ -403,6 +403,7 @@ static const std::array matmul_methods = {
             DataType::FP32, 8, 0, DataFormat::PackFormat::BIAS_PER_ROW, DataType::FP32, DataType::UNKNOWN, 8, 1),
         .bias_format = DataFormat(DataType::FP32),
 
+        .fn_is_supported = cpu_has_advsimd,
         .fn_get_mr = nullptr,
         .fn_get_nr = kai_get_nr_matmul_clamp_f32_f32_f32p8x1biasf32_6x8x4_neon_mla,
         .fn_get_kr = kai_get_kr_matmul_clamp_f32_f32_f32p8x1biasf32_6x8x4_neon_mla,
@@ -442,8 +443,6 @@ static const std::array matmul_methods = {
         .lhs_transposed = false,
         .rhs_transposed = false,
 
-        .is_sme2 = true,
-
         .dst_format = DataFormat(DataType::FP32),
         .lhs_format = DataFormat(DataType::FP32),
         .packed_lhs_format = DataFormat(DataType::FP32, 2 * get_sme_vector_length<float>(), 1),
@@ -453,6 +452,7 @@ static const std::array matmul_methods = {
             DataType::UNKNOWN, 2 * get_sme_vector_length<float>(), 1),
         .bias_format = DataFormat(DataType::FP32),
 
+        .fn_is_supported = cpu_has_sme2,
         .fn_get_mr = kai_get_mr_matmul_clamp_f32_f32p2vlx1_f32p2vlx1biasf32_sme2_mopa,
         .fn_get_nr = kai_get_nr_matmul_clamp_f32_f32p2vlx1_f32p2vlx1biasf32_sme2_mopa,
         .fn_get_kr = kai_get_kr_matmul_clamp_f32_f32p2vlx1_f32p2vlx1biasf32_sme2_mopa,
@@ -621,7 +621,7 @@ TEST_P(MatMulTest, PackedLhs) {
     const auto& data = test_data();
     const auto& method = matmul_methods.at(method_no);
 
-    if (method.is_sme2 && !cpu_has_sme2()) {
+    if (method.fn_is_supported && !method.fn_is_supported()) {
         GTEST_SKIP();
     }
 
@@ -672,7 +672,7 @@ TEST_P(MatMulTest, PackedRhs) {
     const auto& data = test_data();
     const auto& method = matmul_methods.at(method_no);
 
-    if (method.is_sme2 && !cpu_has_sme2()) {
+    if (method.fn_is_supported && !method.fn_is_supported()) {
         GTEST_SKIP();
     }
 
@@ -743,7 +743,7 @@ TEST_P(MatMulTest, Output) {
     const auto& data = test_data();
     const auto& method = matmul_methods.at(method_no);
 
-    if (method.is_sme2 && !cpu_has_sme2()) {
+    if (method.fn_is_supported && !method.fn_is_supported()) {
         GTEST_SKIP();
     }
 

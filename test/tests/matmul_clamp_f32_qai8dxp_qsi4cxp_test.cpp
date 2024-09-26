@@ -22,6 +22,7 @@
 #include "kai/ukernels/matmul/matmul_clamp_f32_qai8dxp_qsi4cxp/kai_matmul_clamp_f32_qai8dxp_qsi4cxp_interface.h"
 #include "kai/ukernels/matmul/pack/kai_lhs_quant_pack_qai8dxp_f32.h"
 #include "kai/ukernels/matmul/pack/kai_rhs_pack_nxk_qsi4cxp_qsu4cxs1s0.h"
+#include "test/common/cpu_info.hpp"
 #include "test/common/int4.hpp"
 #include "test/common/memory.hpp"
 #include "test/common/test_suite.hpp"
@@ -34,12 +35,12 @@ namespace kai::test {
 
 static const std::array<UkernelVariant<kai_matmul_clamp_f32_qai8dxp_qsi4cxp_ukernel>, 6>
     variants_kai_matmul_clamp_f32_qai8dxp_qsi4cxp = {{
-        UKERNEL_MATMUL_VARIANT(clamp_f32_qai8dxp1x8_qsi4cxp4x8_1x4x32_neon_dotprod),
-        UKERNEL_MATMUL_VARIANT(clamp_f32_qai8dxp1x8_qsi4cxp8x8_1x8x32_neon_dotprod),
-        UKERNEL_MATMUL_VARIANT(clamp_f32_qai8dxp4x8_qsi4cxp4x8_4x4x32_neon_i8mm),
-        UKERNEL_MATMUL_VARIANT(clamp_f32_qai8dxp4x8_qsi4cxp4x8_8x4x32_neon_i8mm),
-        UKERNEL_MATMUL_VARIANT(clamp_f32_qai8dxp4x8_qsi4cxp8x8_4x8x32_neon_i8mm),
-        UKERNEL_MATMUL_VARIANT(clamp_f32_qai8dxp4x8_qsi4cxp8x8_8x8x32_neon_i8mm),
+        UKERNEL_MATMUL_VARIANT(clamp_f32_qai8dxp1x8_qsi4cxp4x8_1x4x32_neon_dotprod, cpu_has_dotprod),
+        UKERNEL_MATMUL_VARIANT(clamp_f32_qai8dxp1x8_qsi4cxp8x8_1x8x32_neon_dotprod, cpu_has_dotprod),
+        UKERNEL_MATMUL_VARIANT(clamp_f32_qai8dxp4x8_qsi4cxp4x8_4x4x32_neon_i8mm, cpu_has_i8mm),
+        UKERNEL_MATMUL_VARIANT(clamp_f32_qai8dxp4x8_qsi4cxp4x8_8x4x32_neon_i8mm, cpu_has_i8mm),
+        UKERNEL_MATMUL_VARIANT(clamp_f32_qai8dxp4x8_qsi4cxp8x8_4x8x32_neon_i8mm, cpu_has_i8mm),
+        UKERNEL_MATMUL_VARIANT(clamp_f32_qai8dxp4x8_qsi4cxp8x8_8x8x32_neon_i8mm, cpu_has_i8mm),
     }};
 
 class MatMulTest_f32_qai8dxp4x8_qsi4cxp8x8 : public UkernelVariantTest {};
@@ -47,6 +48,10 @@ class MatMulTest_f32_qai8dxp4x8_qsi4cxp8x8 : public UkernelVariantTest {};
 TEST_P(MatMulTest_f32_qai8dxp4x8_qsi4cxp8x8, EndToEnd) {
     auto& [variant_index, matmul_shape] = GetParam();
     const auto& ukernel_variant = variants_kai_matmul_clamp_f32_qai8dxp_qsi4cxp.at(variant_index);
+
+    if (ukernel_variant.fn_is_supported && !ukernel_variant.fn_is_supported()) {
+        GTEST_SKIP();
+    }
 
     const uint64_t seed = 0;
 
