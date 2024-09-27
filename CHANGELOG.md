@@ -17,6 +17,8 @@ KleidiAI follows the [Semantic Versioning](https://semver.org/) specification fo
 - Extend support for signed 4-bit integer inputs in quantized symmetric 4-bit signed integer with per-channel quantization (QSI4CXP) RHS packing micro-kernel.
   - kai_rhs_pack_nxk_qsi4cxp_qsu4cxs1s0 renamed to kai_rhs_pack_nxk_qsi4cxp_qs4cxs1s0.
   - kai_rhs_pack_kxn_qsi4cxp_qsu4cxs1s0 renamed to kai_rhs_pack_kxn_qsi4cxp_qs4cxs1s0.
+- Remove FP16 GEMV micro-kernel optimized for Advanced SIMD.
+  - Where a dedicated GEMV micro-kernel is not provided, it is recommended to use existing GEMM micro-kernels which have dedicated paths for M=1 (a "GEMV" operation).
 
 ## v0.2.0
 
