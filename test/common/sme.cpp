@@ -20,7 +20,7 @@ uint64_t get_sme_vector_length<1>() {
 
     if (res == 0) {
         if (cpu_has_sme()) {
-            __asm __volatile(
+            __asm__ __volatile__(
                 ".inst 0xd503477f  // SMSTART ZA\n"
                 "cntb %0\n"
                 ".inst 0xd503467f  // SMSTOP\n"
@@ -43,7 +43,7 @@ uint64_t get_sme_vector_length<2>() {
 
     if (res == 0) {
         if (cpu_has_sme()) {
-            __asm __volatile(
+            __asm__ __volatile__(
                 ".inst 0xd503477f  // SMSTART ZA\n"
                 "cnth %0\n"
                 ".inst 0xd503467f  // SMSTOP\n"
@@ -66,7 +66,7 @@ uint64_t get_sme_vector_length<4>() {
 
     if (res == 0) {
         if (cpu_has_sme()) {
-            __asm __volatile(
+            __asm__ __volatile__(
                 ".inst 0xd503477f  // SMSTART ZA\n"
                 "cntw %0\n"
                 ".inst 0xd503467f  // SMSTOP\n"

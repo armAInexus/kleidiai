@@ -104,7 +104,7 @@ inline static float kai_cast_f32_bf16(uint16_t bf16) {
 inline static uint16_t kai_cast_bf16_f32(float f32) {
     uint16_t bf16 = 0;
 #ifdef __ARM_FEATURE_BF16
-    asm("bfcvt %h[output], %s[input]" : [output] "=w"(bf16) : [input] "w"(f32));
+    __asm__ __volatile__("bfcvt %h[output], %s[input]" : [output] "=w"(bf16) : [input] "w"(f32));
 #else
     const uint32_t* i32 = (uint32_t*)(&f32);
     bf16 = (*i32 >> 16);
@@ -135,7 +135,7 @@ inline static size_t kai_roundup(size_t a, size_t b) {
 inline static uint64_t kai_get_sme_vector_length_u8(void) {
     uint64_t res = 0;
 
-    __asm __volatile(
+    __asm__ __volatile__(
         ".inst 0xd503477f  // SMSTART ZA\n"
         "cntb %0\n"
         ".inst 0xd503467f  // SMSTOP\n"
@@ -151,7 +151,7 @@ inline static uint64_t kai_get_sme_vector_length_u8(void) {
 inline static uint64_t kai_get_sme_vector_length_u16(void) {
     uint64_t res = 0;
 
-    __asm __volatile(
+    __asm__ __volatile__(
         ".inst 0xd503477f  // SMSTART ZA\n"
         "cnth %0\n"
         ".inst 0xd503467f  // SMSTOP\n"
@@ -167,7 +167,7 @@ inline static uint64_t kai_get_sme_vector_length_u16(void) {
 inline static uint64_t kai_get_sme_vector_length_u32(void) {
     uint64_t res = 0;
 
-    __asm __volatile(
+    __asm__ __volatile__(
         ".inst 0xd503477f  // SMSTART ZA\n"
         "cntw %0\n"
         ".inst 0xd503467f  // SMSTOP\n"

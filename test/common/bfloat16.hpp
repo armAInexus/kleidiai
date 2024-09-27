@@ -40,7 +40,7 @@ public:
     /// Creates a new object from the specified numeric value.
     BFloat16(float value) : _data(0) {
 #ifdef __ARM_FEATURE_BF16
-        asm("bfcvt %h[output], %s[input]" : [output] "=w"(_data) : [input] "w"(value));
+        __asm__ __volatile__("bfcvt %h[output], %s[input]" : [output] "=w"(_data) : [input] "w"(value));
 #else
         const uint32_t* value_i32 = reinterpret_cast<const uint32_t*>(&value);
         _data = (*value_i32 >> 16);
@@ -52,7 +52,7 @@ public:
     BFloat16& operator=(T value) {
         const auto value_f32 = static_cast<float>(value);
 #ifdef __ARM_FEATURE_BF16
-        asm("bfcvt %h[output], %s[input]" : [output] "=w"(_data) : [input] "w"(value_f32));
+        __asm__ __volatile__("bfcvt %h[output], %s[input]" : [output] "=w"(_data) : [input] "w"(value_f32));
 #else
         const uint32_t* value_i32 = reinterpret_cast<const uint32_t*>(&value_f32);
         _data = (*value_i32 >> 16);

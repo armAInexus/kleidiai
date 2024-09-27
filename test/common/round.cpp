@@ -13,7 +13,7 @@ namespace kai::test {
 
 int32_t round_to_nearest_even_i32(float value) {
     int32_t rounded = 0;
-    asm("fcvtns %w[output], %s[input]" : [output] "=r"(rounded) : [input] "w"(value));
+    __asm__ __volatile__("fcvtns %w[output], %s[input]" : [output] "=r"(rounded) : [input] "w"(value));
     return rounded;
 }
 
@@ -21,7 +21,7 @@ size_t round_to_nearest_even_usize(float value) {
     static_assert(sizeof(size_t) == sizeof(uint64_t));
 
     uint64_t rounded = 0;
-    asm("fcvtns %x[output], %s[input]" : [output] "=r"(rounded) : [input] "w"(value));
+    __asm__ __volatile__("fcvtns %x[output], %s[input]" : [output] "=r"(rounded) : [input] "w"(value));
     return rounded;
 }
 
