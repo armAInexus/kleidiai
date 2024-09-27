@@ -9,6 +9,7 @@
 #include "kai_matmul_clamp_f32_qai8dxp4x8_qsi4cxp8x8_4x8x32_neon_i8mm.h"
 
 #include <arm_neon.h>
+#include <stddef.h>
 #include <stdint.h>
 
 #include "kai/kai_common.h"

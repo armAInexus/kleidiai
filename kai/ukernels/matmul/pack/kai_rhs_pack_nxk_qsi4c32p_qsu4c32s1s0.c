@@ -6,6 +6,7 @@
 #include "kai_rhs_pack_nxk_qsi4c32p_qsu4c32s1s0.h"
 
 #include <math.h>
+#include <stddef.h>
 #include <stdint.h>
 #include <string.h>
 
