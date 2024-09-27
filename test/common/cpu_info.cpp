@@ -9,7 +9,6 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
-#include <string_view>
 #include <tuple>
 
 #include "kai/kai_common.h"
@@ -21,6 +20,8 @@
 #if defined(__aarch64__) && defined(__APPLE__)
 #include <sys/sysctl.h>
 #include <sys/types.h>
+
+#include <string_view>
 #endif  // defined(__aarch64__) && defined(__APPLE__)
 
 namespace kai::test {
@@ -41,7 +42,31 @@ enum CpuFeatures {
 };
 
 #if defined(__aarch64__) && defined(__linux__)
-/// Define recent CPU capabilities not available in toolchain definitions yet
+/// Define CPU capabilities not available in toolchain definitions
+#ifndef HWCAP_ASIMD
+constexpr uint64_t HWCAP_ASIMD = 1UL << 1;
+#endif
+#ifndef HWCAP_FPHP
+constexpr uint64_t HWCAP_FPHP = 1UL << 9;
+#endif
+#ifndef HWCAP_ASIMDHP
+constexpr uint64_t HWCAP_ASIMDHP = 1UL << 10;
+#endif
+#ifndef HWCAP_ASIMDDP
+constexpr uint64_t HWCAP_ASIMDDP = 1UL << 20;
+#endif
+#ifndef HWCAP_SVE
+constexpr uint64_t HWCAP_SVE = 1UL << 22;
+#endif
+#ifndef HWCAP2_SVE2
+constexpr uint64_t HWCAP2_SVE2 = 1UL << 1;
+#endif
+#ifndef HWCAP2_I8MM
+constexpr uint64_t HWCAP2_I8MM = 1UL << 13;
+#endif
+#ifndef HWCAP2_BF16
+constexpr uint64_t HWCAP2_BF16 = 1UL << 14;
+#endif
 #ifndef HWCAP2_SME
 constexpr uint64_t HWCAP2_SME = 1UL << 23;
 #endif
