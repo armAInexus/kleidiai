@@ -14,6 +14,9 @@ KleidiAI follows the [Semantic Versioning](https://semver.org/) specification fo
 - Micro-kernels to compute the matrix multiplication of dynamically quantized asymmetric signed 8-bit integer with per-row quantization (QAI8DX) LHS and quantized symmetric 4-bit signed integer with per-block quantization (QSI4C32) RHS. The destination matrix data type is single-precision floating-point (F32). The micro-kernels have been optimized using the Arm® CPU feature FEAT_I8MM for the matrix-by-matrix cases and the FEAT_DotProd for the vector-by-matrix cases.
 - RHS matrix packing micro-kernels to pack the RHS matrix holding the QSI4C32 values.
 - Unit test and example for integer micro-kernels.
+- Extend support for signed 4-bit integer inputs in quantized symmetric 4-bit signed integer with per-channel quantization (QSI4CXP) RHS packing micro-kernel.
+  - kai_rhs_pack_nxk_qsi4cxp_qsu4cxs1s0 renamed to kai_rhs_pack_nxk_qsi4cxp_qs4cxs1s0.
+  - kai_rhs_pack_kxn_qsi4cxp_qsu4cxs1s0 renamed to kai_rhs_pack_kxn_qsi4cxp_qs4cxs1s0.
 
 ## v0.2.0
 

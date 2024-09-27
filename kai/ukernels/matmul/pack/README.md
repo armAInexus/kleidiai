@@ -78,13 +78,13 @@ Output
 
 RHS packed matrix (N x K) contains quantized (q) symmetric (s) 4-bit signed int (i4) values with per-block quantization (c32). Two int4 values are stored in one byte. Fp16 scale factors (scalef16) are stored at the end of each block.
 
-#### kai_run_rhs_pack_nxk_qsi4cxp_qsu4cxs1s0()
+#### kai_run_rhs_pack_nxk_qsi4cxp_qs4cxs1s0()
 
 Packs RHS matrix and bias with per-channel quantization parameters.
 
 Inputs
 
-1. RHS matrix and dimensions. The input RHS matrix (N x K) has quantized (q) symmetric (s) 4-bit unsigned int (u4) values with per-channel quantization (cx) parameters. The two int4 elements are packed in sequential order (s1s0) i.e. two int4 values stored in one byte, where the lower order part of the byte (low) holds the low nibble (K-index + 0) and the higher order of the byte holds the high nibble (K-index + 1).
+1. RHS matrix and dimensions. The input RHS matrix (N x K) has quantized (q) symmetric (s) 4-bit signed or unsigned int (4) values with per-channel quantization (cx) parameters. The two int4 elements are packed in sequential order (s1s0) i.e. two int4 values stored in one byte, where the lower order part of the byte (low) holds the low nibble (K-index + 0) and the higher order of the byte holds the high nibble (K-index + 1).
 1. Block length, mr, kr sr and other parameters defines how to interleave multiple rows and split the rows.
 1. Bias for N elements
 1. Scale factors
@@ -93,6 +93,6 @@ Output
 
 RHS packed matrix (N x K) contains quantized (q) symmetric (s) 4-bit signed int (i4) values with per-channel quantization (cx). Two int4 values are stored in one byte.
 
-#### kai_run_rhs_pack_kxn_qsi4cxp_qsu4cxs1s0()
+#### kai_run_rhs_pack_kxn_qsi4cxp_qs4cxs1s0()
 
-Same as kai_run_rhs_pack_nxk_qsi4cxp_qsu4cxs1s0() with the input RHS matrix dimensions as K x N.
+Same as kai_run_rhs_pack_nxk_qsi4cxp_qs4cxs1s0() with the input RHS matrix dimensions as K x N.

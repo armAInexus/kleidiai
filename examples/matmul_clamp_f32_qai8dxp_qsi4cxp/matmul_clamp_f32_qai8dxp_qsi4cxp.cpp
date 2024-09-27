@@ -23,8 +23,8 @@
 #include "kai_matmul_clamp_f32_qai8dxp4x8_qsi4cxp8x8_4x8x32_neon_i8mm.h"
 #include "kai_matmul_clamp_f32_qai8dxp4x8_qsi4cxp8x8_8x8x32_neon_i8mm.h"
 #include "kai_matmul_clamp_f32_qai8dxp_qsi4cxp_interface.h"
-#include "kai_rhs_pack_kxn_qsi4cxp_qsu4cxs1s0.h"
-#include "kai_rhs_pack_nxk_qsi4cxp_qsu4cxs1s0.h"
+#include "kai_rhs_pack_kxn_qsi4cxp_qs4cxs1s0.h"
+#include "kai_rhs_pack_nxk_qsi4cxp_qs4cxs1s0.h"
 
 #define INT4_MIN (-8)
 #define INT4_MAX (7)
@@ -565,10 +565,10 @@ int main(int argc, char** argv) {
             size_t rhs_packed_size = 0;
 
             if (format == rhs_format::nxk) {
-                rhs_packed_size = kai_get_rhs_packed_size_rhs_pack_nxk_qsi4cxp_qsu4cxs1s0(n, k, nr, kr, sr);
+                rhs_packed_size = kai_get_rhs_packed_size_rhs_pack_nxk_qsi4cxp_qs4cxs1s0(n, k, nr, kr, sr);
 
             } else {
-                rhs_packed_size = kai_get_rhs_packed_size_rhs_pack_kxn_qsi4cxp_qsu4cxs1s0(n, k, nr, kr, sr);
+                rhs_packed_size = kai_get_rhs_packed_size_rhs_pack_kxn_qsi4cxp_qs4cxs1s0(n, k, nr, kr, sr);
             }
 
             const size_t dst_size = ukernel_variants[idx_variant].ukernel.get_dst_size(m, n);
@@ -581,12 +581,12 @@ int main(int argc, char** argv) {
             // If the RHS matrix contains constant values, the packing can be performed
             // only once
             if (format == rhs_format::nxk) {
-                struct kai_rhs_pack_nxk_qsi4cxp_qsu4cxs1s0_params nxk_params;
+                struct kai_rhs_pack_nxk_qsi4cxp_qs4cxs1s0_params nxk_params;
 
                 nxk_params.lhs_zero_point = 1;
                 nxk_params.rhs_zero_point = 8;
                 // RHS packing
-                kai_run_rhs_pack_nxk_qsi4cxp_qsu4cxs1s0(
+                kai_run_rhs_pack_nxk_qsi4cxp_qs4cxs1s0(
                     1, n, k, nr, kr, sr,                     // Packing arguments
                     (const uint8_t*)(rhs_native_mtx_qs4cx),  // RHS
                     NULL,                                    // Bias
@@ -595,11 +595,11 @@ int main(int argc, char** argv) {
                     0, &nxk_params);
 
             } else {
-                struct kai_rhs_pack_kxn_qsi4cxp_qsu4cxs1s0_params kxn_params;
+                struct kai_rhs_pack_kxn_qsi4cxp_qs4cxs1s0_params kxn_params;
                 kxn_params.lhs_zero_point = 1;
                 kxn_params.rhs_zero_point = 8;
                 // RHS packing
-                kai_run_rhs_pack_kxn_qsi4cxp_qsu4cxs1s0(
+                kai_run_rhs_pack_kxn_qsi4cxp_qs4cxs1s0(
                     1, n, k, nr, kr, sr,                     // Packing arguments
                     (const uint8_t*)(rhs_native_mtx_qs4cx),  // RHS
                     NULL,                                    // Bias

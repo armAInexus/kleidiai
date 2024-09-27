@@ -3,7 +3,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 //
-#include "kai_rhs_pack_nxk_qsi4cxp_qsu4cxs1s0.h"
+#include "kai_rhs_pack_kxn_qsi4cxp_qs4cxs1s0.h"
 
 #include <math.h>
 #include <stdint.h>
@@ -22,15 +22,17 @@ inline static size_t kai_k_roundedup(size_t k, size_t kr, size_t sr) {
     return kai_roundup(k, kr_sr_roundedup4);
 }
 
-size_t kai_get_n_step_rhs_pack_nxk_qsi4cxp_qsu4cxs1s0(size_t nr) {
+size_t kai_get_n_step_rhs_pack_kxn_qsi4cxp_qs4cxs1s0(size_t nr) {
     return nr;
 }
 
-size_t kai_get_rhs_offset_rhs_pack_nxk_qsi4cxp_qsu4cxs1s0(size_t n_idx, size_t rhs_stride) {
-    return n_idx * rhs_stride;
+size_t kai_get_rhs_offset_rhs_pack_kxn_qsi4cxp_qs4cxs1s0(size_t n_idx, size_t rhs_stride) {
+    KAI_UNUSED(rhs_stride);
+    KAI_ASSERT((n_idx % 2) == 0);
+    return (n_idx / 2) * sizeof(int8_t);
 }
 
-size_t kai_get_rhs_packed_stride_rhs_pack_nxk_qsi4cxp_qsu4cxs1s0(size_t k, size_t nr, size_t kr, size_t sr) {
+size_t kai_get_rhs_packed_stride_rhs_pack_kxn_qsi4cxp_qs4cxs1s0(size_t k, size_t nr, size_t kr, size_t sr) {
     const size_t k_internal = kai_k_roundedup(k, kr, sr);
 
     KAI_ASSERT((k_internal % 2) == 0);
@@ -38,23 +40,23 @@ size_t kai_get_rhs_packed_stride_rhs_pack_nxk_qsi4cxp_qsu4cxs1s0(size_t k, size_
     return nr * ((k_internal / 2) + kai_num_bytes_multiplier_rhs + kai_num_bytes_sum_rhs + kai_num_bytes_bias);
 }
 
-size_t kai_get_rhs_packed_offset_rhs_pack_nxk_qsi4cxp_qsu4cxs1s0(
+size_t kai_get_rhs_packed_offset_rhs_pack_kxn_qsi4cxp_qs4cxs1s0(
     size_t n_idx, size_t k, size_t nr, size_t kr, size_t sr) {
     KAI_ASSERT((n_idx % nr) == 0);
 
-    return (n_idx / nr) * kai_get_rhs_packed_stride_rhs_pack_nxk_qsi4cxp_qsu4cxs1s0(k, nr, kr, sr);
+    return (n_idx / nr) * kai_get_rhs_packed_stride_rhs_pack_kxn_qsi4cxp_qs4cxs1s0(k, nr, kr, sr);
 }
 
-size_t kai_get_rhs_packed_size_rhs_pack_nxk_qsi4cxp_qsu4cxs1s0(size_t n, size_t k, size_t nr, size_t kr, size_t sr) {
+size_t kai_get_rhs_packed_size_rhs_pack_kxn_qsi4cxp_qs4cxs1s0(size_t n, size_t k, size_t nr, size_t kr, size_t sr) {
     const size_t num_rows = kai_roundup(n, nr) / nr;
 
-    return num_rows * kai_get_rhs_packed_stride_rhs_pack_nxk_qsi4cxp_qsu4cxs1s0(k, nr, kr, sr);
+    return num_rows * kai_get_rhs_packed_stride_rhs_pack_kxn_qsi4cxp_qs4cxs1s0(k, nr, kr, sr);
 }
 
-void kai_run_rhs_pack_nxk_qsi4cxp_qsu4cxs1s0(
+void kai_run_rhs_pack_kxn_qsi4cxp_qs4cxs1s0(
     size_t num_groups, size_t n, size_t k, size_t nr, size_t kr, size_t sr, const uint8_t* rhs, const float* bias,
     const float* scale, void* rhs_packed, size_t extra_bytes,
-    const struct kai_rhs_pack_nxk_qsi4cxp_qsu4cxs1s0_params* params) {
+    const struct kai_rhs_pack_kxn_qsi4cxp_qs4cxs1s0_params* params) {
     KAI_ASSERT(num_groups == 1);
     KAI_ASSERT(extra_bytes == 0);
     KAI_ASSERT((kr % sr) == 0);
@@ -62,17 +64,17 @@ void kai_run_rhs_pack_nxk_qsi4cxp_qsu4cxs1s0(
     KAI_ASSERT(scale != NULL);
     KAI_ASSERT(rhs_packed != NULL);
     KAI_ASSERT(params != NULL);
-    KAI_ASSERT(params->rhs_zero_point == 8);
     KAI_ASSERT(params->lhs_zero_point == 1);
+    KAI_ASSERT(params->rhs_zero_point == 0 || params->rhs_zero_point == 8);
 
     const size_t rhs_zero_point = params->rhs_zero_point;
-    const size_t rhs_packed_stride = kai_get_rhs_packed_stride_rhs_pack_nxk_qsi4cxp_qsu4cxs1s0(k, nr, kr, sr);
+    const size_t rhs_packed_stride = kai_get_rhs_packed_stride_rhs_pack_kxn_qsi4cxp_qs4cxs1s0(k, nr, kr, sr);
     const size_t k_internal = kai_k_roundedup(k, kr, sr);
     const size_t dst_num_rows = kai_roundup(n, nr) / nr;
     const size_t dst_num_bytes_per_row = nr * (kai_k_roundedup(k, kr, sr) / 2);
     const size_t block_length_in_bytes = kr / sr;
     const size_t k_interleaved_v = 16U;
-    const size_t rhs_stride = kai_roundup(k, 2) / 2;
+    const size_t rhs_stride = kai_roundup(n, 2) / 2;
 
     for (size_t dst_row_idx = 0; dst_row_idx < dst_num_rows; ++dst_row_idx) {
         uint8_t* dst_row = (uint8_t*)rhs_packed + dst_row_idx * rhs_packed_stride;
@@ -97,50 +99,79 @@ void kai_run_rhs_pack_nxk_qsi4cxp_qsu4cxs1s0(
             // Clamp the index to avoid out-of-bound reads
             const size_t n0_valid_idx = KAI_MIN(n0_idx, n - 1);
 
-            const size_t src_addr_byte0 = (k0_idx / 2) + n0_valid_idx * rhs_stride;
-            const size_t src_addr_byte1 = (k1_idx / 2) + n0_valid_idx * rhs_stride;
+            const size_t src_addr_byte0 = (n0_valid_idx / 2) + k0_idx * rhs_stride;
+            const size_t src_addr_byte1 = (n0_valid_idx / 2) + k1_idx * rhs_stride;
 
-            uint8_t byte0 = rhs_zero_point | rhs_zero_point << 4;
-            uint8_t byte1 = rhs_zero_point | rhs_zero_point << 4;
+            if (params->rhs_zero_point == 8) {
+                uint8_t byte0 = rhs_zero_point | rhs_zero_point << 4;
+                uint8_t byte1 = rhs_zero_point | rhs_zero_point << 4;
 
-            if (k0_idx < k) {
-                byte0 = rhs[src_addr_byte0];
-            }
-
-            if (k1_idx < k) {
-                byte1 = rhs[src_addr_byte1];
-            }
-
-            // The following operations where we extract the values from the bytes
-            // can be also written in the following and less efficient manner:
-            /*
-                uint8_t src_x0_lo = 0;
-                uint8_t src_x0_hi = 0;
-
-                if ((k0_idx % 2) == 0) {
-                    src_x0_lo = (byte0 & 0x0F);
-                } else {
-                    src_x0_lo = (byte0 >> 4);
+                if (k0_idx < k) {
+                    byte0 = rhs[src_addr_byte0];
                 }
 
-                if ((k1_idx % 2) == 0) {
-                    src_x0_hi = (byte1 & 0x0F);
-                } else {
-                    src_x0_hi = (byte1 >> 4);
+                if (k1_idx < k) {
+                    byte1 = rhs[src_addr_byte1];
                 }
-            */
-            const size_t shift_right_x0 = (k0_idx % 2) * 4;
-            const size_t shift_right_x1 = (k1_idx % 2) * 4;
 
-            const uint8_t src_x0_lo = (byte0 >> shift_right_x0) & 0x0F;
-            const uint8_t src_x0_hi = (byte1 >> shift_right_x1) & 0x0F;
+                // The following operations where we extract the values from the bytes
+                // can be also written in the following and less efficient manner:
+                /*
+                    uint8_t src_x0_lo = 0;
+                    uint8_t src_x0_hi = 0;
 
-            sums[nr_idx] += (int32_t)src_x0_lo + (int32_t)src_x0_hi - 2 * (int32_t)rhs_zero_point;
+                    if ((n0_idx % 2) == 0) {
+                        src_x0_lo = (byte0 & 0x0F);
+                    } else {
+                        src_x0_lo = (byte0 >> 4);
+                    }
 
-            const uint8_t dst_qs0 = src_x0_lo | (src_x0_hi << 4);
+                    if ((n0_idx % 2) == 0) {
+                        src_x0_hi = (byte1 & 0x0F);
+                    } else {
+                        src_x0_hi = (byte1 >> 4);
+                    }
+                */
+                const size_t shift_right_x0 = (n0_idx % 2) * 4;
 
-            *dst_row = dst_qs0 ^ 0x88;
-            dst_row += sizeof(uint8_t);
+                const uint8_t src_x0_lo = (byte0 >> shift_right_x0) & 0x0F;
+                const uint8_t src_x0_hi = (byte1 >> shift_right_x0) & 0x0F;
+
+                sums[nr_idx] += (int32_t)src_x0_lo + (int32_t)src_x0_hi - 2 * (int32_t)rhs_zero_point;
+
+                const uint8_t dst_qs0 = src_x0_lo | (src_x0_hi << 4);
+
+                *dst_row = dst_qs0 ^ 0x88;
+                dst_row += sizeof(uint8_t);
+            } else {
+                int8_t byte0 = 0;
+                int8_t byte1 = 0;
+
+                if (k0_idx < k) {
+                    byte0 = rhs[src_addr_byte0];
+                }
+
+                if (k1_idx < k) {
+                    byte1 = rhs[src_addr_byte1];
+                }
+
+                // The logic behind the following operations where we extract the
+                // values from the bytes is same as unsigned
+
+                const size_t shift_right_x0 = (n0_idx % 2) * 4;
+
+                int8_t src_x0_lo = (byte0 >> shift_right_x0) & 0x0F;
+                int8_t src_x0_hi = (byte1 >> shift_right_x0) & 0x0F;
+
+                const int8_t dst_qs0 = src_x0_lo | (src_x0_hi << 4);
+
+                *(int8_t*)dst_row = dst_qs0;
+                dst_row += sizeof(int8_t);
+
+                src_x0_lo = kai_ext_sign_i8_i4(src_x0_lo);
+                src_x0_hi = kai_ext_sign_i8_i4(src_x0_hi);
+                sums[nr_idx] += (int32_t)src_x0_lo + (int32_t)src_x0_hi;
+            }
         }
 
         // Adjust the reduction sums

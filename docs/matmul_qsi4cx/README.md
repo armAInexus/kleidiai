@@ -64,10 +64,10 @@ You might have observed that the LHS and RHS matrices also include additional in
 In the header of the matrix multiplication micro-kernel we report the additional micro-kernels required to leverage the computation. For this specific case, the additional micro-kernels are the following:
 
 - [kai_lhs_quant_pack_qai8dxp_f32](../../kai/ukernels/matmul/pack/kai_lhs_quant_pack_qai8dxp_f32.c)
-- [kai_rhs_pack_kxn_qsi4cxp_qsu4cxs1s0](../../kai/ukernels/matmul/pack/kai_rhs_pack_kxn_qsi4cxp_qsu4cxs1s0.c) or [kai_rhs_pack_nxk_qsi4cxp_qsu4cxs1s0](../../kai/ukernels/matmul/pack/kai_rhs_pack_nxk_qsi4cxp_qsu4cxs1s0.c)
+- [kai_rhs_pack_kxn_qsi4cxp_qs4cxs1s0](../../kai/ukernels/matmul/pack/kai_rhs_pack_kxn_qsi4cxp_qs4cxs1s0.c) or [kai_rhs_pack_nxk_qsi4cxp_qs4cxs1s0](../../kai/ukernels/matmul/pack/kai_rhs_pack_nxk_qsi4cxp_qs4cxs1s0.c)
 
 The **kai_lhs_quant_pack_qai8dxp_f32** micro-kernel performs the dynamic quantization of the LHS matrix from f32 to int8 and packs the value to improve the cache locality during the matrix multiplication routine.
-Instead, the **kai_rhs_pack_nxk_qsi4cxp_qsu4cxs1s0 or kai_rhs_pack_kxn_qsi4cxp_qsu4cxs1s0** packs the original integer 4-bit RHS matrix to improve the cache locality during the matrix multiplication routine.
+Instead, the **kai_rhs_pack_nxk_qsi4cxp_qs4cxs1s0 or kai_rhs_pack_kxn_qsi4cxp_qs4cxs1s0** packs the original integer 4-bit RHS matrix to improve the cache locality during the matrix multiplication routine.
 
 The packing arguments required to run the preceeding micro-kernels, such as **mr**, **kr**, and **sr**, are obtained using the helper methods provided in the matrix multiplication micro-kernel.
 
@@ -96,7 +96,7 @@ Include the micro-kernels' headers files:
 
 ```c
 #include "kai_lhs_quant_pack_qai8dxp_f32.h"
-#include "kai_rhs_pack_nxk_qsi4cxp_qsu4cxs1s0.h"
+#include "kai_rhs_pack_nxk_qsi4cxp_qs4cxs1s0.h"
 #include "kai_matmul_clamp_f32_qai8dxp4x8_qsi4cxp8x8_8x8x32_neon_i8mm.h"
 ```
 
@@ -163,7 +163,7 @@ Allocate the memory for the LHS and RHS packed matrices:
 
     // Get the size in bytes for the packed matrices
     const size_t lhs_packed_size = kai_get_lhs_packed_size_lhs_quant_pack_qai8dxp_f32(m, k, mr, kr, sr);
-    const size_t rhs_packed_size = kai_get_rhs_packed_size_rhs_pack_nxk_qsi4cxp_qsu4cxs1s0(n, k, nr, kr, sr);
+    const size_t rhs_packed_size = kai_get_rhs_packed_size_rhs_pack_nxk_qsi4cxp_qs4cxs1s0(n, k, nr, kr, sr);
 
     // Allocate the matrices
     uint8_t* lhs_packed_mtx_qa8dx = new uint8_t[lhs_packed_size];
@@ -183,12 +183,12 @@ Once we know the size of the packed matrices, we allocate the memory for the pac
 Assuming you have filled the native LHS and RHS matrices with some random values, perform the RHS packing:
 
 ```c
-    struct kai_rhs_pack_nxk_qsi4cxp_qsu4cxs1s0_params params;
+    struct kai_rhs_pack_nxk_qsi4cxp_qs4cxs1s0_params params;
     params.lhs_zero_point = 1;
     params.rhs_zero_point = 8;
 
     // RHS packing
-    kai_run_rhs_pack_nxk_qsi4cxp_qsu4cxs1s0(
+    kai_run_rhs_pack_nxk_qsi4cxp_qs4cxs1s0(
         1, n, k, nr, kr, sr,                    // Packing arguments
         (const uint8_t*)(rhs_native_mtx_qs4cx), // RHS
         NULL,                                   // Bias
@@ -261,8 +261,8 @@ include_directories(
 # Files requires to build the executable
 add_executable(matmul_clamp_f32_qai8dxp_qsi4cxp
     matmul_clamp_f32_qai8dxp_qsi4cxp.cpp
-    ${MATMUL_PACK_PATH}/kai_rhs_pack_nxk_qsi4cxp_qsu4cxs1s0.c
-    ${MATMUL_PACK_PATH}/kai_rhs_pack_kxn_qsi4cxp_qsu4cxs1s0.c
+    ${MATMUL_PACK_PATH}/kai_rhs_pack_nxk_qsi4cxp_qs4cxs1s0.c
+    ${MATMUL_PACK_PATH}/kai_rhs_pack_kxn_qsi4cxp_qs4cxs1s0.c
     ${MATMUL_PACK_PATH}/kai_lhs_quant_pack_qai8dxp_f32.c
     ${MATMUL_PATH}/kai_matmul_clamp_f32_qai8dxp4x8_qsi4cxp8x8_8x8x32_neon_i8mm.c)
 

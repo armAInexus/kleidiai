@@ -89,7 +89,7 @@ enum class QuantizationMethod : uint32_t {
 /// @return The quantized data matrix and the quantization scale matrix.
 template <typename SrcType, typename DstType, typename ScaleType>
 std::tuple<std::vector<uint8_t>, std::vector<uint8_t>> quantize_symmetric_per_block(
-    const void* src, size_t height, size_t width, size_t quant_width);
+    const void* src, size_t height, size_t width, size_t quant_width, bool is_transposed = true);
 
 /// Quantizes each subblock of the matrix using asymmetric quantization method.
 ///

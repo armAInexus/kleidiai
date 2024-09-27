@@ -181,6 +181,14 @@ inline static uint64_t kai_get_sme_vector_length_u32(void) {
 
 #endif  // __ARM_FEATURE_SVE
 
+/// Extends the sign bit of int 4-bit value (stored in int8_t variable)
+/// @param[in] value The 4-bit int value
+///
+/// @return the int8_t value with sign extended
+inline static int8_t kai_ext_sign_i8_i4(int8_t value) {
+    return (value ^ 0x8) - 8;
+}
+
 #ifdef __cplusplus
 }
 #endif

@@ -20,7 +20,7 @@
 #include "kai/ukernels/matmul/matmul_clamp_f32_qai8dxp_qsi4cxp/kai_matmul_clamp_f32_qai8dxp4x8_qsi4cxp8x8_8x8x32_neon_i8mm.h"
 #include "kai/ukernels/matmul/matmul_clamp_f32_qai8dxp_qsi4cxp/kai_matmul_clamp_f32_qai8dxp_qsi4cxp_interface.h"
 #include "kai/ukernels/matmul/pack/kai_lhs_quant_pack_qai8dxp_f32.h"
-#include "kai/ukernels/matmul/pack/kai_rhs_pack_nxk_qsi4cxp_qsu4cxs1s0.h"
+#include "kai/ukernels/matmul/pack/kai_rhs_pack_nxk_qsi4cxp_qs4cxs1s0.h"
 
 struct kai_matmul_ukernel_f32_qa8dxp_qs4cxp {
     kai_matmul_clamp_f32_qai8dxp_qsi4cxp_ukernel ukernel;
@@ -138,7 +138,7 @@ struct kai_matmul {
 
         // Get the size in bytes for the packed matrices
         const size_t lhs_packed_size = kai_get_lhs_packed_size_lhs_quant_pack_qai8dxp_f32(m, k, mr, kr, sr);
-        const size_t rhs_packed_size = kai_get_rhs_packed_size_rhs_pack_nxk_qsi4cxp_qsu4cxs1s0(n, k, nr, kr, sr);
+        const size_t rhs_packed_size = kai_get_rhs_packed_size_rhs_pack_nxk_qsi4cxp_qs4cxs1s0(n, k, nr, kr, sr);
         const size_t dst_size = variant.ukernel.get_dst_size(m, n);
 
         // Allocate the matrices
@@ -148,12 +148,12 @@ struct kai_matmul {
 
         // If the RHS matrix contains constant values, the packing can be performed
         // only once
-        struct kai_rhs_pack_nxk_qsi4cxp_qsu4cxs1s0_params params;
+        struct kai_rhs_pack_nxk_qsi4cxp_qs4cxs1s0_params params;
         params.lhs_zero_point = 1;
         params.rhs_zero_point = 8;
 
         // RHS packing
-        kai_run_rhs_pack_nxk_qsi4cxp_qsu4cxs1s0(
+        kai_run_rhs_pack_nxk_qsi4cxp_qs4cxs1s0(
             1, n, k, nr, kr, sr,                     // Packing arguments
             (const uint8_t*)(rhs_native_mtx_qs4cx),  // RHS
             NULL,                                    // Bias
