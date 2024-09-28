@@ -9,6 +9,7 @@
 #include <cstddef>
 #include <type_traits>
 
+#include "test/common/bfloat16.hpp"
 #include "test/common/int4.hpp"
 
 namespace kai::test {
@@ -25,6 +26,14 @@ inline constexpr size_t size_in_bits<UInt4> = 4;
 template <>
 inline constexpr size_t size_in_bits<Int4> = 4;
 
+/// TODO: Move this
+inline float bf16_to_float(uint16_t v) {
+    const uint32_t lv = (v << 16);
+    float fp;
+    memcpy(&fp, &lv, sizeof(lv));
+    return fp;
+}
+
 /// Reads the array at the specified index.
 ///
 /// @param[in] array Data buffer.
@@ -39,6 +48,9 @@ T read_array(const void* array, size_t index) {
     } else if constexpr (std::is_same_v<T, Int4>) {
         const auto [lo, hi] = Int4::unpack_u8(reinterpret_cast<const uint8_t*>(array)[index / 2]);
         return index % 2 == 0 ? lo : hi;
+    } else if constexpr (std::is_same_v<T, BFloat16>) {
+        uint16_t raw_value = reinterpret_cast<const uint16_t*>(array)[index];
+        return BFloat16(bf16_to_float(raw_value));
     } else {
         return reinterpret_cast<const T*>(array)[index];
     }

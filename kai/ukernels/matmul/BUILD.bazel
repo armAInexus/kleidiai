@@ -7,9 +7,9 @@
 load(
     "//:kai_defs.bzl",
     "kai_c_library",
+    "kai_cpu_bf16",
     "kai_cpu_dotprod",
     "kai_cpu_fp16",
-    "kai_cpu_bf16",
     "kai_cpu_i8mm",
     "kai_cpu_neon",
     "kai_cpu_sme",
@@ -34,18 +34,18 @@ kai_c_library(
 )
 
 kai_c_library(
-    name = "clamp_bf16_bf16_f32p_interface",
-    hdrs = ["matmul_clamp_bf16_bf16_f32p/kai_matmul_clamp_bf16_bf16_f32p_interface.h"],
+    name = "clamp_f32_bf16p_bf16p_interface",
+    hdrs = ["matmul_clamp_f32_bf16p_bf16p/kai_matmul_clamp_f32_bf16p_bf16p_interface.h"],
     cpu_uarch = kai_cpu_bf16(),
 )
 
 kai_c_library(
-    name = "clamp_bf16_bf16_f32p12x1biasf32_8x12x4_neon_mmla",
-    srcs = ["matmul_clamp_f16_f16_f16p/kai_matmul_clamp_bf16_bf16_f32p12x1biasf32_8x12x4_neon_mmla.c"],
-    hdrs = ["matmul_clamp_f16_f16_f16p/kai_matmul_clamp_bf16_bf16_f32p12x1biasf32_8x12x4_neon_mmla.h"],
+    name = "clamp_f32_bf16p_bf16p12x1biasf32_8x12x4_neon_mmla",
+    srcs = ["matmul_clamp_f16_f16_f16p/kai_matmul_clamp_f32_bf16p_bf16p12x1biasf32_8x12x4_neon_mmla.c"],
+    hdrs = ["matmul_clamp_f16_f16_f16p/kai_matmul_clamp_f32_bf16p_bf16p12x1biasf32_8x12x4_neon_mmla.h"],
     cpu_uarch = kai_cpu_bf16(),
     deps = [
-        ":clamp_bf16_bf16_f32p_interface",
+        ":clamp_f32_bf16p_bf16p_interface",
     ],
 )
 
@@ -177,9 +177,9 @@ kai_c_library(
 )
 
 kai_c_library(
-    name = "lhs_pack_8x4_f32_bf16_neon",
-    srcs = ["pack/kai_lhs_pack_8x4_f32_bf16_neon.c"],
-    hdrs = ["pack/kai_lhs_pack_8x4_f32_bf16_neon.h"],
+    name = "lhs_pack_f32p8x4_bf16_neon",
+    srcs = ["pack/kai_lhs_pack_f32p8x4_bf16_neon.c"],
+    hdrs = ["pack/kai_lhs_pack_f32p8x4_bf16_neon.h"],
     cpu_uarch = kai_cpu_bf16(),
 )
 
@@ -191,9 +191,9 @@ kai_c_library(
 )
 
 kai_c_library(
-    name = "matmul_transpose_pack_rhs_bias_bf16p16x4zf32_bf16_f32_neon_nr_12",
-    srcs = ["pack/kai_matmul_transpose_pack_rhs_bias_bf16p16x4zf32_bf16_f32_neon_nr_12.c"],
-    hdrs = ["pack/kai_matmul_transpose_pack_rhs_bias_bf16p16x4zf32_bf16_f32_neon_nr_12.h"],
+    name = "rhs_pack_kxn_f32p4x12biasf32_f32_bf16_neon",
+    srcs = ["pack/kai_rhs_pack_kxn_f32p4x12biasf32_f32_bf16_neon.c"],
+    hdrs = ["pack/kai_rhs_pack_kxn_f32p4x12biasf32_f32_bf16_neon.h"],
     cpu_uarch = kai_cpu_bf16(),
 )
 

@@ -82,6 +82,14 @@ public:
         return _data != rhs._data;
     }
 
+    uint16_t data() const {
+        return _data;
+    }
+
+    void set_data(uint16_t data) {
+        _data = data;
+    }
+
     /// Writes the value to the output stream.
     ///
     /// @param[in] os Output stream to be written to.

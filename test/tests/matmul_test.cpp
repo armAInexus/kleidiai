@@ -21,11 +21,13 @@
 #include <vector>
 
 #include "kai/kai_common.h"
+#include "test/common/MatMulMethod.hpp"
 #include "test/common/compare.hpp"
 #include "test/common/cpu_info.hpp"
 #include "test/common/data_format.hpp"
 #include "test/common/data_type.hpp"
 #include "test/common/float16.hpp"
+#include "test/common/matmul_test_common.hpp"
 #include "test/common/matrix_portion.hpp"
 #include "test/common/printer.hpp"
 #include "test/common/sme.hpp"
@@ -45,296 +47,6 @@
 #include "kai/ukernels/matmul/matmul_clamp_f32_f32_f32p/kai_matmul_clamp_f32_f32_f32p8x1biasf32_6x8x4_neon_mla.h"
 #include "kai/ukernels/matmul/pack/kai_rhs_pack_kxn_f32p8x1biasf32_f32_f32_neon.h"
 namespace kai::test {
-
-// NOLINTBEGIN(misc-non-private-member-variables-in-classes)
-
-/// Matrix multiplication method.
-struct MatMulMethod {
-    std::string_view name;  ///< Name of matmul method.
-
-    size_t m0;  ///< Block size in M dimension.
-    size_t n0;  ///< Block size in N dimension.
-
-    bool lhs_transposed;  ///< LHS matrix is transposed.
-    bool rhs_transposed;  ///< RHS matrix is transposed.
-
-    DataFormat dst_format;         ///< Data format of the destination matrix.
-    DataFormat lhs_format;         ///< Data format of the LHS matrix.
-    DataFormat packed_lhs_format;  ///< Data format of the packed LHS matrix.
-    DataFormat rhs_format;         ///< Data format of the RHS matrix.
-    DataFormat packed_rhs_format;  ///< Data format of the packed RHS matrix.
-    DataFormat bias_format;        ///< Data format of the bias vector.
-
-    /// Check if CPU supports required features.
-    ///
-    /// @return Supported (true) or not supported (false).
-    std::function<bool(void)> fn_is_supported;
-
-    /// Gets mr value.
-    ///
-    /// This is the packing parameter which must be used to pack the LHS matrix (if necessary).
-    ///
-    /// @return The mr value.
-    std::function<size_t(void)> fn_get_mr;
-
-    /// Gets nr value.
-    ///
-    /// This is the packing parameter which must be used to pack the RHS matrix (if necessary).
-    ///
-    /// @return The nr value.
-    std::function<size_t(void)> fn_get_nr;
-
-    /// Gets kr value.
-    ///
-    /// This is the packing parameter which must be used to pack the LHS and RHS matrix (if necessary).
-    ///
-    /// @return The kr value.
-    std::function<size_t(void)> fn_get_kr;
-
-    /// Gets sr value.
-    ///
-    /// This is the packing parameter which must be used to pack the RHS matrix.
-    ///
-    /// @return The sr value.
-    std::function<size_t(void)> fn_get_sr;
-
-    /// Gets m step value for main kernel.
-    ///
-    /// The starting row index must be divisible by `m_step`.
-    ///
-    /// @return The m step value.
-    std::function<size_t(void)> fn_get_main_m_step;
-
-    /// Gets n step value for RHS packing kernel.
-    ///
-    /// The starting row index must be divisible by `n_step`.
-    ///
-    /// @return The n step value.
-    std::function<size_t(void)> fn_get_pack_rhs_n_step;
-
-    /// Gets n step value for main kernel.
-    ///
-    /// The starting column index must be divisible by `n_step`.
-    ///
-    /// @return The n step value.
-    std::function<size_t(void)> fn_get_main_n_step;
-
-    /// Gets the offset in bytes of the LHS matrix.
-    ///
-    /// @param[in] m_idx Coordinate of the matrix in M dimension.
-    /// @param[in] stride Row stride in bytes.
-    ///
-    /// @return The offset in bytes.
-    std::function<size_t(size_t m_idx, size_t stride)> fn_get_lhs_offset;
-
-    /// Gets the size in bytes of the packed LHS matrix.
-    ///
-    /// @param[in] m Number of rows in the unpacked LHS matrix.
-    /// @param[in] k Number of columns in the unpacked LHS matrix.
-    /// @param[in] mr Number of rows to be interleaved.
-    /// @param[in] kr Unused. Must be 1.
-    /// @param[in] sr Unused. Must be 1.
-    ///
-    /// @return The size in bytes.
-    std::function<size_t(size_t m, size_t k, size_t mr, size_t kr, size_t sr)> fn_get_packed_lhs_size;
-
-    /// Gets the offset in bytes of the packed LHS matrix.
-    ///
-    /// @param[in] m_idx Coordinate of the matrix in M dimension.
-    /// @param[in] k Size of the matrix in K dimension.
-    ///
-    /// @return The offset in bytes.
-    std::function<size_t(size_t m_idx, size_t k)> fn_get_packed_lhs_offset;
-
-    /// Preprocesses the LHS matrix.
-    ///
-    /// @param[in] m Number of rows of the unpacked LHS matrix.
-    /// @param[in] k Common dimension between the LHS and RHS matrix.
-    /// @param[in] mr Block size in M dimension. It must be {{ kernel.interleave_by }}VL.
-    /// @param[in] kr Block size in K dimension. It must be {{ kernel.block_by }}.
-    /// @param[in] sr Number of kr splits. It must be 1.
-    /// @param[in] m_idx_start Unused. Must be 0.
-    /// @param[in] lhs LHS matrix data buffer.
-    /// @param[in] lhs_stride Row stride in bytes of the LHS matrix.
-    /// @param[out] lhs_packed Packed RHS matrix.
-    std::function<void(
-        size_t m, size_t k, size_t mr, size_t kr, size_t sr, size_t m_idx_start, const void* lhs, size_t lhs_stride,
-        void* lhs_packed)>
-        fn_pack_lhs;
-
-    /// Gets a value indicating whether LHS packing is needed.
-    [[nodiscard]] bool is_pack_lhs_needed() const {
-        return fn_pack_lhs != nullptr;
-    }
-
-    /// Gets the offset in bytes of the RHS matrix.
-    ///
-    /// @param[in] n_idx Coordinate of the matrix in N dimension.
-    ///
-    /// @return The offset in bytes.
-    std::function<size_t(size_t n_idx)> fn_get_rhs_offset;
-
-    /// Gets the size in bytes of the packed RHS matrix.
-    ///
-    /// @param[in] n Size of the matrix in N dimension.
-    /// @param[in] k Size of the matrix in K dimension.
-    ///
-    /// @return The size in bytes.
-    std::function<size_t(size_t n, size_t k)> fn_get_packed_rhs_size;
-
-    /// Gets the offset in bytes of the packed RHS matrix in the RHS packing kernel
-    ///
-    /// @param[in] n_idx Coordinate of the matrix in N dimension.
-    /// @param[in] k Size of the matrix in K dimension.
-    ///
-    /// @return The offset in bytes.
-    std::function<size_t(size_t n_idx, size_t k)> fn_get_pack_rhs_packed_rhs_offset;
-
-    /// Gets the offset in bytes of the packed RHS matrix in the main kernel.
-    ///
-    /// @param[in] n_idx Coordinate of the matrix in N dimension.
-    /// @param[in] k Size of the matrix in K dimension.
-    ///
-    /// @return The offset in bytes.
-    std::function<size_t(size_t n_idx, size_t k)> fn_get_main_packed_rhs_offset;
-
-    std::function<void(
-        size_t num_groups, size_t n, size_t k, size_t nr, size_t kr, size_t sr, size_t rhs_stride, const void* rhs,
-        const void* bias, const void* scale, void* rhs_packed, size_t extra_bytes, const void* params)>
-        fn_pack_rhs;
-
-    /// Gets the offset in bytes to the data element in the bias buffer.
-    ///
-    /// @param[in] n_idx Column index.
-    ///
-    /// @return The offset in bytes to the data element.
-    std::function<size_t(size_t n_idx)> fn_get_bias_offset;
-
-    /// Gets the offset in bytes to the data element in the destination matrix buffer.
-    ///
-    /// @param[in] m_idx Row index.
-    /// @param[in] n_idx Column index.
-    /// @param[in] stride Row stride in bytes.
-    ///
-    /// @return The offset in bytes to the data element.
-    std::function<size_t(size_t m_idx, size_t n_idx, size_t stride)> fn_get_dst_offset;
-
-    /// Gets the size in bytes of the destination matrix buffer.
-    ///
-    /// @param[in] m Number of rows.
-    /// @param[in] n Number of columns.
-    ///
-    /// @return The size in bytes of the destination matrix buffer.
-    std::function<size_t(size_t m, size_t n)> fn_get_dst_size;
-
-    /// Performs F16 or F32 matrix multiplication with RHS packing
-    /// followed by clamp operation.
-    ///
-    /// @param[in] m Size of the matrix in M dimension.
-    /// @param[in] n Size of the matrix in N dimension.
-    /// @param[in] k Size of the matrix in K dimension.
-    /// @param[in] lhs LHS data buffer.
-    /// @param[in] packed_rhs Packed RHS data buffer.
-    /// @param[out] dst Output data buffer.
-    /// @param[in] lhs_stride LHS row stride.
-    /// @param[in] dst_stride Output row stride.
-    /// @param[in] clamp_min Lower bound of the output data.
-    /// @param[in] clamp_max Upper bound of the output data.
-    std::function<void(
-        size_t m, size_t n, size_t k,                             //
-        const void* lhs, size_t lhs_stride,                       //
-        const void* packed_rhs,                                   //
-        void* dst, size_t dst_stride_row, size_t dst_stride_col,  //
-        Float16 clamp_min, Float16 clamp_max)>
-        fn_matmul_f16_f16_f16p;
-
-    std::function<void(
-        size_t m, size_t n, size_t k,                             //
-        const void* lhs, size_t lhs_stride,                       //
-        const void* packed_rhs,                                   //
-        void* dst, size_t dst_stride_row, size_t dst_stride_col,  //
-        float clamp_min, float clamp_max)>
-        fn_matmul_f32_f32_f32p;
-
-    /// Performs F32 matrix multiplication with LHS & RHS packing
-    /// followed by clamp operation.
-    ///
-    /// @param[in] m Number of output rows to be computed.
-    /// @param[in] n Number of output columns to be computed.
-    /// @param[in] k Common dimension of the LHS and RHS operands.
-    /// @param[in] packed_lhs Packed LHS matrix buffer.
-    /// @param[in] packed_rhs Packed RHS matrix buffer.
-    /// @param[out] dst Output matrix buffer.
-    /// @param[in] dst_stride_row Row stride in bytes of the output matrix.
-    /// @param[in] dst_stride_col Column stride in bytes of the output matrix.
-    /// @param[in] clamp_min Minimum value to clamp the final result.
-    /// @param[in] clamp_max Maximum value to clamp the final result.
-    std::function<void(
-        size_t m, size_t n, size_t k, const void* lhs_packed, const void* rhs_packed, void* dst, size_t dst_stride_row,
-        size_t dst_stride_col, float clamp_min, float clamp_max)>
-        fn_matmul_f32_f32p_f32p;
-
-    /// Gets a value indicating whether pre-processing the RHS matrix is needed.
-    [[nodiscard]] bool is_pack_rhs_needed() const {
-        return fn_pack_rhs != nullptr;
-    }
-
-    /// Preprocesses the RHS matrix.
-    ///
-    /// @param[in] n Size of the matrix in N dimension.
-    /// @param[in] k Size of the matrix in K dimension.
-    /// @param[in] rhs RHS data buffer.
-    /// @param[in] rhs_row_stride RHS row stride.
-    /// @param[in] bias Bias data buffer.
-    /// @param[in] scale Quantization scales data buffer.
-    /// @param[out] packed_rhs Packed RHS data buffer.
-    void pack_rhs(
-        size_t n, size_t k, const void* rhs, size_t rhs_row_stride, const void* bias, const void* scale,
-        void* packed_rhs) const {
-        KAI_UNUSED(n);
-        KAI_UNUSED(k);
-        KAI_UNUSED(rhs);
-        KAI_UNUSED(rhs_row_stride);
-        KAI_UNUSED(bias);
-        KAI_UNUSED(scale);
-        KAI_UNUSED(packed_rhs);
-
-        if (fn_pack_rhs != nullptr) {
-            fn_pack_rhs(
-                1, n, k, fn_get_nr(), fn_get_kr(), fn_get_sr(), rhs_row_stride, rhs, bias, nullptr, packed_rhs, 0,
-                nullptr);
-        } else {
-            KAI_ERROR("RHS pre-processing is not supported!");
-        }
-    }
-
-    [[nodiscard]] bool has_main_kernel() const {
-        return fn_matmul_f16_f16_f16p != nullptr || fn_matmul_f32_f32p_f32p != nullptr ||
-            fn_matmul_f32_f32_f32p != nullptr;
-    }
-
-    void main_kernel(
-        size_t m, size_t n, size_t k, const void* lhs, const void* rhs, const void* bias, void* dst, size_t lhs_stride,
-        size_t rhs_stride, size_t dst_stride, float clamp_min, float clamp_max) const {
-        KAI_UNUSED(bias);
-        KAI_UNUSED(rhs_stride);
-        if (fn_matmul_f16_f16_f16p) {
-            fn_matmul_f16_f16_f16p(
-                m, n, k, lhs, lhs_stride, rhs, dst, dst_stride, sizeof(Float16), clamp_min,
-                static_cast<Float16>(clamp_max));
-        } else if (fn_matmul_f32_f32_f32p) {
-            fn_matmul_f32_f32_f32p(
-                m, n, k, lhs, lhs_stride, rhs, dst, dst_stride, sizeof(float), clamp_min,
-                static_cast<Float16>(clamp_max));
-        } else if (fn_matmul_f32_f32p_f32p) {
-            fn_matmul_f32_f32p_f32p(m, n, k, lhs, rhs, dst, dst_stride, sizeof(float), clamp_min, clamp_max);
-        } else {
-            KAI_ERROR("Main kernel is not available!");
-        }
-    }
-};
-
-// NOLINTEND(misc-non-private-member-variables-in-classes)
 
 /// List of supported matrix multiplication methods.
 static const std::array matmul_methods = {
@@ -486,35 +198,11 @@ static const std::array matmul_methods = {
     },
 };
 
-/// Matrix multiplication shape.
-struct MatMulShape {
-    size_t m;  ///< LHS height.
-    size_t n;  ///< RHS width.
-    size_t k;  ///< LHS width and RHS height.
-};
-
-/// Matrix multiplication test information.
-using MatMulTestParams = std::tuple<size_t, MatMulShape, MatrixPortion>;
-
-/// Prints the test information.
-void PrintTo(const MatMulTestParams& param, std::ostream* os) {
-    const auto& [method_no, shape, portion] = param;
-
-    // NOLINTBEGIN(cppcoreguidelines-pro-bounds-constant-array-index)
-    *os << "Method_" << matmul_methods[method_no].name                           //
-        << "__M_" << shape.m << "__N_" << shape.n << "__K_" << shape.k           //
-        << "__PortionStartRow_" << static_cast<int>(portion.start_row() * 1000)  //
-        << "__PortionStartCol_" << static_cast<int>(portion.start_col() * 1000)  //
-        << "__PortionHeight_" << static_cast<int>(portion.height() * 1000)       //
-        << "__PortionWidth_" << static_cast<int>(portion.width() * 1000);
-    // NOLINTEND(cppcoreguidelines-pro-bounds-constant-array-index)
-}
-
 /// Matrix multiplication test fixture.
 class MatMulTest : public testing::TestWithParam<MatMulTestParams> {
 private:
     /// Unique ID: m, n, k, method_id.
-    using TestDataId = std::tuple<size_t, size_t, size_t, size_t>;
+    using TestDataId = std::tuple<size_t, size_t, size_t, std::string>;
 
 protected:
     /// Cached test data that is shared between multiple test case.
@@ -530,8 +218,8 @@ protected:
 
     /// Gets the test data for the current test case.
     static const TestData& test_data() {
-        const auto& [method_no, info, portion] = GetParam();
-        const TestDataId data_id{info.m, info.n, info.k, method_no};
+        const auto& [method, info, portion] = GetParam();
+        const TestDataId data_id{info.m, info.n, info.k, method.name};
 
         // If the test data is already available, returns it.
         const auto data_it = _data.find(data_id);
@@ -541,8 +229,6 @@ protected:
         }
 
         // Generates the test data.
-        const auto& method = matmul_methods.at(method_no);
-
         const auto has_lhs_pack = method.packed_lhs_format.data_type() != DataType::UNKNOWN;
         const auto has_rhs_pack = method.packed_rhs_format.data_type() != DataType::UNKNOWN;
         const auto has_bias = method.bias_format.data_type() != DataType::UNKNOWN;
@@ -617,9 +303,8 @@ std::map<MatMulTest::TestDataId, MatMulTest::TestData> MatMulTest::_data;
 
 /// Tests the LHS packing kernel.
 TEST_P(MatMulTest, PackedLhs) {
-    const auto& [method_no, info, portion] = GetParam();
+    const auto& [method, info, portion] = GetParam();
     const auto& data = test_data();
-    const auto& method = matmul_methods.at(method_no);
 
     if (method.fn_is_supported && !method.fn_is_supported()) {
         GTEST_SKIP();
@@ -668,9 +353,8 @@ TEST_P(MatMulTest, PackedLhs) {
 
 /// Tests the RHS packing kernel.
 TEST_P(MatMulTest, PackedRhs) {
-    const auto& [method_no, info, portion] = GetParam();
+    const auto& [method, info, portion] = GetParam();
     const auto& data = test_data();
-    const auto& method = matmul_methods.at(method_no);
 
     if (method.fn_is_supported && !method.fn_is_supported()) {
         GTEST_SKIP();
@@ -739,9 +423,8 @@ TEST_P(MatMulTest, PackedRhs) {
 
 /// Tests the output.
 TEST_P(MatMulTest, Output) {
-    const auto& [method_no, info, portion] = GetParam();
+    const auto& [method, info, portion] = GetParam();
     const auto& data = test_data();
-    const auto& method = matmul_methods.at(method_no);
 
     if (method.fn_is_supported && !method.fn_is_supported()) {
         GTEST_SKIP();
@@ -837,7 +520,7 @@ TEST_P(MatMulTest, Output) {
 INSTANTIATE_TEST_SUITE_P(
     MatMul, MatMulTest,
     testing::Combine(
-        testing::Range<size_t>(0, matmul_methods.size()),
+        testing::ValuesIn(matmul_methods),
         testing::Values(
             MatMulShape{1, 16, 16},   //
             MatMulShape{20, 1, 20},   //
