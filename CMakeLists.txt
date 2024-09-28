@@ -90,9 +90,9 @@ set(KLEIDIAI_FILES_NEON_FP16
 )
 
 set(KLEIDIAI_FILES_NEON_BF16
-    kai/ukernels/matmul/pack/kai_lhs_pack_8x4_f32_bf16_neon.c
-    kai/ukernels/matmul/pack/kai_matmul_transpose_pack_rhs_bias_bf16p16x4zf32_bf16_f32_neon_nr_12.c
-    kai/ukernels/matmul/matmul_clamp_bf16_bf16_f32p/kai_matmul_clamp_bf16_bf16_f32p12x1biasf32_8x12x4_neon_mmla.c
+    kai/ukernels/matmul/pack/kai_lhs_pack_f32p8x4_bf16_neon.c
+    kai/ukernels/matmul/pack/kai_rhs_pack_kxn_f32p4x12biasf32_f32_bf16_neon.c
+    kai/ukernels/matmul/matmul_clamp_f32_bf16p_bf16p/kai_matmul_clamp_f32_bf16p_bf16p12x1biasf32_8x12x4_neon_mmla.c
 )
 
 set(KLEIDIAI_FILES_NEON
@@ -175,6 +175,7 @@ if(KLEIDIAI_BUILD_TESTS)
         test/common/printer.cpp
         test/common/int4.cpp
         test/common/compare.cpp
+        test/common/matmul_test_common.cpp
         test/common/matrix_portion.cpp
         test/common/rect.cpp
         test/common/round.cpp
@@ -209,6 +210,7 @@ if(KLEIDIAI_BUILD_TESTS)
         test/tests/matmul_clamp_f32_qai8dxp_qsi4cxp_test.cpp
         test/tests/matmul_clamp_f32_qsi8d32p_qsi4c32p_test.cpp
         test/tests/matmul_clamp_f32_qai8dxp_qsi4c32p_test.cpp
+        test/tests/matmul_clamp_f32_bf16p_bf16p_test.cpp
     )
 
     target_link_libraries(kleidiai_test
