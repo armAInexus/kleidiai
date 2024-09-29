@@ -245,6 +245,28 @@ struct MatMulMethod {
         Float16 clamp_min, Float16 clamp_max)>
         fn_matmul_f32_bf16p_bf16p;
 
+    /// Performs BF16 matrix multiplication with RHS packing
+    /// followed by clamp operation.
+    ///
+    /// @param[in] m Size of the matrix in M dimension.
+    /// @param[in] n Size of the matrix in N dimension.
+    /// @param[in] k Size of the matrix in K dimension.
+    /// @param[in] lhs LHS data buffer.
+    /// @param[in] lhs_stride LHS row stride.
+    /// @param[in] packed_rhs Packed RHS data buffer.
+    /// @param[out] dst Output data buffer.
+    /// @param[in] dst_stride_row Output row stride.
+    /// @param[in] dst_stride_col Output column stride.
+    /// @param[in] clamp_min Lower bound of the output data.
+    /// @param[in] clamp_max Upper bound of the output data.
+    std::function<void(
+        size_t m, size_t n, size_t k,                             //
+        const void* lhs, size_t lhs_stride,                       //
+        const void* packed_rhs,                                   //
+        void* dst, size_t dst_stride_row, size_t dst_stride_col,  //
+        Float16 clamp_min, Float16 clamp_max)>
+        fn_matmul_f32_f32_bf16p;
+
     /// Performs F32 matrix multiplication with LHS & RHS packing
     /// followed by clamp operation.
     ///
@@ -299,7 +321,8 @@ struct MatMulMethod {
 
     [[nodiscard]] bool has_main_kernel() const {
         return fn_matmul_f16_f16_f16p != nullptr || fn_matmul_f32_f32p_f32p != nullptr ||
-            fn_matmul_f32_f32_f32p != nullptr || fn_matmul_f32_bf16p_bf16p != nullptr;
+            fn_matmul_f32_f32_f32p != nullptr || fn_matmul_f32_bf16p_bf16p != nullptr ||
+            fn_matmul_f32_f32_bf16p != nullptr;
     }
 
     void main_kernel(
@@ -320,6 +343,9 @@ struct MatMulMethod {
             fn_matmul_f32_f32p_f32p(m, n, k, lhs, rhs, dst, dst_stride, sizeof(float), clamp_min, clamp_max);
         } else if (fn_matmul_f32_bf16p_bf16p) {
             fn_matmul_f32_bf16p_bf16p(m, n, k, lhs, rhs, dst, dst_stride, sizeof(float), clamp_min, clamp_max);
+        } else if (fn_matmul_f32_f32_bf16p) {
+            fn_matmul_f32_f32_bf16p(
+                m, n, k, lhs, lhs_stride, rhs, dst, dst_stride, sizeof(float), clamp_min, clamp_max);
         } else {
             KAI_ERROR("Main kernel is not available!");
         }
