@@ -51,7 +51,6 @@ void kai_run_rhs_pack_kxn_f32p4x12biasf32_f32_bf16_neon(
     KAI_ASSUME(kr == kai_kr);
     KAI_ASSUME(sr == 1);
     KAI_ASSUME(rhs != NULL);
-    KAI_ASSUME(bias != NULL);
     KAI_ASSUME(scale == NULL);
     KAI_ASSUME(rhs_packed != NULL);
     KAI_ASSUME(extra_bytes == 0);
@@ -68,6 +67,18 @@ void kai_run_rhs_pack_kxn_f32p4x12biasf32_f32_bf16_neon(
         memset(pad_row, 0, width * sizeof(float));
     }
 
+    // Fill zeros if bias is nullptr
+    size_t bias_step = nr * sizeof(float);
+
+    void* zero_bias = NULL;
+    if (bias == NULL) {
+        zero_bias = alloca(bias_step);
+        memset(zero_bias, 0, bias_step);
+        bias_step = 0;
+    }
+
+    const void* bias_ptr = bias == NULL ? zero_bias : bias;
+
     size_t out_stride = kai_nr * kai_roundup(height, 4) * sizeof(bfloat16_t) + kai_nr * sizeof(uint32_t);
 
     __asm__ __volatile__(
@@ -81,7 +92,7 @@ void kai_run_rhs_pack_kxn_f32p4x12biasf32_f32_bf16_neon(
         "sub x22, x22, #0xc\n"
         "ldr q8, [%x[bias], #0x20]\n"
         "cmp x22, #0xc\n"
-        "add %x[bias], %x[bias], #0x30\n"
+        "add %x[bias], %x[bias], %x[bias_step]\n"
         "str q16, [x21, #0x0]\n"
         "str q26, [x21, #0x10]\n"
         "str q8, [x21, #0x20]\n"
@@ -451,8 +462,9 @@ void kai_run_rhs_pack_kxn_f32p4x12biasf32_f32_bf16_neon(
         "add %x[out], %x[out], #0x60\n"
         "bge 13b\n"
         "21:"  // Done
-        : [bias] "+&r"(bias), [height] "+&r"(height), [in] "+&r"(in), [out] "+&r"(out)
-        : [in_stride] "r"(in_stride), [out_stride] "r"(out_stride), [pad_row] "r"(pad_row), [width] "r"(width)
+        : [bias] "+&r"(bias_ptr), [height] "+&r"(height), [in] "+&r"(in), [out] "+&r"(out)
+        : [bias_step] "r"(bias_step), [in_stride] "r"(in_stride), [out_stride] "r"(out_stride), [pad_row] "r"(pad_row),
+          [width] "r"(width)
         : "cc", "memory", "v0", "v1", "v2", "v3", "v4", "v5", "v6", "v7", "v8", "v9", "v10", "v11", "v12", "v13", "v14",
           "v15", "v16", "v17", "v18", "v19", "v20", "v21", "v22", "v23", "v24", "v25", "v26", "v27", "v28", "v29",
           "v30", "v31", "x9", "x20", "x21", "x22", "x23", "x24", "x25", "x26", "x27", "x28");

@@ -286,7 +286,6 @@ struct MatMulMethod {
         KAI_UNUSED(rhs_row_stride);
         KAI_UNUSED(bias);
         KAI_UNUSED(scale);
-        KAI_UNUSED(packed_rhs);
 
         if (fn_pack_rhs != nullptr) {
             fn_pack_rhs(
