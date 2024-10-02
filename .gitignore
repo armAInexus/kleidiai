@@ -91,7 +91,7 @@ _deps
 
 # Build directory
 cmake-build-*/
-build/
+build*/
 bazel-*
 
 ### Debug files
