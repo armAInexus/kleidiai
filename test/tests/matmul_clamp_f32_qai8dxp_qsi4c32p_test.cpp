@@ -11,6 +11,8 @@
 #include <cstdint>
 #include <cstdlib>
 #include <limits>
+#include <string>
+#include <tuple>
 #include <vector>
 
 #include "kai/kai_common.h"
@@ -25,7 +27,6 @@
 #include "kai/ukernels/matmul/pack/kai_rhs_pack_nxk_qsi4c32p_qsu4c32s1s0.h"
 #include "test/common/bfloat16.hpp"
 #include "test/common/cpu_info.hpp"
-#include "test/common/data_type.hpp"
 #include "test/common/int4.hpp"
 #include "test/common/memory.hpp"
 #include "test/common/round.hpp"
@@ -38,8 +39,8 @@
 
 namespace kai::test {
 
-static auto cpu_has_dotprod_and_bf16 = []() { return cpu_has_dotprod() && cpu_has_bf16(); };
-static auto cpu_has_i8mm_and_bf16 = []() { return cpu_has_i8mm() && cpu_has_bf16(); };
+static const auto cpu_has_dotprod_and_bf16 = []() { return cpu_has_dotprod() && cpu_has_bf16(); };
+static const auto cpu_has_i8mm_and_bf16 = []() { return cpu_has_i8mm() && cpu_has_bf16(); };
 
 static const std::array<UkernelVariant<kai_matmul_clamp_f32_qai8dxp_qsi4c32p_ukernel>, 5>
     variants_kai_matmul_clamp_f32_qai8dxp_qsi4c32p = {{
@@ -56,7 +57,7 @@ class UkernelVariantTest_withBL : public ::testing::TestWithParam<MatMulTestPara
 
 class MatMulTest_f32_qmatmul_clamp_f32_qai8dxp_qsi4c32p : public UkernelVariantTest_withBL {};
 
-TEST_P(MatMulTest_f32_qmatmul_clamp_f32_qai8dxp_qsi4c32p, EndToEnd_RHS_Transposed) {
+TEST_P(MatMulTest_f32_qmatmul_clamp_f32_qai8dxp_qsi4c32p, EndToEnd_RHS_nxk) {
     const auto& [variant_index, matmul_shape, bl] = GetParam();
     const auto& ukernel_variant = variants_kai_matmul_clamp_f32_qai8dxp_qsi4c32p.at(variant_index);
 
@@ -79,14 +80,19 @@ TEST_P(MatMulTest_f32_qmatmul_clamp_f32_qai8dxp_qsi4c32p, EndToEnd_RHS_Transpose
     const auto ref_lhs = fill_random<float>(M * K, seed + 0);
     const auto ref_rhs = fill_random<float>(N * K, seed + 1);
 
+    // Transposed(nxk) RHS dimensions
+    const size_t ref_rhs_qsi4_stride = round_up_multiple(K, 2);
+    const size_t ref_rhs_qsi4_size = N * ref_rhs_qsi4_stride;
+    const size_t ref_rhs_qsi4_size_bytes = round_up_division(ref_rhs_qsi4_size, 2);
+
     // Runs the reference implementation.
     //   * Quantizes the LHS matrix using 8-bit asymmetric quantization.
     //   * Quantizes the RHS matrix using 4-bit symmetric quantization.
     //   * Performs GEMM.
     const auto [ref_lhs_qvalues, ref_lhs_scales, ref_lhs_zero_points] =
         quantize_asymmetric_per_block_dynamic<float, int8_t, float, int32_t>(ref_lhs.data(), M, K, K);
-    const auto [ref_rhs_qsi4, ref_rhs_scales] =
-        quantize_symmetric_per_block_dynamic<float, Int4, BFloat16>(ref_rhs.data(), N, K, bl);
+    const auto [ref_rhs_qsi4, ref_rhs_scales] = quantize_symmetric_per_block_dynamic<float, Int4, BFloat16>(
+        ref_rhs.data(), N, K, bl, ref_rhs_qsi4_stride, ref_rhs_qsi4_size_bytes);
 
     const auto ref_dst = matmul_clamp_nt_t<int8_t, float, int32_t, Int4, BFloat16, int32_t, float, int32_t, float>(
         M, N, K, ref_lhs_qvalues.data(), ref_lhs_scales.data(), ref_lhs_zero_points.data(), K, ref_rhs_qsi4.data(),
@@ -102,7 +108,7 @@ TEST_P(MatMulTest_f32_qmatmul_clamp_f32_qai8dxp_qsi4c32p, EndToEnd_RHS_Transpose
     // Runs the RHS packing micro-kernel.
     //   * Generates the 4-bit unsigned symmetric quantized input for the micro-kernel.
     //   * Packs the RHS matrix.
-    const auto ref_rhs_qsu4 = cast_qsu4_qsi4(ref_rhs_qsi4.data(), N * K);
+    const auto ref_rhs_qsu4 = cast_qsu4_qsi4(ref_rhs_qsi4.data(), ref_rhs_qsi4_size);
 
     const size_t ref_rhs_qsu4_stride = round_up_division(K, 2);
     const size_t ref_rhs_scales_stride = round_up_division(K, bl) * sizeof(uint16_t);
@@ -139,7 +145,7 @@ TEST_P(MatMulTest_f32_qmatmul_clamp_f32_qai8dxp_qsi4c32p, EndToEnd_RHS_Transpose
     }
 }
 
-TEST_P(MatMulTest_f32_qmatmul_clamp_f32_qai8dxp_qsi4c32p, EndToEnd_RHS_NonTransposed) {
+TEST_P(MatMulTest_f32_qmatmul_clamp_f32_qai8dxp_qsi4c32p, EndToEnd_RHS_kxn) {
     const auto& [variant_index, matmul_shape, bl] = GetParam();
     const auto& ukernel_variant = variants_kai_matmul_clamp_f32_qai8dxp_qsi4c32p.at(variant_index);
 
@@ -161,7 +167,15 @@ TEST_P(MatMulTest_f32_qmatmul_clamp_f32_qai8dxp_qsi4c32p, EndToEnd_RHS_NonTransp
     // Generates input data.
     const auto ref_lhs = fill_random<float>(M * K, seed + 0);
     const auto ref_rhs_transposed = fill_random<float>(N * K, seed + 1);
-    const auto ref_rhs = transpose(ref_rhs_transposed.data(), DataType::FP32, N, K);
+
+    // Transposed(nxk) RHS dimensions
+    const size_t ref_rhs_qsi4_nxk_stride = K;
+    const size_t ref_rhs_qsi4_nxk_size = N * ref_rhs_qsi4_nxk_stride;
+    const size_t ref_rhs_qsi4_nxk_size_bytes = round_up_division(ref_rhs_qsi4_nxk_size, 2);
+    // Non-Transposed(kxn) RHS dimensions
+    const size_t ref_rhs_qsi4_kxn_stride = round_up_multiple(N, 2);
+    const size_t ref_rhs_qsi4_kxn_size = K * ref_rhs_qsi4_kxn_stride;
+    const size_t ref_rhs_qsi4_kxn_size_bytes = round_up_division(ref_rhs_qsi4_kxn_size, 2);
 
     // Runs the reference implementation.
     //   * Quantizes the LHS matrix using 8-bit asymmetric quantization.
@@ -169,8 +183,12 @@ TEST_P(MatMulTest_f32_qmatmul_clamp_f32_qai8dxp_qsi4c32p, EndToEnd_RHS_NonTransp
     //   * Performs GEMM.
     const auto [ref_lhs_qvalues, ref_lhs_scales, ref_lhs_zero_points] =
         quantize_asymmetric_per_block_dynamic<float, int8_t, float, int32_t>(ref_lhs.data(), M, K, K);
-    const auto [ref_rhs_qsi4, ref_rhs_scales] =
-        quantize_symmetric_per_block_dynamic<float, Int4, BFloat16>(ref_rhs.data(), K, N, bl);
+    const auto [ref_rhs_qsi4_transposed, ref_rhs_scales] = quantize_symmetric_per_block_dynamic<float, Int4, BFloat16>(
+        ref_rhs_transposed.data(), N, K, bl, ref_rhs_qsi4_nxk_stride, ref_rhs_qsi4_nxk_size_bytes);
+
+    auto ref_rhs_qsi4 = transpose<Int4>(
+        ref_rhs_qsi4_transposed.data(), N, K, ref_rhs_qsi4_nxk_stride, ref_rhs_qsi4_kxn_stride,
+        ref_rhs_qsi4_kxn_size_bytes);
 
     const auto ref_dst = matmul_clamp_nt_nt<int8_t, float, int32_t, Int4, BFloat16, int32_t, float, int32_t, float>(
         M, N, K, ref_lhs_qvalues.data(), ref_lhs_scales.data(), ref_lhs_zero_points.data(), K, ref_rhs_qsi4.data(),
@@ -186,7 +204,7 @@ TEST_P(MatMulTest_f32_qmatmul_clamp_f32_qai8dxp_qsi4c32p, EndToEnd_RHS_NonTransp
     // Runs the RHS packing micro-kernel.
     //   * Generates the 4-bit unsigned symmetric quantized input for the micro-kernel.
     //   * Packs the RHS matrix.
-    const auto ref_rhs_qsu4 = cast_qsu4_qsi4(ref_rhs_qsi4.data(), N * K);
+    const auto ref_rhs_qsu4 = cast_qsu4_qsi4(ref_rhs_qsi4.data(), ref_rhs_qsi4_kxn_size);
 
     const size_t ref_rhs_qsu4_stride = round_up_division(N, 2);
     const size_t ref_rhs_scales_stride = round_up_division(K, bl) * sizeof(uint16_t);
@@ -226,6 +244,14 @@ INSTANTIATE_TEST_SUITE_P(
     MatMul, MatMulTest_f32_qmatmul_clamp_f32_qai8dxp_qsi4c32p,
     testing::Combine(
         testing::Range<size_t>(0, variants_kai_matmul_clamp_f32_qai8dxp_qsi4c32p.size()),
-        testing::Values(MatMulShape{16, 32, 64}, MatMulShape{8, 32, 64}), testing::Values(32, 64)));
+        testing::Values(MatMulShape{16, 32, 64}, MatMulShape{8, 32, 64}, MatMulShape{15, 31, 45}),
+        testing::Values(32, 64)),
+    [](const auto& info) {
+        const std::string name{variants_kai_matmul_clamp_f32_qai8dxp_qsi4c32p.at(std::get<0>(info.param)).name};
+        const auto shape = std::get<MatMulShape>(info.param);
+        const auto bl = std::get<2>(info.param);
+        return name + "__M_" + std::to_string(shape.m) + "__N_" + std::to_string(shape.n) + "__K_" +
+            std::to_string(shape.k) + "__BL_" + std::to_string(bl);
+    });
 
 }  // namespace kai::test

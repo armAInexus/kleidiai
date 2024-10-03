@@ -23,7 +23,7 @@ enum class QuantizationMethod : uint32_t {
 ///
 /// The input matrix is divided into quantization blocks of the same size.
 ///
-/// The height of the block does not effect the behavior of this function hence it is omitted
+/// The height of the block does not affect the behavior of this function hence it is omitted
 /// from the function arguments and the figures below.
 ///
 /// ```
@@ -83,7 +83,7 @@ std::vector<uint8_t> compute_symmetric_per_block_quantization_info(
 ///
 /// The input matrix is divided into quantization blocks of the same size.
 ///
-/// The height of the block does not effect the behavior of this function hence it is omitted
+/// The height of the block does not affect the behavior of this function hence it is omitted
 /// from the function arguments and the figures below.
 ///
 /// The quantization scale matrix can be calculated using
@@ -141,11 +141,13 @@ std::vector<uint8_t> compute_symmetric_per_block_quantization_info(
 /// @param[in] height The number of rows.
 /// @param[in] width The number of columns.
 /// @param[in] quant_width The number of columns of the quantization block.
+/// @param[in] stride Destination stride
+/// @param[in] dst_size Destination size in bytes
 ///
 /// @return The quantized data matrix.
 template <typename SrcType, typename DstType, typename ScaleType>
 std::vector<uint8_t> quantize_symmetric_per_block(
-    const void* src, const void* scales, size_t height, size_t width, size_t quant_width, bool is_transposed = true);
+    const void* src, const void* scales, size_t height, size_t width, size_t quant_width,  size_t stride, size_t dst_size);
 
 /// Dynamically quantizes each block of the matrix using symmetric quantization method.
 ///
@@ -167,17 +169,19 @@ std::vector<uint8_t> quantize_symmetric_per_block(
 /// @param[in] height The number of rows.
 /// @param[in] width The number of columns.
 /// @param[in] quant_width The number of columns of the quantization block.
+/// @param[in] stride Destination stride
+/// @param[in] dst_size Destination size in bytes
 ///
 /// @return The quantized data matrix and the quantization scale matrix.
 template <typename SrcType, typename DstType, typename ScaleType>
 std::tuple<std::vector<uint8_t>, std::vector<uint8_t>> quantize_symmetric_per_block_dynamic(
-    const void* src, size_t height, size_t width, size_t quant_width, bool is_transposed = true);
+    const void* src, size_t height, size_t width, size_t quant_width, size_t stride, size_t dst_size);
 
 /// Computes the quantization information using asymmetric per-block quantization method.
 ///
 /// The input matrix is divided into quantization blocks of the same size.
 ///
-/// The height of the block does not effect the behavior of this function hence it is omitted
+/// The height of the block does not affect the behavior of this function hence it is omitted
 /// from the function arguments and the figures below.
 ///
 /// ```
@@ -251,7 +255,7 @@ std::tuple<std::vector<uint8_t>, std::vector<uint8_t>> compute_asymmetric_per_bl
 ///
 /// The input matrix is divided into quantization blocks of the same size.
 ///
-/// The height of the block does not effect the behavior of this function hence it is omitted
+/// The height of the block does not affect the behavior of this function hence it is omitted
 /// from the function arguments and the figures below.
 ///
 /// The quantization scale and zero point matrix can be calculated using

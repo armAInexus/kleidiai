@@ -113,15 +113,13 @@ std::vector<uint8_t> compute_symmetric_per_block_quantization_info(
 
 template <typename SrcType, typename DstType, typename ScaleType>
 std::vector<uint8_t> quantize_symmetric_per_block(
-    const void* src, const void* scales, size_t height, size_t width, size_t quant_width, bool is_transposed) {
+    const void* src, const void* scales, size_t height, size_t width, size_t quant_width, size_t stride, size_t dst_size) {
     static_assert(is_floating_point<SrcType>);
     static_assert(is_integral<DstType>);
     static_assert(is_floating_point<ScaleType>);
 
     const auto num_quant_packets_x = round_up_division(width, quant_width);
-
-    const auto data_bytes = round_up_division(height * width * size_in_bits<DstType>, 8);
-    std::vector<uint8_t> data(data_bytes);
+    std::vector<uint8_t> data(dst_size);
 
     const auto* src_ptr = reinterpret_cast<const SrcType*>(src);
 
@@ -135,11 +133,7 @@ std::vector<uint8_t> quantize_symmetric_per_block(
 
                 if (x < width) {
                     const auto quantized = quantize_symmetric<DstType>(src_ptr[y * width + x], scale);
-                    if (is_transposed) {
-                        write_array(data.data(), y * width + x, quantized);
-                    } else {
-                        write_array(data.data(), x * height + y, quantized);
-                    }
+                    write_array(data.data(), y * stride + x, quantized);
                 }
             }
         }
@@ -150,11 +144,11 @@ std::vector<uint8_t> quantize_symmetric_per_block(
 
 template <typename SrcType, typename DstType, typename ScaleType>
 std::tuple<std::vector<uint8_t>, std::vector<uint8_t>> quantize_symmetric_per_block_dynamic(
-    const void* src, size_t height, size_t width, size_t quant_width, bool is_transposed) {
+    const void* src, size_t height, size_t width, size_t quant_width, size_t stride, size_t dst_size) {
     auto scales_src_type =
         compute_symmetric_per_block_quantization_info<SrcType, DstType, SrcType>(src, height, width, quant_width);
     auto data = quantize_symmetric_per_block<SrcType, DstType, SrcType>(
-        src, scales_src_type.data(), height, width, quant_width, is_transposed);
+        src, scales_src_type.data(), height, width, quant_width, stride, dst_size);
 
     if constexpr (std::is_same_v<ScaleType, SrcType>) {
         return {data, scales_src_type};
@@ -167,15 +161,15 @@ std::tuple<std::vector<uint8_t>, std::vector<uint8_t>> quantize_symmetric_per_bl
 }
 
 template std::tuple<std::vector<uint8_t>, std::vector<uint8_t>> quantize_symmetric_per_block_dynamic<
-    float, Int4, Float16>(const void* src, size_t height, size_t width, size_t quant_width, bool is_transposed);
+    float, Int4, Float16>(const void* src, size_t height, size_t width, size_t quant_width, size_t stride, size_t dst_size);
 template std::tuple<std::vector<uint8_t>, std::vector<uint8_t>> quantize_symmetric_per_block_dynamic<
-    float, Int4, float>(const void* src, size_t height, size_t width, size_t quant_width, bool is_transposed);
+    float, Int4, float>(const void* src, size_t height, size_t width, size_t quant_width, size_t stride, size_t dst_size);
 template std::tuple<std::vector<uint8_t>, std::vector<uint8_t>> quantize_symmetric_per_block_dynamic<
-    float, Int4, BFloat16>(const void* src, size_t height, size_t width, size_t quant_width, bool is_transposed);
+    float, Int4, BFloat16>(const void* src, size_t height, size_t width, size_t quant_width, size_t stride, size_t dst_size);
 template std::tuple<std::vector<uint8_t>, std::vector<uint8_t>> quantize_symmetric_per_block_dynamic<
-    float, int8_t, Float16>(const void* src, size_t height, size_t width, size_t quant_width, bool is_transposed);
+    float, int8_t, Float16>(const void* src, size_t height, size_t width, size_t quant_width, size_t stride, size_t dst_size);
 template std::tuple<std::vector<uint8_t>, std::vector<uint8_t>> quantize_symmetric_per_block_dynamic<
-    float, int8_t, float>(const void* src, size_t height, size_t width, size_t quant_width, bool is_transposed);
+    float, int8_t, float>(const void* src, size_t height, size_t width, size_t quant_width, size_t stride, size_t dst_size);
 
 template <typename SrcType, typename DstType, typename ScaleType, typename ZeroPointType>
 std::tuple<std::vector<uint8_t>, std::vector<uint8_t>> compute_asymmetric_per_block_quantization_info(
