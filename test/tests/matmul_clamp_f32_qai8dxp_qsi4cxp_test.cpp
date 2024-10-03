@@ -50,6 +50,10 @@ TEST_P(MatMulTest_f32_qai8dxp_qsi4cxp, EndToEnd_RHS_nxk_qsi4cx) {
     auto& [variant_index, matmul_shape] = GetParam();
     const auto& ukernel_variant = variants_kai_matmul_clamp_f32_qai8dxp_qsi4cxp.at(variant_index);
 
+    if (ukernel_variant.fn_is_supported && !ukernel_variant.fn_is_supported()) {
+        GTEST_SKIP();
+    }
+
     const uint64_t seed = 0;
 
     const size_t M = matmul_shape.m;
@@ -198,6 +202,10 @@ TEST_P(MatMulTest_f32_qai8dxp_qsi4cxp, EndToEnd_RHS_kxn_qsi4cx) {
     auto& [variant_index, matmul_shape] = GetParam();
     const auto& ukernel_variant = variants_kai_matmul_clamp_f32_qai8dxp_qsi4cxp.at(variant_index);
 
+    if (ukernel_variant.fn_is_supported && !ukernel_variant.fn_is_supported()) {
+        GTEST_SKIP();
+    }
+
     const uint64_t seed = 0;
 
     const size_t M = matmul_shape.m;
@@ -268,6 +276,10 @@ TEST_P(MatMulTest_f32_qai8dxp_qsi4cxp, EndToEnd_RHS_kxn_qsi4cx) {
 TEST_P(MatMulTest_f32_qai8dxp_qsi4cxp, EndToEnd_RHS_kxn_qsu4cx) {
     auto& [variant_index, matmul_shape] = GetParam();
     const auto& ukernel_variant = variants_kai_matmul_clamp_f32_qai8dxp_qsi4cxp.at(variant_index);
+
+    if (ukernel_variant.fn_is_supported && !ukernel_variant.fn_is_supported()) {
+        GTEST_SKIP();
+    }
 
     const uint64_t seed = 0;
 
