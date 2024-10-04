@@ -9,6 +9,7 @@ FROM ubuntu:24.04
 # These arguments are required to support multi-arch images via same Dockerfile
 ARG TARGETARCH
 ARG BUILDARCH
+ARG FVP_UBUNTU_VERSION=24.04.1
 
 ENV XDG_CACHE_HOME=/cache ANDROID_NDK=/opt/devtools/android-ndk BUILD_CACHE=/build_cache
 
@@ -64,8 +65,9 @@ RUN --mount=type=cache,target=${BUILD_CACHE} \
 
 # Creates the root filesystem.
 RUN --mount=type=cache,target=${BUILD_CACHE} \
-    wget -cO ${BUILD_CACHE}/ubuntu-base-24.04-base-arm64.tar.gz "https://cdimage.ubuntu.com/ubuntu-base/releases/24.04/release/ubuntu-base-24.04-base-arm64.tar.gz" && \
-    genext2fs -a ${BUILD_CACHE}/ubuntu-base-24.04-base-arm64.tar.gz -B 4096 -b 51200 linux-rootfs.img && \
+    export UBUNTU_DISTRO_VERSION=$(echo -n "$FVP_UBUNTU_VERSION" | cut -d '.' -f 1,2) && \
+    wget -cO ${BUILD_CACHE}/ubuntu-base-${FVP_UBUNTU_VERSION}-base-arm64.tar.gz "https://cdimage.ubuntu.com/ubuntu-base/releases/${UBUNTU_DISTRO_VERSION}/release/ubuntu-base-${FVP_UBUNTU_VERSION}-base-arm64.tar.gz" && \
+    genext2fs -a ${BUILD_CACHE}/ubuntu-base-${FVP_UBUNTU_VERSION}-base-arm64.tar.gz -B 4096 -b 51200 linux-rootfs.img && \
     tar cJ --remove-files -f linux-rootfs.img.xz linux-rootfs.img
 
 # Compiles the latest Linux kernel, bootloader and root file system for FVP usage
