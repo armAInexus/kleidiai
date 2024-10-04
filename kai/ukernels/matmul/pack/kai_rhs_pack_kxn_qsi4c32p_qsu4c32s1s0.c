@@ -267,8 +267,5 @@ void kai_run_rhs_pack_kxn_qsi4c32p_qsu4c32s1s0(
                 ((float*)dst_row)[i] = bias[src_row_idx];
             }
         }
-
-        // Move the pointer after the biases
-        // dst_row += kai_num_bytes_bias * nr;
     }
 }

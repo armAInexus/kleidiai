@@ -104,6 +104,8 @@ void kai_run_rhs_pack_kxn_qsi4cxp_qs4cxs1s0(
             const size_t src_addr_byte0 = (n0_valid_idx / 2) + k0_idx * rhs_stride;
             const size_t src_addr_byte1 = (n0_valid_idx / 2) + k1_idx * rhs_stride;
 
+            const size_t shift_right_x0 = (n0_idx % 2) * 4;
+
             if (params->rhs_zero_point == 8) {
                 uint8_t byte0 = rhs_zero_point | rhs_zero_point << 4;
                 uint8_t byte1 = rhs_zero_point | rhs_zero_point << 4;
@@ -134,7 +136,6 @@ void kai_run_rhs_pack_kxn_qsi4cxp_qs4cxs1s0(
                         src_x0_hi = (byte1 >> 4);
                     }
                 */
-                const size_t shift_right_x0 = (n0_idx % 2) * 4;
 
                 const uint8_t src_x0_lo = (byte0 >> shift_right_x0) & 0x0F;
                 const uint8_t src_x0_hi = (byte1 >> shift_right_x0) & 0x0F;
@@ -149,6 +150,7 @@ void kai_run_rhs_pack_kxn_qsi4cxp_qs4cxs1s0(
                 int8_t byte0 = 0;
                 int8_t byte1 = 0;
 
+                // NOLINTBEGIN(bugprone-narrowing-conversions,cppcoreguidelines-narrowing-conversions)
                 if (k0_idx < k) {
                     byte0 = rhs[src_addr_byte0];
                 }
@@ -160,12 +162,11 @@ void kai_run_rhs_pack_kxn_qsi4cxp_qs4cxs1s0(
                 // The logic behind the following operations where we extract the
                 // values from the bytes is same as unsigned
 
-                const size_t shift_right_x0 = (n0_idx % 2) * 4;
-
                 int8_t src_x0_lo = (byte0 >> shift_right_x0) & 0x0F;
                 int8_t src_x0_hi = (byte1 >> shift_right_x0) & 0x0F;
 
                 const int8_t dst_qs0 = src_x0_lo | (src_x0_hi << 4);
+                // NOLINTEND(bugprone-narrowing-conversions,cppcoreguidelines-narrowing-conversions)
 
                 *(int8_t*)dst_row = dst_qs0;
                 dst_row += sizeof(int8_t);

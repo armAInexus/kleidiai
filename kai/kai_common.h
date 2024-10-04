@@ -158,7 +158,10 @@ inline static uint64_t kai_get_sme_vector_length_u32(void) {
 ///
 /// @return the int8_t value with sign extended
 inline static int8_t kai_ext_sign_i8_i4(int8_t value) {
-    return (value ^ 0x8) - 8;
+    // Make sure value holds correct int4 value
+    KAI_ASSERT(value <= 0xF);
+
+    return (value ^ 0x8) - 8;  // NOLINT(bugprone-narrowing-conversions,cppcoreguidelines-narrowing-conversions)
 }
 
 #ifdef __cplusplus
