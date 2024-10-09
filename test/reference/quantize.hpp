@@ -19,7 +19,7 @@ enum class QuantizationMethod : uint32_t {
     PER_ROW,     ///< Per-row, i.e. one quantization scale and zero point for each row.
 };
 
-/// Quantizes each subblock of the matrix using symmetric quantization method.
+/// Computes the quantization information using symmetric per-block quantization method.
 ///
 /// The input matrix is divided into quantization blocks of the same size.
 ///
@@ -43,31 +43,19 @@ enum class QuantizationMethod : uint32_t {
 /// Each row of the quantization block is quantized individually.
 ///
 /// ```
-/// Floating-point data           Scale          Quantized data
-/// +-----------------+          +-----+       +-----------------+
-/// | f00 f01 f02 f03 | -------> | s00 |       | q00 q01 q02 q03 |
-/// | f10 f11 f12 f13 | -------> | s10 |       | q10 q11 q12 q13 |
-/// | f20 f21 f22 f23 | -------> | s20 |       | q20 q21 q22 q23 |
-/// | f30 f31 f32 f33 | -------> | s30 |       | q30 q31 q32 q33 |
-/// | ............... |          | ... |       | ............... |
-/// : ............... :          : ... :       : ............... :
+/// Floating-point data           Scale
+/// +-----------------+          +-----+
+/// | f00 f01 f02 f03 | -------> | s00 |
+/// | f10 f11 f12 f13 | -------> | s10 |
+/// | f20 f21 f22 f23 | -------> | s20 |
+/// | f30 f31 f32 f33 | -------> | s30 |
+/// | ............... |          | ... |
+/// : ............... :          : ... :
 /// ```
 ///
-/// The quantization scale and quantized data are stored in separate buffers.
+/// The computed quantization scale matrix:
 ///
 /// ```
-/// Quantized data matrix:
-///
-/// +-----------------+-----------------+----- ...
-/// | q00 q01 q02 q03 | q04 q05 q06 q07 | ........
-/// | q10 q11 q12 q13 | q14 q15 q16 q17 | ........
-/// | q20 q21 q22 q23 | q24 q25 q26 q27 | ........
-/// | q30 q31 q32 q33 | q34 q35 q36 q37 | ........
-/// | ............... | ............... | ........
-/// : ............... : ............... : ........
-///
-/// Quantization scale matrix:
-///
 /// +-----+-----+-- ...
 /// | s00 | s01 | .....
 /// | s10 | s11 | .....
@@ -86,12 +74,106 @@ enum class QuantizationMethod : uint32_t {
 /// @param[in] width The number of columns.
 /// @param[in] quant_width The number of columns of the quantization block.
 ///
+/// @return The quantization scale matrix.
+template <typename SrcType, typename DstType, typename ScaleType>
+std::vector<uint8_t> compute_symmetric_per_block_quantization_info(
+    const void* src, size_t height, size_t width, size_t quant_width);
+
+/// Quantizes each block of the matrix using symmetric quantization method.
+///
+/// The input matrix is divided into quantization blocks of the same size.
+///
+/// The height of the block does not effect the behavior of this function hence it is omitted
+/// from the function arguments and the figures below.
+///
+/// The quantization scale matrix can be calculated using
+/// @ref compute_symmetric_per_block_quantization_info function.
+///
+/// The input matrix and the quantization scale matrix:
+///
+/// ```
+///              Floating-point data                            Scale
+///
+/// Quantization blocks -------+
+///          |                 |
+///          |                 |
+///          v                 v
+/// +-----------------+-----------------+----- ...       +-----+-----+-- ...
+/// | f00 f01 f02 f03 | f04 f05 f06 f07 | ........       | s00 | s01 | .....
+/// | f10 f11 f12 f13 | f14 f15 f16 f17 | ........       | s10 | s11 | .....
+/// | f20 f21 f22 f23 | f24 f25 f26 f27 | ........       | s20 | s21 | .....
+/// | f30 f31 f32 f33 | f34 f35 f36 f37 | ........       | s30 | s31 | .....
+/// | ............... | ............... | ........       | ... | ... | .....
+/// : ............... : ............... : ........       : ... : ... : .....
+/// ```
+///
+/// Each row of the quantization block is quantized individually.
+///
+/// ```
+/// Floating-point data        Scale             Quantized data
+/// +-----------------+       +-----+          +-----------------+
+/// | f00 f01 f02 f03 |       | s00 | -------> | q00 q01 q02 q03 |
+/// | f10 f11 f12 f13 |       | s10 | -------> | q10 q11 q12 q13 |
+/// | f20 f21 f22 f23 |       | s20 | -------> | q20 q21 q22 q23 |
+/// | f30 f31 f32 f33 |       | s30 | -------> | q30 q31 q32 q33 |
+/// | ............... |       | ... | -------> | ............... |
+/// : ............... :       : ... :          : ............... :
+/// ```
+///
+/// The computed quantized data matrix:
+///
+/// ```
+/// +-----------------+-----------------+----- ...
+/// | q00 q01 q02 q03 | q04 q05 q06 q07 | ........
+/// | q10 q11 q12 q13 | q14 q15 q16 q17 | ........
+/// | q20 q21 q22 q23 | q24 q25 q26 q27 | ........
+/// | q30 q31 q32 q33 | q34 q35 q36 q37 | ........
+/// | ............... | ............... | ........
+/// : ............... : ............... : ........
+/// ```
+///
+/// @tparam SrcType The data type of the input data (must be floating-point).
+/// @tparam DstType The data type of the output data (must be integer).
+/// @tparam ScaleType The data type of the quantization scales (must be floating-point).
+///
+/// @param[in] src The input matrix.
+/// @param[in] scales The quantization scale matrix.
+/// @param[in] height The number of rows.
+/// @param[in] width The number of columns.
+/// @param[in] quant_width The number of columns of the quantization block.
+///
+/// @return The quantized data matrix.
+template <typename SrcType, typename DstType, typename ScaleType>
+std::vector<uint8_t> quantize_symmetric_per_block(
+    const void* src, const void* scales, size_t height, size_t width, size_t quant_width, bool is_transposed = true);
+
+/// Dynamically quantizes each block of the matrix using symmetric quantization method.
+///
+/// The quantization information is calculated using
+/// @ref compute_symmetric_per_block_quantization_info function.
+/// The floating-point data is then quantized using
+/// @ref quantize_symmetric_per_block function.
+///
+/// To retain highest quantization accuracy, the data is quantized using the quantization scale
+/// with the same data type as the input data.
+/// After that the quantization scale can be stored in the buffer using `ScaleType` data type
+/// which might have lowest precision than the input data type.
+///
+/// @tparam SrcType The data type of the input data (must be floating-point).
+/// @tparam DstType The data type of the output data (must be integer).
+/// @tparam ScaleType The data type of the quantization scales (must be floating-point).
+///
+/// @param[in] src The input matrix.
+/// @param[in] height The number of rows.
+/// @param[in] width The number of columns.
+/// @param[in] quant_width The number of columns of the quantization block.
+///
 /// @return The quantized data matrix and the quantization scale matrix.
 template <typename SrcType, typename DstType, typename ScaleType>
-std::tuple<std::vector<uint8_t>, std::vector<uint8_t>> quantize_symmetric_per_block(
+std::tuple<std::vector<uint8_t>, std::vector<uint8_t>> quantize_symmetric_per_block_dynamic(
     const void* src, size_t height, size_t width, size_t quant_width, bool is_transposed = true);
 
-/// Quantizes each subblock of the matrix using asymmetric quantization method.
+/// Computes the quantization information using asymmetric per-block quantization method.
 ///
 /// The input matrix is divided into quantization blocks of the same size.
 ///
@@ -115,29 +197,19 @@ std::tuple<std::vector<uint8_t>, std::vector<uint8_t>> quantize_symmetric_per_bl
 /// Each row of the quantization block is quantized individually.
 ///
 /// ```
-/// Floating-point data           Scale       Zero point       Quantized data
-/// +-----------------+          +-----+       +-----+       +-----------------+
-/// | f00 f01 f02 f03 | -------> | s00 |       | z00 |       | q00 q01 q02 q03 |
-/// | f10 f11 f12 f13 | -------> | s10 |       | z10 |       | q10 q11 q12 q13 |
-/// | f20 f21 f22 f23 | -------> | s20 |       | z20 |       | q20 q21 q22 q23 |
-/// | f30 f31 f32 f33 | -------> | s30 |       | z30 |       | q30 q31 q32 q33 |
-/// | ............... |          | ... |       | ... |       | ............... |
-/// : ............... :          : ... :       : ... :       : ............... :
+/// Floating-point data           Scale       Zero point
+/// +-----------------+          +-----+       +-----+
+/// | f00 f01 f02 f03 | -------> | s00 |       | z00 |
+/// | f10 f11 f12 f13 | -------> | s10 |       | z10 |
+/// | f20 f21 f22 f23 | -------> | s20 |       | z20 |
+/// | f30 f31 f32 f33 | -------> | s30 |       | z30 |
+/// | ............... |          | ... |       | ... |
+/// : ............... :          : ... :       : ... :
 /// ```
 ///
-/// The quantization scales, zero points quantized data are stored in separate buffers.
+/// The computed quantization scales and zero points matrices:
 ///
 /// ```
-/// Quantized data matrix:
-///
-/// +-----------------+-----------------+----- ...
-/// | q00 q01 q02 q03 | q04 q05 q06 q07 | ........
-/// | q10 q11 q12 q13 | q14 q15 q16 q17 | ........
-/// | q20 q21 q22 q23 | q24 q25 q26 q27 | ........
-/// | q30 q31 q32 q33 | q34 q35 q36 q37 | ........
-/// | ............... | ............... | ........
-/// : ............... : ............... : ........
-///
 /// Quantization scale matrix:
 ///
 /// +-----+-----+-- ...
@@ -170,9 +242,106 @@ std::tuple<std::vector<uint8_t>, std::vector<uint8_t>> quantize_symmetric_per_bl
 /// @param[in] width The number of columns.
 /// @param[in] quant_width The number of columns of the quantization block.
 ///
-/// @return The quantized data matrix, the scale matrix and the zero point matrix.
+/// @return The quantization scale matrix and the quantization zero point matrix.
 template <typename SrcType, typename DstType, typename ScaleType, typename ZeroPointType>
-std::tuple<std::vector<uint8_t>, std::vector<uint8_t>, std::vector<uint8_t>> quantize_asymmetric_per_block(
+std::tuple<std::vector<uint8_t>, std::vector<uint8_t>> compute_asymmetric_per_block_quantization_info(
+    const void* src, size_t height, size_t width, size_t quant_width);
+
+/// Quantizes each block of the matrix using asymmetric quantization method.
+///
+/// The input matrix is divided into quantization blocks of the same size.
+///
+/// The height of the block does not effect the behavior of this function hence it is omitted
+/// from the function arguments and the figures below.
+///
+/// The quantization scale and zero point matrix can be calculated using
+/// @ref compute_asymmetric_per_block_quantization_info function.
+///
+/// The input matrix, quantization scale matrix and quantization zero matrix:
+///
+/// ```
+///              Floating-point data                            Scale                  Zero point
+///
+/// Quantization blocks -------+
+///          |                 |
+///          |                 |
+///          v                 v
+/// +-----------------+-----------------+----- ...       +-----+-----+-- ...       +-----+-----+-- ...
+/// | f00 f01 f02 f03 | f04 f05 f06 f07 | ........       | s00 | s01 | .....       | z00 | z01 | .....
+/// | f10 f11 f12 f13 | f14 f15 f16 f17 | ........       | s10 | s11 | .....       | z10 | z11 | .....
+/// | f20 f21 f22 f23 | f24 f25 f26 f27 | ........       | s20 | s21 | .....       | z20 | z21 | .....
+/// | f30 f31 f32 f33 | f34 f35 f36 f37 | ........       | s30 | s31 | .....       | z30 | z31 | .....
+/// | ............... | ............... | ........       | ... | ... | .....       | ... | ... | .....
+/// : ............... : ............... : ........       : ... : ... : .....       | ... | ... | .....
+/// ```
+///
+/// Each row of the quantization block is quantized individually.
+///
+/// ```
+/// Floating-point data        Scale       Zero point          Quantized data
+/// +-----------------+       +-----+       +-----+          +-----------------+
+/// | f00 f01 f02 f03 |       | s00 |       | z00 | -------> | q00 q01 q02 q03 |
+/// | f10 f11 f12 f13 |       | s10 |       | z10 | -------> | q10 q11 q12 q13 |
+/// | f20 f21 f22 f23 |       | s20 |       | z20 | -------> | q20 q21 q22 q23 |
+/// | f30 f31 f32 f33 |       | s30 |       | z30 | -------> | q30 q31 q32 q33 |
+/// | ............... |       | ... |       | ... | -------> | ............... |
+/// : ............... :       : ... :       : ... :          : ............... :
+/// ```
+///
+/// The computed quantized data matrix:
+///
+/// ```
+/// +-----------------+-----------------+----- ...
+/// | q00 q01 q02 q03 | q04 q05 q06 q07 | ........
+/// | q10 q11 q12 q13 | q14 q15 q16 q17 | ........
+/// | q20 q21 q22 q23 | q24 q25 q26 q27 | ........
+/// | q30 q31 q32 q33 | q34 q35 q36 q37 | ........
+/// | ............... | ............... | ........
+/// : ............... : ............... : ........
+/// ```
+///
+/// @tparam SrcType The data type of the input data (must be floating-point).
+/// @tparam DstType The data type of the output data (must be integer).
+/// @tparam ScaleType The data type of the quantization scales (must be floating-point).
+/// @tparam ZeroPointType The data type of the quantization zero points (must be integer).
+///
+/// @param[in] src The input matrix.
+/// @param[in] scales The quantization scale matrix.
+/// @param[in] zero_points The quantization zero point matrix.
+/// @param[in] height The number of rows.
+/// @param[in] width The number of columns.
+/// @param[in] quant_width The number of columns of the quantization block.
+///
+/// @return The quantized data matrix.
+template <typename SrcType, typename DstType, typename ScaleType, typename ZeroPointType>
+std::vector<uint8_t> quantize_asymmetric_per_block(
+    const void* src, const void* scales, const void* zero_points, size_t height, size_t width, size_t quant_width);
+
+/// Dynamically quantizes each block of the matrix using asymmetric quantization method.
+///
+/// The quantization information is calculated using
+/// @ref compute_asymmetric_per_block_quantization_info function.
+/// The floating-point data is then quantized using
+/// @ref quantize_asymmetric_per_block function.
+///
+/// To retain highest quantization accuracy, the data is quantized using the quantization scale
+/// with the same data type as the input data.
+/// After that the quantization scale can be stored in the buffer using `ScaleType` data type
+/// which might have lowest precision than the input data type.
+///
+/// @tparam SrcType The data type of the input data (must be floating-point).
+/// @tparam DstType The data type of the output data (must be integer).
+/// @tparam ScaleType The data type of the quantization scales (must be floating-point).
+/// @tparam ZeroPointType The data type of the quantization zero points (must be integer).
+///
+/// @param[in] src The input matrix.
+/// @param[in] height The number of rows.
+/// @param[in] width The number of columns.
+/// @param[in] quant_width The number of columns of the quantization block.
+///
+/// @return The quantized data matrix, the quantization scale matrix and the quantization zero point matrix.
+template <typename SrcType, typename DstType, typename ScaleType, typename ZeroPointType>
+std::tuple<std::vector<uint8_t>, std::vector<uint8_t>, std::vector<uint8_t>> quantize_asymmetric_per_block_dynamic(
     const void* src, size_t height, size_t width, size_t quant_width);
 
 }  // namespace kai::test

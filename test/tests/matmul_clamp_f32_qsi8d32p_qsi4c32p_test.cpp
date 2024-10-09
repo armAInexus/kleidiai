@@ -49,9 +49,9 @@ TEST(matmul_clamp_f32_qsi8d32p4x8_qsi4c32p4x8_8x4x32_neon_i8mm, EndToEnd) {
 
     // Runs the reference implementation.
     const auto [ref_lhs_qvalues, ref_lhs_scales] =
-        quantize_symmetric_per_block<float, int8_t, Float16>(ref_lhs.data(), M, K, bl);
+        quantize_symmetric_per_block_dynamic<float, int8_t, Float16>(ref_lhs.data(), M, K, bl);
     const auto [ref_rhs_qsi4, ref_rhs_scales] =
-        quantize_symmetric_per_block<float, Int4, Float16>(ref_rhs.data(), N, K, bl);
+        quantize_symmetric_per_block_dynamic<float, Int4, Float16>(ref_rhs.data(), N, K, bl);
 
     const auto ref_dst = matmul_clamp_nt_t<int8_t, Float16, int32_t, Int4, Float16, int32_t, float, int32_t, float>(
         M, N, K, ref_lhs_qvalues.data(), ref_lhs_scales.data(), nullptr, bl, ref_rhs_qsi4.data(), ref_rhs_scales.data(),
@@ -121,9 +121,9 @@ TEST(matmul_clamp_f32_qsi8d32p1x8_qsi4c32p4x8_1x4x32_neon_dotprod, EndToEnd) {
 
     // Runs the reference implementation.
     const auto [ref_lhs_qvalues, ref_lhs_scales] =
-        quantize_symmetric_per_block<float, int8_t, Float16>(ref_lhs.data(), M, K, bl);
+        quantize_symmetric_per_block_dynamic<float, int8_t, Float16>(ref_lhs.data(), M, K, bl);
     const auto [ref_rhs_qsi4, ref_rhs_scales] =
-        quantize_symmetric_per_block<float, Int4, Float16>(ref_rhs.data(), N, K, bl);
+        quantize_symmetric_per_block_dynamic<float, Int4, Float16>(ref_rhs.data(), N, K, bl);
 
     const auto ref_dst = matmul_clamp_nt_t<int8_t, Float16, int32_t, Int4, Float16, int32_t, float, int32_t, float>(
         M, N, K, ref_lhs_qvalues.data(), ref_lhs_scales.data(), nullptr, bl, ref_rhs_qsi4.data(), ref_rhs_scales.data(),

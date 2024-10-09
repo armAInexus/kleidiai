@@ -75,9 +75,9 @@ TEST_P(MatMulTest_f32_qai8dxp_qsi4cxp, EndToEnd_RHS_nxk_qsi4cx) {
     //   * Quantizes the RHS matrix using 4-bit symmetric quantization.
     //   * Performs GEMM.
     const auto [ref_lhs_qvalues, ref_lhs_scales, ref_lhs_zero_points] =
-        quantize_asymmetric_per_block<float, int8_t, float, int32_t>(ref_lhs.data(), M, K, K);
+        quantize_asymmetric_per_block_dynamic<float, int8_t, float, int32_t>(ref_lhs.data(), M, K, K);
     const auto [ref_rhs_qsi4, ref_rhs_scales] =
-        quantize_symmetric_per_block<float, Int4, float>(ref_rhs.data(), N, K, K);
+        quantize_symmetric_per_block_dynamic<float, Int4, float>(ref_rhs.data(), N, K, K);
 
     const auto ref_dst = matmul_clamp_nt_t<int8_t, float, int32_t, Int4, float, int32_t, float, int32_t, float>(
         M, N, K, ref_lhs_qvalues.data(), ref_lhs_scales.data(), ref_lhs_zero_points.data(), K, ref_rhs_qsi4.data(),
@@ -150,9 +150,9 @@ TEST_P(MatMulTest_f32_qai8dxp_qsi4cxp, EndToEnd_RHS_nxk_qsu4cx) {
     //   * Quantizes the RHS matrix using 4-bit symmetric quantization.
     //   * Performs GEMM.
     const auto [ref_lhs_qvalues, ref_lhs_scales, ref_lhs_zero_points] =
-        quantize_asymmetric_per_block<float, int8_t, float, int32_t>(ref_lhs.data(), M, K, K);
+        quantize_asymmetric_per_block_dynamic<float, int8_t, float, int32_t>(ref_lhs.data(), M, K, K);
     const auto [ref_rhs_qsi4, ref_rhs_scales] =
-        quantize_symmetric_per_block<float, Int4, float>(ref_rhs.data(), N, K, K);
+        quantize_symmetric_per_block_dynamic<float, Int4, float>(ref_rhs.data(), N, K, K);
 
     const auto ref_dst = matmul_clamp_nt_t<int8_t, float, int32_t, Int4, float, int32_t, float, int32_t, float>(
         M, N, K, ref_lhs_qvalues.data(), ref_lhs_scales.data(), ref_lhs_zero_points.data(), K, ref_rhs_qsi4.data(),
@@ -227,9 +227,9 @@ TEST_P(MatMulTest_f32_qai8dxp_qsi4cxp, EndToEnd_RHS_kxn_qsi4cx) {
     //   * Quantizes the RHS matrix using 4-bit symmetric quantization.
     //   * Performs GEMM.
     const auto [ref_lhs_qvalues, ref_lhs_scales, ref_lhs_zero_points] =
-        quantize_asymmetric_per_block<float, int8_t, float, int32_t>(ref_lhs.data(), M, K, K);
+        quantize_asymmetric_per_block_dynamic<float, int8_t, float, int32_t>(ref_lhs.data(), M, K, K);
     const auto [ref_rhs_qsi4, ref_rhs_scales] =
-        quantize_symmetric_per_block<float, Int4, float>(ref_rhs.data(), N, K, K, false /* is_transposed */);
+        quantize_symmetric_per_block_dynamic<float, Int4, float>(ref_rhs.data(), N, K, K, false /* is_transposed */);
 
     const auto ref_dst = matmul_clamp_nt_nt<int8_t, float, int32_t, Int4, float, int32_t, float, int32_t, float>(
         M, N, K, ref_lhs_qvalues.data(), ref_lhs_scales.data(), ref_lhs_zero_points.data(), K, ref_rhs_qsi4.data(),
@@ -302,9 +302,9 @@ TEST_P(MatMulTest_f32_qai8dxp_qsi4cxp, EndToEnd_RHS_kxn_qsu4cx) {
     //   * Quantizes the RHS matrix using 4-bit symmetric quantization.
     //   * Performs GEMM.
     const auto [ref_lhs_qvalues, ref_lhs_scales, ref_lhs_zero_points] =
-        quantize_asymmetric_per_block<float, int8_t, float, int32_t>(ref_lhs.data(), M, K, K);
+        quantize_asymmetric_per_block_dynamic<float, int8_t, float, int32_t>(ref_lhs.data(), M, K, K);
     const auto [ref_rhs_qsi4, ref_rhs_scales] =
-        quantize_symmetric_per_block<float, Int4, float>(ref_rhs.data(), N, K, K, false /* is_transposed */);
+        quantize_symmetric_per_block_dynamic<float, Int4, float>(ref_rhs.data(), N, K, K, false /* is_transposed */);
 
     const auto ref_dst = matmul_clamp_nt_nt<int8_t, float, int32_t, Int4, float, int32_t, float, int32_t, float>(
         M, N, K, ref_lhs_qvalues.data(), ref_lhs_scales.data(), ref_lhs_zero_points.data(), K, ref_rhs_qsi4.data(),

@@ -14,6 +14,18 @@
 
 namespace kai::test {
 
+/// Converts each element of the array to the specified data type.
+///
+/// @tparam DstType The data type to cast into.
+/// @tparam SrcType The data type to cast from.
+///
+/// @param[in] src The source data.
+/// @param[in] length The number of elements.
+///
+/// @return A new data buffer containing casted values.
+template <typename DstType, typename SrcType>
+std::vector<uint8_t> cast(const void* src, size_t length);
+
 /// Converts each element of the source matrix to the new data type.
 ///
 /// @param[in] src Source matrix data buffer.
