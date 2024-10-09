@@ -13,10 +13,10 @@
 #include <benchmark/benchmark.h>
 
 #include "benchmark/matmul/matmul_utils.hpp"
-#include "kai/ukernels/matmul/matmul_clamp_f32_f32p_f32p/kai_matmul_clamp_f32_f32p2vlx1_f32p2vlx1biasf32_sme2_mopa.h"
 #include "kai/ukernels/matmul/matmul_clamp_f32_f32p_f32p/kai_matmul_clamp_f32_f32p_f32p_interface.h"
-#include "kai/ukernels/matmul/pack/kai_lhs_pack_f32p2vlx1_f32_sme.h"
-#include "kai/ukernels/matmul/pack/kai_rhs_pack_kxn_f32p2vlx1biasf32_f32_f32_sme.h"
+#include "kai/ukernels/matmul/matmul_clamp_f32_f32p_f32p/kai_matmul_clamp_f32_f32p_f32pb_2vlx2vl_sme2_mopa.h"
+#include "kai/ukernels/matmul/pack/kai_lhs_pack_f32p_f32_2vlx1_sme.h"
+#include "kai/ukernels/matmul/pack/kai_rhs_pack_kxn_f32pb_f32_f32_2vlx1_sme.h"
 #include "test/common/cpu_info.hpp"
 
 namespace kai::bench::matmul_f32_f32p_f32p {
@@ -31,18 +31,15 @@ struct kai_matmul_ukernel_f32_f32p_f32p {
 };
 
 kai_matmul_ukernel_f32_f32p_f32p sme_variants[] = {
-    {kai_get_m_step_matmul_clamp_f32_f32p2vlx1_f32p2vlx1biasf32_sme2_mopa,
-     kai_get_n_step_matmul_clamp_f32_f32p2vlx1_f32p2vlx1biasf32_sme2_mopa,
-     kai_get_mr_matmul_clamp_f32_f32p2vlx1_f32p2vlx1biasf32_sme2_mopa,
-     kai_get_nr_matmul_clamp_f32_f32p2vlx1_f32p2vlx1biasf32_sme2_mopa,
-     kai_get_kr_matmul_clamp_f32_f32p2vlx1_f32p2vlx1biasf32_sme2_mopa,
-     kai_get_sr_matmul_clamp_f32_f32p2vlx1_f32p2vlx1biasf32_sme2_mopa,
-     kai_get_lhs_packed_offset_matmul_clamp_f32_f32p2vlx1_f32p2vlx1biasf32_sme2_mopa,
-     kai_get_rhs_packed_offset_matmul_clamp_f32_f32p2vlx1_f32p2vlx1biasf32_sme2_mopa,
-     kai_get_dst_offset_matmul_clamp_f32_f32p2vlx1_f32p2vlx1biasf32_sme2_mopa,
-     kai_get_dst_size_matmul_clamp_f32_f32p2vlx1_f32p2vlx1biasf32_sme2_mopa,
-     kai_run_matmul_clamp_f32_f32p2vlx1_f32p2vlx1biasf32_sme2_mopa,
-     "matmul_clamp_f32_f32p2vlx1_f32p2vlx1biasf32_sme2_mopa"},
+    {kai_get_m_step_matmul_clamp_f32_f32p_f32pb_2vlx2vl_sme2_mopa,
+     kai_get_n_step_matmul_clamp_f32_f32p_f32pb_2vlx2vl_sme2_mopa,
+     kai_get_mr_matmul_clamp_f32_f32p_f32pb_2vlx2vl_sme2_mopa, kai_get_nr_matmul_clamp_f32_f32p_f32pb_2vlx2vl_sme2_mopa,
+     kai_get_kr_matmul_clamp_f32_f32p_f32pb_2vlx2vl_sme2_mopa, kai_get_sr_matmul_clamp_f32_f32p_f32pb_2vlx2vl_sme2_mopa,
+     kai_get_lhs_packed_offset_matmul_clamp_f32_f32p_f32pb_2vlx2vl_sme2_mopa,
+     kai_get_rhs_packed_offset_matmul_clamp_f32_f32p_f32pb_2vlx2vl_sme2_mopa,
+     kai_get_dst_offset_matmul_clamp_f32_f32p_f32pb_2vlx2vl_sme2_mopa,
+     kai_get_dst_size_matmul_clamp_f32_f32p_f32pb_2vlx2vl_sme2_mopa,
+     kai_run_matmul_clamp_f32_f32p_f32pb_2vlx2vl_sme2_mopa, "matmul_clamp_f32_f32p_f32pb_2vlx2vl_sme2_mopa"},
 };
 
 struct kai_matmul_f32_f32p_f32p_sme {
@@ -67,10 +64,10 @@ struct kai_matmul_f32_f32p_f32p_sme {
         const size_t kr = variant.ukernel.get_kr();
         const size_t sr = variant.ukernel.get_sr();
 
-        const size_t lhs_packed_size = kai_get_lhs_packed_size_lhs_pack_f32p2vlx1_f32_sme(m, k, mr, kr, sr);
+        const size_t lhs_packed_size = kai_get_lhs_packed_size_lhs_pack_f32p_f32_2vlx1_sme(m, k, mr, kr, sr);
         float* lhs_packed = new float[lhs_packed_size / sizeof(float)];
 
-        const size_t rhs_packed_size = kai_get_rhs_packed_size_rhs_pack_kxn_f32p2vlx1biasf32_f32_f32_sme(n, k);
+        const size_t rhs_packed_size = kai_get_rhs_packed_size_rhs_pack_kxn_f32pb_f32_f32_2vlx1_sme(n, k);
 
         float* rhs_packed = new float[rhs_packed_size / sizeof(float)];
 
@@ -78,11 +75,11 @@ struct kai_matmul_f32_f32p_f32p_sme {
         const size_t rhs_stride = n * sizeof(float);
         const size_t dst_stride_row = n * sizeof(float);
         const size_t dst_stride_col = sizeof(float);
-        kai_run_rhs_pack_kxn_f32p2vlx1biasf32_f32_f32_sme(
+        kai_run_rhs_pack_kxn_f32pb_f32_f32_2vlx1_sme(
             1, n, k, nr, kr, sr,  // Packing arguments
             rhs_stride, rhs, bias, NULL, rhs_packed, 0, NULL);
 
-        kai_run_lhs_pack_f32p2vlx1_f32_sme(m, k, mr, kr, sr, 0, lhs, k * sizeof(float), lhs_packed);
+        kai_run_lhs_pack_f32p_f32_2vlx1_sme(m, k, mr, kr, sr, 0, lhs, k * sizeof(float), lhs_packed);
 
         float* dst = new float[dst_size];
         for (auto _ : state) {

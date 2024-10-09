@@ -8,6 +8,10 @@
 
 KleidiAI follows the [Semantic Versioning](https://semver.org/) specification for releases.
 
+## v0.4.0 - Upcoming Release
+
+- Rename the SME2 GEMM micro-kernels to follow the function naming convention.
+
 ## v0.3.0
 
 - Advanced SIMD FP32 GEMM micro-kernel.
