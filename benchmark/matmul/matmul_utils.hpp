@@ -4,8 +4,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-#ifndef KAI_BENCHMARK_MATMUL_MATMUL_UTILS_HPP
-#define KAI_BENCHMARK_MATMUL_MATMUL_UTILS_HPP
+#pragma once
 
 #include <algorithm>
 #include <cassert>
@@ -82,5 +81,3 @@ static void quant_qs4cx_f32(size_t n, size_t k, const float* rhs_f32, uint8_t* r
         rhs_scales_f32[row_idx] = recip_scale0;
     }
 };
-
-#endif /* KAI_BENCHMARK_MATMUL_MATMUL_UTILS_HPP */

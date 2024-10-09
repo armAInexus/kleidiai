@@ -225,8 +225,13 @@ if(KLEIDIAI_BUILD_BENCHMARK)
     include(FetchGBench)
 
     add_executable(kleidiai_benchmark
-        benchmark/main.cpp)
+        benchmark/main.cpp
+        benchmark/matmul/matmul_f32_f32p_f32p.cpp
+        benchmark/matmul/matmul_f32.cpp
+        test/common/cpu_info.cpp)
 
+    set_source_files_properties(benchmark/matmul/matmul_f32_f32p_f32p.cpp PROPERTIES COMPILE_OPTIONS -march=armv8.2-a+sve+sve2${KLEIDIAI_INTERNAL_EXTRA_ARCH})
+    set_source_files_properties(benchmark/matmul/matmul_f32.cpp PROPERTIES COMPILE_OPTIONS -march=armv8.2-a+dotprod+i8mm${KLEIDIAI_INTERNAL_EXTRA_ARCH})
     target_link_libraries(
         kleidiai_benchmark
         kleidiai

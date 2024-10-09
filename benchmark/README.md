@@ -26,7 +26,6 @@ $ cmake -DCMAKE_TOOLCHAIN_FILE=/path/to/android-ndk/build/cmake/android.toolchai
 
 ## Usage
 
-For now, the only kernel that is included in the benchmarking suite is matmul_clamp_f32_qai8dxp_qsi4cxp.
 The dimensions of the LHS- and RHS-matrices needs to be specified with the `-m`, `-n` and `-k` options.
 The shape of the LHS-matrix is MxK, and the shape of the RHS-matrix is KxN.
 

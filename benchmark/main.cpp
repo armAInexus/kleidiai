@@ -4,6 +4,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
+#include <benchmark/benchmark.h>
 #include <unistd.h>
 
 #include <cstdint>
@@ -11,6 +12,7 @@
 #include <cstdlib>
 
 #include "benchmark/matmul/matmul_f32.hpp"
+#include "benchmark/matmul/matmul_f32_f32p_f32p.hpp"
 
 void print_usage(char* name) {
     fprintf(stderr, "Usage:\n");
@@ -59,10 +61,9 @@ int main(int argc, char** argv) {
         exit(EXIT_FAILURE);
     }
 
-    kai_matmul matmul_f32;
-    for (int i = 0; i < num_ukernel_variants; i++) {
-        ::benchmark::RegisterBenchmark(ukernel_variants[i].name, matmul_f32, ukernel_variants[i], m, n, k);
-    }
+    kai::bench::matmul_f32_qa8dxp_qs4cxp::dotprod::RegisterBenchmarks(m, n, k);
+    kai::bench::matmul_f32_qa8dxp_qs4cxp::i8mm::RegisterBenchmarks(m, n, k);
+    kai::bench::matmul_f32_f32p_f32p::RegisterBenchmarks(m, n, k);
 
     ::benchmark::RunSpecifiedBenchmarks();
     ::benchmark::Shutdown();
