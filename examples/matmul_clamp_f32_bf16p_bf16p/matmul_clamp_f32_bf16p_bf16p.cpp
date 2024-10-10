@@ -4,44 +4,38 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-// Example usage for matrix multiplication of two half precision floating-point (FP16) matrices and the accumulation of
-// the result into an FP16 destination matrix.
+// Example usage for matrix multiplication of two half-precision brain floating-point (BF16) matrices
+// and the accumulation of the result into an FP32 destination matrix.
 //
 // The activations and the weights, stored in the LHS and RHS matrices respectively, are both non-transposed matrices.
-// The matrix multiplication computation is performed using floating-point fused multiply-add to accumulator (FMLA)
-// vector instructions present in the FEAT_FP16 Arm® architecture feature.
+// The matrix multiplication computation is performed using BF16 matrix multiply (BFMMLA)
+// vector instructions present in the FEAT_BF16 Arm® architecture feature.
 //
-#if !defined(__aarch64__) || !defined(__ARM_FEATURE_FP16_SCALAR_ARITHMETIC) || \
-    !defined(__ARM_FEATURE_FP16_VECTOR_ARITHMETIC)
-#error This file must be compiled for AArch64, FEAT_FP16.
+#if !defined(__aarch64__) || !defined(__ARM_FEATURE_BF16_SCALAR_ARITHMETIC) || \
+    !defined(__ARM_FEATURE_BF16_VECTOR_ARITHMETIC)
+#error This file must be compiled for AArch64, FEAT_BF16.
 #else
 #include <arm_neon.h>
 
 #include <algorithm>
-#include <bitset>
 #include <cfloat>
 #include <chrono>
 #include <cmath>
 #include <cstddef>
+#include <cstring>
 #include <iomanip>
 #include <iostream>
 
 // Include micro-kernel variants
+#include "kai/kai_common.h"
 #include "kai_lhs_pack_f32p8x4_bf16_neon.h"
 #include "kai_matmul_clamp_f32_bf16p_bf16p12x1biasf32_8x12x4_neon_mmla.h"
+#include "kai_matmul_clamp_f32_bf16p_bf16p_interface.h"
 #include "kai_rhs_pack_kxn_f32p4x12biasf32_f32_bf16_neon.h"
-#include "matmul_clamp_f32_bf16p_bf16p_interface.h"
-
-inline float bf16_to_float(uint16_t v) {
-    const uint32_t lv = (v << 16);
-    float fp;
-    memcpy(&fp, &lv, sizeof(lv));
-    return fp;
-}
 
 inline float bf16_to_float(const bfloat16_t* v) {
     const uint16_t uint_rep = *reinterpret_cast<const uint16_t*>(v);
-    return bf16_to_float(uint_rep);
+    return kai_cast_f32_bf16(uint_rep);
 }
 
 namespace {
@@ -53,12 +47,15 @@ constexpr kai_matmul_clamp_f32_bf16p_bf16p_ukernel ukernel{
     kai_get_nr_matmul_clamp_f32_bf16p_bf16p12x1biasf32_8x12x4_neon_mmla,
     kai_get_kr_matmul_clamp_f32_bf16p_bf16p12x1biasf32_8x12x4_neon_mmla,
     kai_get_sr_matmul_clamp_f32_bf16p_bf16p12x1biasf32_8x12x4_neon_mmla,
-    kai_get_lhs_offset_matmul_clamp_f32_bf16p_bf16p12x1biasf32_8x12x4_neon_mmla,
+    kai_get_lhs_packed_offset_matmul_clamp_f32_bf16p_bf16p12x1biasf32_8x12x4_neon_mmla,
     kai_get_rhs_packed_offset_matmul_clamp_f32_bf16p_bf16p12x1biasf32_8x12x4_neon_mmla,
     kai_get_dst_offset_matmul_clamp_f32_bf16p_bf16p12x1biasf32_8x12x4_neon_mmla,
     kai_get_dst_size_matmul_clamp_f32_bf16p_bf16p12x1biasf32_8x12x4_neon_mmla,
     kai_run_matmul_clamp_f32_bf16p_bf16p12x1biasf32_8x12x4_neon_mmla};
 
+/// @brief Truncate the 32-bit floating point number's least significant 16 mantissa bits
+/// @param x floating-point number
+/// @return truncated floating-point number
 float truncate(float x) {
     uint32_t uval = (*reinterpret_cast<uint32_t*>(&x) & 0xffff0000);
     return *reinterpret_cast<float*>(&uval);
@@ -78,10 +75,8 @@ void run_matmul_ref(
 
                 acc += lhs_val * rhs_val;
             }
-            acc = std::max(acc, scalar_min);
-            acc = std::min(acc, scalar_max);
 
-            dst[row_idx * n + col_idx] = acc;
+            dst[row_idx * n + col_idx] = std::clamp(acc, scalar_min, scalar_max);
         }
     }
 }
@@ -220,12 +215,12 @@ int main() {
     float* dst_ref = new float[dst_size];
 
     run_matmul_ref(
-        M, N, K,          // Dimensions
-        lhs,              // LHS buffer
-        rhs,              // RHS buffer
-        bias,             // Bias buffer
-        dst_ref,          // DST
-        FLT_MIN, FLT_MAX  // Min and max for the clamp operation
+        M, N, K,           // Dimensions
+        lhs,               // LHS buffer
+        rhs,               // RHS buffer
+        bias,              // Bias buffer
+        dst_ref,           // DST
+        -FLT_MAX, FLT_MAX  // Min and max for the clamp operation
     );
     //----------- END REFERENCE IMPLEMENTATION
     //------------------------------------
@@ -275,18 +270,18 @@ int main() {
 
     float* dst = new float[dst_size];
 
-    kai_run_lhs_pack_f32p8x4_bf16_neon(M, K, mr, kr, sr, 0 /* m_idx_start */, lhs, lhs_stride, lhs_packed);
-
     const auto timer_matmul_start = std::chrono::high_resolution_clock::now();
 
+    kai_run_lhs_pack_f32p8x4_bf16_neon(M, K, mr, kr, sr, 0 /* m_idx_start */, lhs, lhs_stride, lhs_packed);
+
     ukernel.run_matmul(
-        M, N, K,          // Dimensions
-        lhs_packed,       // LHS packed
-        rhs_packed,       // RHS packed
-        dst,              // DST
-        dst_stride_row,   // DST stride (row)
-        dst_stride_col,   // DST stride (col)
-        FLT_MIN, FLT_MAX  // Min and max for the clamp operation
+        M, N, K,           // Dimensions
+        lhs_packed,        // LHS packed
+        rhs_packed,        // RHS packed
+        dst,               // DST
+        dst_stride_row,    // DST stride (row)
+        dst_stride_col,    // DST stride (col)
+        -FLT_MAX, FLT_MAX  // Min and max for the clamp operation
     );
 
     const auto timer_matmul_end = std::chrono::high_resolution_clock::now();
@@ -302,7 +297,8 @@ int main() {
     print_matrix(M, N, "ref", dst_ref);
 #endif  // KAI_DEBUG
 
-    const bool is_valid = is_output_correct(M, N, 0.02 /* rel tol */, dst_ref, dst);
+    constexpr float rel_tolerance = 0.02;  // This value was chosen by experimentation
+    const bool is_valid = is_output_correct(M, N, rel_tolerance, dst_ref, dst);
 
     std::cout << "TEST[matmul_clamp_f32_bf16p_bf16p]\n";
     std::cout << "- ukernel: matmul_clamp_f32_bf16p_bf16p12x1biasf32_8x12x4_neon_mmla\n";
@@ -321,6 +317,7 @@ int main() {
     delete[] lhs;
     delete[] rhs;
     delete[] bias;
+    delete[] lhs_packed;
     delete[] rhs_packed;
     delete[] dst;
     delete[] dst_ref;

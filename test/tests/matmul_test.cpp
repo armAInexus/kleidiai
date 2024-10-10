@@ -21,12 +21,10 @@
 #include <vector>
 
 #include "kai/kai_common.h"
-#include "test/common/MatMulMethod.hpp"
 #include "test/common/compare.hpp"
 #include "test/common/cpu_info.hpp"
 #include "test/common/data_format.hpp"
 #include "test/common/data_type.hpp"
-#include "test/common/float16.hpp"
 #include "test/common/matmul_test_common.hpp"
 #include "test/common/matrix_portion.hpp"
 #include "test/common/printer.hpp"
@@ -202,7 +200,7 @@ static const std::array matmul_methods = {
 class MatMulTest : public testing::TestWithParam<MatMulTestParams> {
 private:
     /// Unique ID: m, n, k, method_id.
-    using TestDataId = std::tuple<size_t, size_t, size_t, std::string>;
+    using TestDataId = std::tuple<size_t, size_t, size_t, std::string_view>;
 
 protected:
     /// Cached test data that is shared between multiple test case.

@@ -7,8 +7,10 @@
 #pragma once
 
 #include <cstddef>
+#include <cstring>
 #include <type_traits>
 
+#include "kai/kai_common.h"
 #include "test/common/bfloat16.hpp"
 #include "test/common/int4.hpp"
 
@@ -26,14 +28,6 @@ inline constexpr size_t size_in_bits<UInt4> = 4;
 template <>
 inline constexpr size_t size_in_bits<Int4> = 4;
 
-/// TODO: Move this
-inline float bf16_to_float(uint16_t v) {
-    const uint32_t lv = (v << 16);
-    float fp;
-    memcpy(&fp, &lv, sizeof(lv));
-    return fp;
-}
-
 /// Reads the array at the specified index.
 ///
 /// @param[in] array Data buffer.
@@ -50,7 +44,7 @@ T read_array(const void* array, size_t index) {
         return index % 2 == 0 ? lo : hi;
     } else if constexpr (std::is_same_v<T, BFloat16>) {
         uint16_t raw_value = reinterpret_cast<const uint16_t*>(array)[index];
-        return BFloat16(bf16_to_float(raw_value));
+        return BFloat16(kai_cast_f32_bf16(raw_value));
     } else {
         return reinterpret_cast<const T*>(array)[index];
     }

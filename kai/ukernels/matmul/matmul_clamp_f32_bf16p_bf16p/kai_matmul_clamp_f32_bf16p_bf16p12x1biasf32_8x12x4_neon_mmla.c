@@ -10,7 +10,6 @@
 
 #include <arm_bf16.h>
 #include <arm_neon.h>
-#include <math.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -48,16 +47,15 @@ size_t kai_get_sr_matmul_clamp_f32_bf16p_bf16p12x1biasf32_8x12x4_neon_mmla(void)
     return kai_sr;
 }
 
-size_t kai_get_lhs_offset_matmul_clamp_f32_bf16p_bf16p12x1biasf32_8x12x4_neon_mmla(size_t m_idx, size_t stride) {
+size_t kai_get_lhs_packed_offset_matmul_clamp_f32_bf16p_bf16p12x1biasf32_8x12x4_neon_mmla(size_t m_idx, size_t k) {
     KAI_ASSUME(m_idx % kai_mr == 0);
 
-    return m_idx * stride;
+    return m_idx * kai_roundup(k, kai_kr) * sizeof(bfloat16_t);
 }
 
 size_t kai_get_rhs_packed_offset_matmul_clamp_f32_bf16p_bf16p12x1biasf32_8x12x4_neon_mmla(size_t n_idx, size_t k) {
     KAI_ASSUME(n_idx % kai_nr == 0);
 
-    // return n_idx / kai_nr * (kai_nr * sizeof(float) + kai_nr * k * sizeof(bfloat16));
     return n_idx * (sizeof(float) + kai_roundup(k, kai_kr) * sizeof(bfloat16_t));
 }
 
@@ -82,7 +80,6 @@ void kai_run_matmul_clamp_f32_bf16p_bf16p12x1biasf32_8x12x4_neon_mmla(
     KAI_ASSERT(dst_stride_col == sizeof(float));
 
     const void* Apanel = lhs_packed;
-    // const void *Bpanel = rhs_packed;
     void* Cpanel = dst;
     size_t ldc = dst_stride_row / sizeof(float);
 
@@ -100,7 +97,7 @@ void kai_run_matmul_clamp_f32_bf16p_bf16p12x1biasf32_8x12x4_neon_mmla(
     KernelArgs ka;
 
     ka.N = n;
-    ka.K = kai_roundup(k, 4) / 4 - 1;
+    ka.K = kai_roundup(k, kai_kr) / kai_kr - 1;
 
     ka.Bpanel = rhs_packed;
 

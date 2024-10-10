@@ -10,17 +10,14 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
-#include <limits>
 #include <vector>
 
 #include "kai/kai_common.h"
 #include "test/common/bfloat16.hpp"
 #include "test/common/data_format.hpp"
 #include "test/common/data_type.hpp"
-#include "test/common/float16.hpp"
 #include "test/common/memory.hpp"
 #include "test/common/round.hpp"
-#include "test/reference/quantize.hpp"
 
 namespace kai::test {
 
@@ -37,9 +34,7 @@ std::vector<uint8_t> pack_block(
     const auto dst_bytes =
         round_up_multiple(full_height, block_height) * round_up_multiple(full_width, block_width) * dst_esize;
 
-    std::vector<uint8_t> dst;
-    dst.resize(dst_bytes);
-    memset(dst.data(), 0, dst_bytes);
+    std::vector<uint8_t> dst(dst_bytes, 0);
 
     const auto* src_ptr = reinterpret_cast<const uint8_t*>(src);
     auto* dst_ptr = dst.data();
@@ -106,9 +101,7 @@ std::vector<uint8_t> pack_bias_per_row(
     const auto group_bytes = group_bias_bytes + group_num_blocks * block_data_bytes;
     const auto dst_bytes = num_groups * group_bytes;
 
-    std::vector<uint8_t> dst;
-    dst.resize(dst_bytes);
-    memset(dst.data(), 0, dst_bytes);
+    std::vector<uint8_t> dst(dst_bytes, 0);
 
     const auto* src_ptr = reinterpret_cast<const uint8_t*>(src);
     const auto* bias_ptr = reinterpret_cast<const uint8_t*>(bias);
@@ -147,8 +140,8 @@ std::vector<uint8_t> pack_bias_per_row(
                                              x_element) *
                                                 src_esize;
 
-                                        uint16_t src_value = convert(src_ptr_elm, src_dtype, dst_dtype);
-                                        memcpy(dst_ptr, &src_value, dst_esize);
+                                        const uint16_t dst_value = convert(src_ptr_elm, src_dtype, dst_dtype);
+                                        memcpy(dst_ptr, &dst_value, dst_esize);
                                     }
                                 }
 

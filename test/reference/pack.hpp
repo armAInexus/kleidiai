@@ -22,8 +22,8 @@ class DataFormat;
 /// @param[in] height Number of rows of the source matrix.
 /// @param[in] width Number of columns of the source matrix.
 std::vector<uint8_t> pack(
-    const DataFormat& dst_format, const void* src, const void* scales, const void* zero_points,
-    const DataFormat& src_format, size_t height, size_t width);
+    const DataFormat& dst_format, const void* src, const void* scales, const void* bias, const DataFormat& src_format,
+    size_t height, size_t width);
 
 /// Packs the quantized data and the quantization scale into a single buffer.
 ///

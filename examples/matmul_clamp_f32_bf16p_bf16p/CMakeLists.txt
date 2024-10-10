@@ -4,7 +4,9 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.18)
+
+project(KleidiAI)
 
 set(CMAKE_CXX_STANDARD 17)
 set(KLEIDIAI_PATH ../../)

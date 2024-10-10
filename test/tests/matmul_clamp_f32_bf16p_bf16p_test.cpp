@@ -20,16 +20,13 @@
 #include <vector>
 
 #include "kai/kai_common.h"
-#include "test/common/MatMulMethod.hpp"
 #include "test/common/compare.hpp"
 #include "test/common/cpu_info.hpp"
 #include "test/common/data_format.hpp"
 #include "test/common/data_type.hpp"
-#include "test/common/float16.hpp"
 #include "test/common/matmul_test_common.hpp"
 #include "test/common/matrix_portion.hpp"
 #include "test/common/printer.hpp"
-#include "test/common/sme.hpp"
 #include "test/reference/fill.hpp"
 #include "test/reference/matmul.hpp"
 #include "test/reference/pack.hpp"
@@ -41,7 +38,8 @@
 namespace kai::test {
 
 /// List of supported matrix multiplication methods.
-static const std::array matmul_methods = {
+namespace {
+const std::array matmul_methods = {
     MatMulMethod{
         .name = "matmul_nt_nt_f32_bf16p_bf16p_8x12_neon_mla",
 
@@ -51,8 +49,6 @@ static const std::array matmul_methods = {
         .lhs_transposed = false,
         .rhs_transposed = false,
 
-        .is_sme2 = false,
-
         .dst_format = DataFormat(DataType::FP32),
         .lhs_format = DataFormat(DataType::FP32),
         .packed_lhs_format =
@@ -61,6 +57,7 @@ static const std::array matmul_methods = {
         .packed_rhs_format = DataFormat(
             DataType::BF16, 12, 4, DataFormat::PackFormat::BIAS_PER_ROW, DataType::FP32, DataType::UNKNOWN, 12, 4),
         .bias_format = DataFormat(DataType::FP32),
+        .fn_is_supported = cpu_has_bf16,
 
         .fn_get_mr = kai_get_mr_matmul_clamp_f32_bf16p_bf16p12x1biasf32_8x12x4_neon_mmla,
         .fn_get_nr = kai_get_nr_matmul_clamp_f32_bf16p_bf16p12x1biasf32_8x12x4_neon_mmla,
@@ -99,8 +96,6 @@ static const std::array matmul_methods = {
         .lhs_transposed = false,
         .rhs_transposed = false,
 
-        .is_sme2 = false,
-
         .dst_format = DataFormat(DataType::FP32),
         .lhs_format = DataFormat(DataType::FP32),
         .packed_lhs_format =
@@ -109,6 +104,7 @@ static const std::array matmul_methods = {
         .packed_rhs_format = DataFormat(
             DataType::BF16, 12, 4, DataFormat::PackFormat::BIAS_PER_ROW, DataType::FP32, DataType::UNKNOWN, 12, 4),
         .bias_format = DataFormat(DataType::UNKNOWN),
+        .fn_is_supported = cpu_has_bf16,
 
         .fn_get_mr = kai_get_mr_matmul_clamp_f32_bf16p_bf16p12x1biasf32_8x12x4_neon_mmla,
         .fn_get_nr = kai_get_nr_matmul_clamp_f32_bf16p_bf16p12x1biasf32_8x12x4_neon_mmla,
@@ -138,12 +134,13 @@ static const std::array matmul_methods = {
 
         .fn_matmul_f32_bf16p_bf16p = kai_run_matmul_clamp_f32_bf16p_bf16p12x1biasf32_8x12x4_neon_mmla,
     }};
+}
 
 /// Matrix multiplication test fixture.
 class MatMulTestBf16 : public testing::TestWithParam<MatMulTestParams> {
 private:
     /// Unique ID: m, n, k
-    using TestDataId = std::tuple<size_t, size_t, size_t, std::string>;
+    using TestDataId = std::tuple<size_t, size_t, size_t, std::string_view>;
 
 protected:
     /// Cached test data that is shared between multiple test case.
@@ -203,7 +200,7 @@ protected:
         }
 
         std::vector<uint8_t> packed_rhs;
-        packed_rhs.resize(method.packed_rhs_format.default_size_in_bytes(rhs_h, rhs_w));
+        packed_rhs.resize(method.fn_get_packed_rhs_size(rhs_w, rhs_h));
 
         if (has_rhs_pack) {
             const auto ref_rhs_row_stride = method.rhs_format.default_row_stride(rhs_w);
@@ -249,7 +246,7 @@ TEST_P(MatMulTestBf16, Output) {
     const auto& [method, info, portion] = GetParam();
     const auto& data = test_data();
 
-    if (method.is_sme2 && !cpu_has_sme2()) {
+    if (method.fn_is_supported && !method.fn_is_supported()) {
         GTEST_SKIP();
     }
 
@@ -372,5 +369,4 @@ INSTANTIATE_TEST_SUITE_P(
             MatrixPortion(0.4, 0.5, 0.6, 0.8)  // Somewhere Middle
             )),
     testing::PrintToStringParamName());
-
 }  // namespace kai::test

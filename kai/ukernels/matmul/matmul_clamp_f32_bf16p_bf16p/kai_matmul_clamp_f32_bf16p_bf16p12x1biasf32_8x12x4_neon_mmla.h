@@ -60,13 +60,13 @@ size_t kai_get_kr_matmul_clamp_f32_bf16p_bf16p12x1biasf32_8x12x4_neon_mmla(void)
 /// @return The sr value.
 size_t kai_get_sr_matmul_clamp_f32_bf16p_bf16p12x1biasf32_8x12x4_neon_mmla(void);
 
-/// Gets the offset in bytes to the data element in the LHS matrix buffer.
+/// Gets the offset in bytes to the data element in the packed LHS matrix buffer.
 ///
 /// @param[in] m_idx Row index.
-/// @param[in] stride Row stride in bytes.
+/// @param[in] k Number of columns.
 ///
 /// @return The offset in bytes to the data element.
-size_t kai_get_lhs_offset_matmul_clamp_f32_bf16p_bf16p12x1biasf32_8x12x4_neon_mmla(size_t m_idx, size_t stride);
+size_t kai_get_lhs_packed_offset_matmul_clamp_f32_bf16p_bf16p12x1biasf32_8x12x4_neon_mmla(size_t m_idx, size_t k);
 
 /// Gets the offset in bytes to the data element in the packed RHS matrix buffer.
 ///
@@ -96,7 +96,7 @@ size_t kai_get_dst_size_matmul_clamp_f32_bf16p_bf16p12x1biasf32_8x12x4_neon_mmla
 
 /// Runs the matrix multiplication microkernel followed by a clamp operation.
 ///
-/// The pointer of each buffers (LHS, packed RHS and output) needs to be added with offset
+/// The pointer of each buffers (packed LHS, packed RHS and output) needs to be added with offset
 /// calculated using the following functions:
 ///
 ///   * Packed LHS: @ref kai_get_lhs_offset_matmul_clamp_f32_bf16p_bf16p12x1biasf32_8x12x4_neon_mmla.
@@ -106,7 +106,7 @@ size_t kai_get_dst_size_matmul_clamp_f32_bf16p_bf16p12x1biasf32_8x12x4_neon_mmla
 /// @param[in]  m Number of output rows to be computed.
 /// @param[in]  n Number of output columns to be computed.
 /// @param[in]  k Common dimension of the LHS and RHS operand.
-/// @param[in]  lhs LHS matrix buffer.
+/// @param[in]  lhs_packed Packed LHS buffer.
 /// @param[in]  rhs_packed Packed RHS buffer.
 /// @param[out] dst Output matrix buffer.
 /// @param[in]  dst_stride_row Stride in bytes between two rows of the DST matrix.

@@ -7,7 +7,6 @@
 #include "matmul_test_common.hpp"
 
 #include <ostream>
-#include <string_view>
 
 namespace kai::test {
 void PrintTo(const MatMulTestParams& param, std::ostream* os) {
