@@ -30,8 +30,9 @@ struct MatMulShape {
 struct MatMulMethod {
     std::string_view name;  ///< Name of matmul method.
 
-    size_t m0;  ///< Block size in M dimension.
-    size_t n0;  ///< Block size in N dimension.
+    size_t m0{0};  ///< Block size in M dimension.
+    size_t n0{0};  ///< Block size in N dimension.
+    size_t k0{0};  ///< Block size in K dimension.
 
     bool lhs_transposed;  ///< LHS matrix is transposed.
     bool rhs_transposed;  ///< RHS matrix is transposed.
@@ -168,7 +169,7 @@ struct MatMulMethod {
     /// @param[in] kr Block size in K dimension.
     ///
     /// @return The size in bytes.
-    std::function<size_t(size_t n, size_t k, size_t nr, size_t kr)> fn_get_packed_rhs_size_generic_block_size;
+    std::function<size_t(size_t n, size_t k, size_t nr, size_t kr)> fn_get_packed_rhs_size_generic_block_size = nullptr;
 
     /// Gets the offset in bytes of the packed RHS matrix in the RHS packing kernel
     ///

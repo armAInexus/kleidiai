@@ -45,6 +45,7 @@ const std::array matmul_methods = {
 
         .m0 = 8,
         .n0 = 12,
+        .k0 = 4,
 
         .lhs_transposed = false,
         .rhs_transposed = false,
@@ -68,7 +69,7 @@ const std::array matmul_methods = {
         .fn_get_pack_rhs_n_step = kai_get_n_step_rhs_quant_pack_bf16pbiasf32_f32_neon,
         .fn_get_main_n_step = kai_get_n_step_matmul_clamp_f32_bf16p_bf16p12x1biasf32_8x12x4_neon_mmla,
 
-        .fn_get_lhs_offset = nullptr,
+        .fn_get_lhs_offset = kai_get_lhs_offset_lhs_quant_pack_bf16p_f32_neon,
         .fn_get_packed_lhs_size = kai_get_lhs_packed_size_lhs_quant_pack_bf16p_f32_neon,
         .fn_get_packed_lhs_offset = kai_get_lhs_packed_offset_matmul_clamp_f32_bf16p_bf16p12x1biasf32_8x12x4_neon_mmla,
         .fn_pack_lhs = kai_run_lhs_quant_pack_bf16p_f32_neon,
@@ -93,6 +94,7 @@ const std::array matmul_methods = {
 
         .m0 = 8,
         .n0 = 12,
+        .k0 = 4,
 
         .lhs_transposed = false,
         .rhs_transposed = false,
@@ -116,7 +118,7 @@ const std::array matmul_methods = {
         .fn_get_pack_rhs_n_step = kai_get_n_step_rhs_quant_pack_bf16pbiasf32_f32_neon,
         .fn_get_main_n_step = kai_get_n_step_matmul_clamp_f32_bf16p_bf16p12x1biasf32_8x12x4_neon_mmla,
 
-        .fn_get_lhs_offset = nullptr,
+        .fn_get_lhs_offset = kai_get_lhs_offset_lhs_quant_pack_bf16p_f32_neon,
         .fn_get_packed_lhs_size = kai_get_lhs_packed_size_lhs_quant_pack_bf16p_f32_neon,
         .fn_get_packed_lhs_offset = kai_get_lhs_packed_offset_matmul_clamp_f32_bf16p_bf16p12x1biasf32_8x12x4_neon_mmla,
         .fn_pack_lhs = kai_run_lhs_quant_pack_bf16p_f32_neon,
@@ -209,7 +211,9 @@ protected:
 
         if (has_rhs_pack) {
             const auto ref_rhs_row_stride = method.rhs_format.default_row_stride(rhs_w);
-            method.pack_rhs(info.n, info.k, rhs.data(), ref_rhs_row_stride, bias.data(), nullptr, packed_rhs.data());
+            method.pack_rhs(
+                info.n, info.k, rhs.data(), ref_rhs_row_stride, has_bias ? bias.data() : nullptr, nullptr,
+                packed_rhs.data());
         }
 
         KAI_ASSUME(method.lhs_format.is_raw());
@@ -217,10 +221,10 @@ protected:
         KAI_ASSUME(method.dst_format.is_raw());
 
         auto ref_dst = matmul(
-            lhs.data(), nullptr, nullptr, method.lhs_format.data_type(),            //
-            rhs.data(), rhs_scales.data(), nullptr, method.rhs_format.data_type(),  //
-            bias.data(), nullptr, nullptr, method.bias_format.data_type(),          //
-            method.dst_format.data_type(),                                          //
+            lhs.data(), nullptr, nullptr, method.lhs_format.data_type(),                         //
+            rhs.data(), rhs_scales.data(), nullptr, method.rhs_format.data_type(),               //
+            has_bias ? bias.data() : nullptr, nullptr, nullptr, method.bias_format.data_type(),  //
+            method.dst_format.data_type(),                                                       //
             info.m, info.n, info.k, method.lhs_transposed, method.rhs_transposed);
 
         const auto& data = _data[data_id] = {
@@ -271,53 +275,60 @@ TEST_P(MatMulTestBf16, Output) {
         GTEST_SKIP();
     }
 
-    const auto lhs_w = method.lhs_transposed ? info.m : info.k;
-    const auto rhs_w = method.rhs_transposed ? info.k : info.n;
-    const auto bias_w = info.n;
-    const auto dst_w = info.n;
+    // ASSERT_FALSE(method.lhs_transposed());
+
+    const size_t lhs_w = info.k;
+    const size_t rhs_w = rect.width();
+    const size_t bias_w = info.n;
+    const size_t dst_w = info.n;
+    const bool has_bias = (data.bias.size() > 0);
 
     const auto lhs_start_row = method.lhs_transposed ? 0 : rect.start_row();
-    const auto lhs_start_col = method.lhs_transposed ? rect.start_row() : 0;
     const auto lhs_stride = method.lhs_format.default_row_stride(lhs_w);
 
-    const uint8_t* lhs_data = nullptr;
-    uintptr_t lhs_offset = 0;
+    std::vector<uint8_t> lhs_data;
+    const size_t lhs_packed_size = method.fn_get_packed_lhs_size(info.m, info.k, method.m0, method.k0, 1 /* sr */);
+    lhs_data.resize(lhs_packed_size);
 
-    lhs_data = data.ref_packed_lhs.data();
+    uintptr_t lhs_offset = method.fn_get_lhs_offset(lhs_start_row, lhs_stride);
+    uintptr_t lhs_packed_offset = method.fn_get_packed_lhs_offset(lhs_start_row, info.k);
 
-    const auto ref_lhs_offset = method.packed_lhs_format.default_offset_in_bytes(lhs_start_row, lhs_start_col, info.k);
-    KAI_UNUSED(ref_lhs_offset);
+    KAI_UNUSED(lhs_offset);
+    method.fn_pack_lhs(
+        rect.height(), info.k, method.m0, method.k0, 1 /* sr */, 0 /* m_idx_start */, data.lhs.data() + lhs_offset,
+        lhs_stride, lhs_data.data() + lhs_packed_offset);
 
-    lhs_offset = method.fn_get_packed_lhs_offset(lhs_start_row, info.k);
+    const auto rhs_stride = method.rhs_format.default_row_stride(info.n);
 
-    // TODO: Check with ref_lhs_offset after fixing default_offset_in_bytes()
+    std::vector<uint8_t> rhs_data;
+    const size_t rhs_packed_size =
+        method.fn_get_packed_rhs_size_generic_block_size(info.n, info.k, method.n0, method.k0);
+    rhs_data.resize(rhs_packed_size);
 
-    const auto rhs_stride = method.rhs_format.default_row_stride(rhs_w);
+    const auto packed_rhs_start_row = rect.start_col();
+    const auto packed_rhs_start_col = 0;
 
-    const uint8_t* rhs_data = nullptr;
-    uintptr_t rhs_offset = 0;
+    uintptr_t rhs_offset = method.fn_get_rhs_offset(rect.start_col());
+    uintptr_t rhs_packed_offset = method.fn_get_main_packed_rhs_offset(packed_rhs_start_row, info.k);
+    const auto ref_rhs_packed_offset =
+        method.packed_rhs_format.default_offset_in_bytes(packed_rhs_start_row, packed_rhs_start_col, info.k);
 
-    if (method.is_pack_rhs_needed()) {
-        const auto packed_rhs_start_row = rect.start_col();
-        const auto packed_rhs_start_col = 0;
+    ASSERT_EQ(rhs_packed_offset, ref_rhs_packed_offset);
 
-        rhs_data = data.ref_packed_rhs.data();
+    uintptr_t bias_offset = sizeof(float) * rect.start_col();
 
-        rhs_offset = method.fn_get_main_packed_rhs_offset(packed_rhs_start_row, info.k);
-        const auto ref_rhs_offset =
-            method.packed_rhs_format.default_offset_in_bytes(packed_rhs_start_row, packed_rhs_start_col, info.k);
+    method.fn_pack_rhs(
+        1,  // num_groups
+        rhs_w, info.k, method.n0, method.k0,
+        1,  // sr
+        rhs_stride, data.rhs.data() + rhs_offset, has_bias ? data.bias.data() + bias_offset : nullptr,
+        NULL,  // Scale
+        rhs_data.data() + rhs_packed_offset, 0, NULL);
 
-        ASSERT_EQ(rhs_offset, ref_rhs_offset);
-    } else {
-        const auto rhs_start_row = method.rhs_transposed ? rect.start_col() : 0;
-        const auto rhs_start_col = method.rhs_transposed ? 0 : rect.start_col();
-
-        rhs_data = data.rhs.data();
-        rhs_offset = method.rhs_format.default_offset_in_bytes(rhs_start_row, rhs_start_col, rhs_w);
+    if (has_bias) {
+        const auto ref_bias_offset = method.bias_format.default_offset_in_bytes(0, rect.start_col(), bias_w);
+        ASSERT_EQ(ref_bias_offset, bias_offset);
     }
-
-    const auto* bias_data = data.bias.data();
-    const auto bias_offset = method.bias_format.default_offset_in_bytes(0, rect.start_row(), bias_w);
 
     const auto dst_stride = method.dst_format.default_row_stride(dst_w);
     const auto dst_offset = method.fn_get_dst_offset(rect.start_row(), rect.start_col(), dst_stride);
@@ -330,13 +341,12 @@ TEST_P(MatMulTestBf16, Output) {
 
     std::vector<uint8_t> dst;
     dst.resize(dst_size);
-
     method.main_kernel(
-        rect.height(), rect.width(), info.k, lhs_data + lhs_offset, rhs_data + rhs_offset, bias_data + bias_offset,
-        dst.data() + dst_offset, lhs_stride, rhs_stride, dst_stride, -std::numeric_limits<float>::infinity(),
+        rect.height(), rect.width(), info.k, lhs_data.data() + lhs_packed_offset, rhs_data.data() + rhs_packed_offset,
+        NULL, dst.data() + dst_offset, lhs_stride, rhs_stride, dst_stride, -std::numeric_limits<float>::infinity(),
         std::numeric_limits<float>::infinity());
 
-    DefaultMismatchHandler handler(0, 0.1, 0, 0.05);
+    DefaultMismatchHandler handler(0, 0.02, 0, 0.05);
     const auto success = compare(dst.data(), data.ref_dst.data(), method.dst_format, info.m, info.n, rect, handler);
 
     ASSERT_TRUE(success);

@@ -29,7 +29,7 @@ size_t kai_get_m_step_lhs_quant_pack_bf16p_f32_neon(size_t mr);
 /// @param[in] lhs_stride Row stride in bytes.
 ///
 /// @return The offset in bytes to the data element.
-size_t kai_get_lhs_offset_lhs_quant_pack_bf16p_f32_neon(size_t m_idx, size_t lhs_stride, size_t mr);
+size_t kai_get_lhs_offset_lhs_quant_pack_bf16p_f32_neon(size_t m_idx, size_t lhs_stride);
 
 /// Gets the offset in bytes to the data element in the packed LHS buffer.
 ///
