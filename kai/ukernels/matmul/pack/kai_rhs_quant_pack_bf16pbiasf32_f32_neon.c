@@ -8,6 +8,8 @@
 #error This file must be compiled for AArch64.
 #else  // Architectural features check.
 
+#define MAX_NR 12
+
 #include <alloca.h>
 #include <arm_neon.h>
 #include <stddef.h>
@@ -16,45 +18,39 @@
 
 #include "kai/kai_common.h"
 
-static const size_t kai_nr = 12;
-static const size_t kai_kr = 4;
-
-size_t kai_get_n_step_rhs_pack_kxn_f32p4x12biasf32_f32_bf16_neon(void) {
-    return kai_nr;
+size_t kai_get_n_step_rhs_quant_pack_bf16pbiasf32_f32_neon(size_t nr) {
+    return nr;
 }
 
-size_t kai_get_rhs_offset_rhs_pack_kxn_f32p4x12biasf32_f32_bf16_neon(size_t n_idx) {
-    KAI_ASSUME(n_idx % kai_nr == 0);
-
+size_t kai_get_rhs_offset_rhs_quant_pack_bf16pbiasf32_f32_neon(size_t n_idx) {
     return n_idx * sizeof(float);
 }
 
-size_t kai_get_bias_offset_rhs_pack_kxn_f32p4x12biasf32_f32_bf16_neon(size_t n_idx) {
+size_t kai_get_bias_offset_rhs_quant_pack_bf16pbiasf32_f32_neon(size_t n_idx) {
     return n_idx * sizeof(uint32_t);
 }
 
-size_t kai_get_rhs_packed_offset_rhs_pack_kxn_f32p4x12biasf32_f32_bf16_neon(size_t n_idx, size_t k) {
-    KAI_ASSUME(n_idx % kai_nr == 0);
+size_t kai_get_rhs_packed_offset_rhs_quant_pack_bf16pbiasf32_f32_neon(size_t n_idx, size_t k, size_t nr, size_t kr) {
+    KAI_ASSUME(n_idx % nr == 0);
 
-    return n_idx * (sizeof(uint32_t) + kai_roundup(k, kai_kr) * sizeof(bfloat16_t));
+    return n_idx * (sizeof(uint32_t) + kai_roundup(k, kr) * sizeof(uint16_t));
 }
 
-size_t kai_get_rhs_packed_size_rhs_pack_kxn_f32p4x12biasf32_f32_bf16_neon(size_t n, size_t k) {
-    return kai_get_rhs_packed_offset_rhs_pack_kxn_f32p4x12biasf32_f32_bf16_neon(kai_roundup(n, kai_nr), k);
+size_t kai_get_rhs_packed_size_rhs_quant_pack_bf16pbiasf32_f32_neon(size_t n, size_t k, size_t nr, size_t kr) {
+    return kai_get_rhs_packed_offset_rhs_quant_pack_bf16pbiasf32_f32_neon(kai_roundup(n, nr), k, nr, kr);
 }
 
-void kai_run_rhs_pack_kxn_f32p4x12biasf32_f32_bf16_neon(
+void kai_run_rhs_quant_pack_bf16pbiasf32_f32_neon(
     size_t num_groups, size_t n, size_t k, size_t nr, size_t kr, size_t sr, size_t rhs_stride, const void* rhs,
     const void* bias, const void* scale, void* rhs_packed, size_t extra_bytes, const void* params) {
     KAI_ASSUME(num_groups == 1);
-    KAI_ASSUME(nr == kai_nr);
-    KAI_ASSUME(kr == kai_kr);
     KAI_ASSUME(sr == 1);
     KAI_ASSUME(rhs != NULL);
     KAI_ASSUME(scale == NULL);
     KAI_ASSUME(rhs_packed != NULL);
     KAI_ASSUME(extra_bytes == 0);
     KAI_ASSUME(params == NULL);
+    KAI_ASSUME(nr <= MAX_NR);
 
     size_t height = k;
     const size_t width = n;
@@ -69,17 +65,16 @@ void kai_run_rhs_pack_kxn_f32p4x12biasf32_f32_bf16_neon(
 
     // Fill zeros if bias is nullptr
     size_t bias_step = nr * sizeof(float);
+    uint8_t zero_bias[MAX_NR * sizeof(float)];
 
-    void* zero_bias = NULL;
     if (bias == NULL) {
-        zero_bias = alloca(bias_step);
         memset(zero_bias, 0, bias_step);
         bias_step = 0;
     }
 
     const void* bias_ptr = bias == NULL ? zero_bias : bias;
 
-    size_t out_stride = kai_nr * kai_roundup(height, 4) * sizeof(bfloat16_t) + kai_nr * sizeof(uint32_t);
+    size_t out_stride = nr * kai_roundup(height, kr) * sizeof(uint16_t) + nr * sizeof(uint32_t);
 
     __asm__ __volatile__(
         "mov x22, %x[width]\n"

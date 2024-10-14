@@ -160,6 +160,16 @@ struct MatMulMethod {
     /// @return The size in bytes.
     std::function<size_t(size_t n, size_t k)> fn_get_packed_rhs_size;
 
+    /// Gets the size in bytes of the packed RHS matrix.
+    ///
+    /// @param[in] n Size of the matrix in N dimension.
+    /// @param[in] k Size of the matrix in K dimension.
+    /// @param[in] nr Block size in N dimension.
+    /// @param[in] kr Block size in K dimension.
+    ///
+    /// @return The size in bytes.
+    std::function<size_t(size_t n, size_t k, size_t nr, size_t kr)> fn_get_packed_rhs_size_generic_block_size;
+
     /// Gets the offset in bytes of the packed RHS matrix in the RHS packing kernel
     ///
     /// @param[in] n_idx Coordinate of the matrix in N dimension.

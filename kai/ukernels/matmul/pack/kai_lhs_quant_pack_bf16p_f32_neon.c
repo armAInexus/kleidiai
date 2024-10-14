@@ -8,66 +8,54 @@
 #error This file must be compiled for AArch64, FEAT_BF16.
 #else  // Architectural features check.
 
+#define MAX_MR 8
+
 #include <arm_neon.h>
 #include <stddef.h>
 #include <stdint.h>
 
 #include "kai/kai_common.h"
 
-static const size_t kai_mr = 8;
-static const size_t kai_kr = 4;
-static const size_t kai_sr = 1;
-
-size_t kai_get_m_step_lhs_pack_f32p8x4_bf16_neon(size_t mr) {
-    KAI_ASSUME(mr == kai_mr);
-    KAI_UNUSED(mr);
-
-    return kai_mr;
+size_t kai_get_m_step_lhs_quant_pack_bf16p_f32_neon(size_t mr) {
+    return mr;
 }
 
-size_t kai_get_lhs_offset_lhs_pack_f32p8x4_bf16_neon(size_t m_idx, size_t lhs_stride) {
-    KAI_ASSUME(m_idx % (kai_mr) == 0);
-
+size_t kai_get_lhs_offset_lhs_quant_pack_bf16p_f32_neon(size_t m_idx, size_t lhs_stride) {
     return m_idx * lhs_stride;
 }
 
-size_t kai_get_lhs_packed_offset_lhs_pack_f32p8x4_bf16_neon(size_t m_idx, size_t k) {
-    KAI_ASSUME(m_idx % kai_mr == 0);
+size_t kai_get_lhs_packed_offset_lhs_quant_pack_bf16p_f32_neon(
+    size_t m_idx, size_t k, size_t mr, size_t kr, size_t sr) {
+    KAI_UNUSED(sr);
+    KAI_ASSUME(m_idx % mr == 0);
 
-    return m_idx * kai_roundup(k, kai_kr) * sizeof(bfloat16_t);
+    return m_idx * kai_roundup(k, kr) * sizeof(uint16_t);
 }
 
-size_t kai_get_lhs_packed_size_lhs_pack_f32p8x4_bf16_neon(size_t m, size_t k, size_t mr, size_t kr, size_t sr) {
-    KAI_ASSUME(mr == kai_mr);
-    KAI_ASSUME(kr == kai_kr);
-    KAI_ASSUME(sr == kai_sr);
-
-    KAI_UNUSED(mr);
-    KAI_UNUSED(kr);
+size_t kai_get_lhs_packed_size_lhs_quant_pack_bf16p_f32_neon(size_t m, size_t k, size_t mr, size_t kr, size_t sr) {
     KAI_UNUSED(sr);
 
-    return kai_roundup(m, kai_mr) * kai_roundup(k, kai_kr) * sizeof(bfloat16_t);
+    return kai_roundup(m, mr) * kai_roundup(k, kr) * sizeof(uint16_t);
 }
 
-void kai_run_lhs_pack_f32p8x4_bf16_neon(
-    size_t m, size_t k, size_t mr, size_t kr, size_t sr, size_t m_idx_start, const void* lhs, size_t lhs_stride,
-    void* lhs_packed) {
-    KAI_ASSUME(mr == kai_mr);
-    KAI_ASSUME(kr == kai_kr);
-    KAI_ASSUME(sr == kai_sr);
+void kai_run_lhs_quant_pack_bf16p_f32_neon(
+    size_t m, size_t k, size_t mr, size_t kr, size_t sr, size_t m_idx_start, const float* lhs, size_t lhs_stride,
+    uint16_t* lhs_packed) {
+    KAI_UNUSED(sr);
     KAI_ASSUME(lhs != NULL);
     KAI_ASSUME(lhs_packed != NULL);
 
     KAI_ASSUME(m_idx_start == 0);
+    KAI_ASSUME(mr <= MAX_MR);
 
-    const size_t block_height = kai_mr;
+    const size_t block_height = mr;
     const size_t row_offset = 0;
 
-    const void* in[block_height];
+    const void* in[MAX_MR];
 
     for (size_t block_y = 0; block_y < m; block_y += block_height) {
         const size_t height = KAI_MIN(m - block_y, block_height);
-        void* out = (char*)lhs_packed + block_y * kai_roundup(k, kr) * sizeof(bfloat16_t);
+        void* out = (char*)lhs_packed + block_y * kai_roundup(k, kr) * sizeof(uint16_t);
         size_t width = k;
 
         for (size_t y = 0; y < height; y++) {

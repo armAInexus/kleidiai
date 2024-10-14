@@ -28,10 +28,10 @@
 
 // Include micro-kernel variants
 #include "kai/kai_common.h"
-#include "kai_lhs_pack_f32p8x4_bf16_neon.h"
+#include "kai_lhs_quant_pack_bf16p_f32_neon.h"
 #include "kai_matmul_clamp_f32_bf16p_bf16p12x1biasf32_8x12x4_neon_mmla.h"
 #include "kai_matmul_clamp_f32_bf16p_bf16p_interface.h"
-#include "kai_rhs_pack_kxn_f32p4x12biasf32_f32_bf16_neon.h"
+#include "kai_rhs_quant_pack_bf16pbiasf32_f32_neon.h"
 
 inline float bf16_to_float(const bfloat16_t* v) {
     const uint16_t uint_rep = *reinterpret_cast<const uint16_t*>(v);
@@ -180,9 +180,9 @@ bool is_output_correct(
 int main() {
     // Parameters of the matrix multiplication. Change these values to see how the micro-kernels operate on different
     // sized matrices
-    const size_t M = 5;  // Rows of LHS and DST matrices
-    const size_t N = 8;  // Columns of RHS and DST matrices, and length of the Bias vector.
-    const size_t K = 7;  // Columns of LHS, rows of RHS matrices
+    const size_t M = 25;   // Rows of LHS and DST matrices
+    const size_t N = 28;   // Columns of RHS and DST matrices, and length of the Bias vector.
+    const size_t K = 117;  // Columns of LHS, rows of RHS matrices
 
     const size_t lhs_size = M * K;
     const size_t rhs_size = N * K;
@@ -235,7 +235,7 @@ int main() {
     const size_t sr = ukernel.get_sr();
 
     // In a single row, we pack nr bias values followed by K rows of nr RHS values
-    const size_t rhs_packed_size = kai_get_rhs_packed_size_rhs_pack_kxn_f32p4x12biasf32_f32_bf16_neon(N, K);
+    const size_t rhs_packed_size = kai_get_rhs_packed_size_rhs_quant_pack_bf16pbiasf32_f32_neon(N, K, nr, kr);
     uint8_t* rhs_packed = new uint8_t[rhs_packed_size];
 
     const size_t lhs_stride = K * sizeof(float);
@@ -243,11 +243,11 @@ int main() {
     const size_t dst_stride_row = N * sizeof(float);
     const size_t dst_stride_col = sizeof(float);
 
-    const size_t lhs_packed_size = kai_get_lhs_packed_size_lhs_pack_f32p8x4_bf16_neon(M, K, mr, kr, sr);
+    const size_t lhs_packed_size = kai_get_lhs_packed_size_lhs_quant_pack_bf16p_f32_neon(M, K, mr, kr, sr);
     bfloat16_t* lhs_packed = new bfloat16_t[lhs_packed_size];
 
     // Packing only needs to be performed once if the contents of the bias and RHS matrices are expected to be constant.
-    kai_run_rhs_pack_kxn_f32p4x12biasf32_f32_bf16_neon(
+    kai_run_rhs_quant_pack_bf16pbiasf32_f32_neon(
         1, N, K, nr, kr, sr,  // Packing arguments
         rhs_stride,           // RHS stride
         rhs,                  // RHS
@@ -272,7 +272,7 @@ int main() {
 
     const auto timer_matmul_start = std::chrono::high_resolution_clock::now();
 
-    kai_run_lhs_pack_f32p8x4_bf16_neon(M, K, mr, kr, sr, 0 /* m_idx_start */, lhs, lhs_stride, lhs_packed);
+    kai_run_lhs_quant_pack_bf16p_f32_neon(M, K, mr, kr, sr, 0 /* m_idx_start */, lhs, lhs_stride, lhs_packed);
 
     ukernel.run_matmul(
         M, N, K,           // Dimensions
