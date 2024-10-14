@@ -15,6 +15,7 @@
 #include "test/common/data_type.hpp"
 #include "test/common/int4.hpp"
 #include "test/common/memory.hpp"
+#include "test/common/round.hpp"
 
 namespace kai::test {
 
@@ -109,5 +110,24 @@ std::vector<uint8_t> reduce_add(
     size_t dimension) {
     return reduce_any_op<ReductionOperator::ADD>(src, src_format, height, width, dst_format, dimension);
 }
+
+template <typename Value, typename Accumulator>
+std::vector<uint8_t> reduce_add_x(const void* src, size_t height, size_t width) {
+    std::vector<uint8_t> dst(round_up_division(height * size_in_bits<Accumulator>, 8));
+
+    for (size_t y = 0; y < height; ++y) {
+        Accumulator acc = 0;
+
+        for (size_t x = 0; x < width; ++x) {
+            acc += static_cast<Accumulator>(read_array<Value>(src, y * width + x));
+        }
+
+        write_array<Accumulator>(dst.data(), y, acc);
+    }
+
+    return dst;
+}
+
+template std::vector<uint8_t> reduce_add_x<int8_t, int32_t>(const void* src, size_t height, size_t width);
 
 }  // namespace kai::test

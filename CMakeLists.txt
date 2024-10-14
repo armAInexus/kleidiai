@@ -118,6 +118,7 @@ set(KLEIDIAI_FILES_SME
     kai/ukernels/matmul/pack/kai_rhs_pack_kxn_f32p2vlx1biasf32_f32_f32_sme.c
     kai/ukernels/matmul/pack/kai_lhs_pack_f32p2vlx1_f32_sme.c
     kai/ukernels/matmul/pack/kai_rhs_pack_kxn_f32pb_f32_f32_16vlx1_sme.c
+    kai/ukernels/matmul/pack/kai_rhs_pack_kxn_qsi8cp2vlx4sb_qsi8_f32_i32_sme.c
 )
 
 set(KLEIDIAI_FILES_SME2
@@ -180,12 +181,14 @@ if(KLEIDIAI_BUILD_TESTS)
 
         test/reference/binary_elementwise.cpp
         test/reference/matmul.cpp
+        test/reference/matmul_pack.cpp
         test/reference/fill.cpp
         test/reference/pack.cpp
         test/reference/quantize.cpp
         test/reference/reduce.cpp
         test/reference/transpose.cpp
         test/reference/cast.cpp
+        test/reference/reorder.cpp
     )
 
     target_compile_options(kleidiai_test_framework
@@ -205,6 +208,7 @@ if(KLEIDIAI_BUILD_TESTS)
         test/tests/matmul_clamp_f32_qai8dxp_qsi4cxp_test.cpp
         test/tests/matmul_clamp_f32_qsi8d32p_qsi4c32p_test.cpp
         test/tests/matmul_clamp_f32_qai8dxp_qsi4c32p_test.cpp
+        test/tests/matmul_clamp_qai8_qai8p_qsi8cp_test.cpp
     )
 
     target_link_libraries(kleidiai_test

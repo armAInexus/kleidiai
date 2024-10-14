@@ -33,4 +33,17 @@ std::vector<uint8_t> reduce_add(
     const void* src, const DataFormat& src_format, size_t height, size_t width, const DataFormat& dst_format,
     size_t dimension);
 
+/// Accumulates the matrix along the first dimension.
+///
+/// @tparam Value The data type of the matrix value.
+/// @tparam Accumulator The data type of the accumulator.
+///
+/// @param[in] src The input data.
+/// @param[in] height The number of rows of the input matrix.
+/// @param[in] width The number of columns of the input matrix.
+///
+/// @return The vector containing the sum of each input matrix row.
+template <typename Value, typename Accumulator>
+std::vector<uint8_t> reduce_add_x(const void* src, size_t height, size_t width);
+
 }  // namespace kai::test
