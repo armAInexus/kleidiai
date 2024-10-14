@@ -122,6 +122,7 @@ set(KLEIDIAI_FILES_SME2
 )
 
 add_library(kleidiai)
+set_target_properties(kleidiai PROPERTIES VERSION ${CMAKE_PROJECT_VERSION} SOVERSION 0)
 target_sources(kleidiai PRIVATE ${KLEIDIAI_FILES_SCALAR})
 
 # Selectively enable architecture features.
@@ -154,6 +155,12 @@ target_include_directories(kleidiai
 target_compile_options(kleidiai
     PRIVATE ${KLEIDIAI_WARNING_FLAGS}
 )
+
+include(GNUInstallDirs)
+install(TARGETS kleidiai
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 
 if(KLEIDIAI_BUILD_TESTS)
     include(FetchGTest)
@@ -207,6 +214,11 @@ if(KLEIDIAI_BUILD_TESTS)
         PRIVATE GTest::gtest_main
     )
 
+    install(TARGETS kleidiai_test
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+
     # Cross-compiling is a common use case which creates a conflict if DISCOVERY_MODE is set to POST_BUILD (by default)
     # since the host platform does not match the target. Setting the mode to PRE_TEST avoids this conflict.
     gtest_discover_tests(kleidiai_test DISCOVERY_MODE PRE_TEST)
@@ -236,6 +248,11 @@ if(KLEIDIAI_BUILD_BENCHMARK)
         kleidiai_benchmark
         kleidiai
         benchmark::benchmark)
+
+    install(TARGETS kleidiai_benchmark
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 
     set(KLEIDIAI_BENCHMARK_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
     target_include_directories(kleidiai_benchmark
