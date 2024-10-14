@@ -13,7 +13,6 @@ endif()
 fetchcontent_declare(googlebench
     GIT_REPOSITORY https://github.com/google/benchmark.git
     GIT_TAG        v1.8.4
-    FIND_PACKAGE_ARGS NAMES benchmark
 )
 
 fetchcontent_makeavailable(googlebench)
