@@ -34,6 +34,9 @@ size_t kai_get_rhs_offset_rhs_pack_kxn_qsi4cxp_qs4cxs1s0(size_t n_idx, size_t rh
 }
 
 size_t kai_get_rhs_packed_stride_rhs_pack_kxn_qsi4cxp_qs4cxs1s0(size_t k, size_t nr, size_t kr, size_t sr) {
+    KAI_UNUSED(kr);
+    KAI_UNUSED(sr);
+
     const size_t k_internal = kai_k_roundedup(k);
 
     KAI_ASSERT((k_internal % 2) == 0);

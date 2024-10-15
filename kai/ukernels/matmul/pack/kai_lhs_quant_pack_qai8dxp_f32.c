@@ -25,6 +25,9 @@ inline static size_t kai_k_roundedup(size_t k) {
 }
 
 inline static size_t kai_lhs_packed_stride(size_t k, size_t mr, size_t kr, size_t sr) {
+    KAI_UNUSED(kr);
+    KAI_UNUSED(sr);
+
     const size_t k_internal = kai_k_roundedup(k);
 
     KAI_ASSERT((k_internal % 2) == 0);
