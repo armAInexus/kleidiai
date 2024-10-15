@@ -113,7 +113,8 @@ std::vector<uint8_t> compute_symmetric_per_block_quantization_info(
 
 template <typename SrcType, typename DstType, typename ScaleType>
 std::vector<uint8_t> quantize_symmetric_per_block(
-    const void* src, const void* scales, size_t height, size_t width, size_t quant_width, size_t stride, size_t dst_size) {
+    const void* src, const void* scales, size_t height, size_t width, size_t quant_width, size_t stride,
+    size_t dst_size) {
     static_assert(is_floating_point<SrcType>);
     static_assert(is_integral<DstType>);
     static_assert(is_floating_point<ScaleType>);
@@ -160,16 +161,21 @@ std::tuple<std::vector<uint8_t>, std::vector<uint8_t>> quantize_symmetric_per_bl
     }
 }
 
-template std::tuple<std::vector<uint8_t>, std::vector<uint8_t>> quantize_symmetric_per_block_dynamic<
-    float, Int4, Float16>(const void* src, size_t height, size_t width, size_t quant_width, size_t stride, size_t dst_size);
-template std::tuple<std::vector<uint8_t>, std::vector<uint8_t>> quantize_symmetric_per_block_dynamic<
-    float, Int4, float>(const void* src, size_t height, size_t width, size_t quant_width, size_t stride, size_t dst_size);
-template std::tuple<std::vector<uint8_t>, std::vector<uint8_t>> quantize_symmetric_per_block_dynamic<
-    float, Int4, BFloat16>(const void* src, size_t height, size_t width, size_t quant_width, size_t stride, size_t dst_size);
-template std::tuple<std::vector<uint8_t>, std::vector<uint8_t>> quantize_symmetric_per_block_dynamic<
-    float, int8_t, Float16>(const void* src, size_t height, size_t width, size_t quant_width, size_t stride, size_t dst_size);
-template std::tuple<std::vector<uint8_t>, std::vector<uint8_t>> quantize_symmetric_per_block_dynamic<
-    float, int8_t, float>(const void* src, size_t height, size_t width, size_t quant_width, size_t stride, size_t dst_size);
+template std::tuple<std::vector<uint8_t>, std::vector<uint8_t>>
+quantize_symmetric_per_block_dynamic<float, Int4, Float16>(
+    const void* src, size_t height, size_t width, size_t quant_width, size_t stride, size_t dst_size);
+template std::tuple<std::vector<uint8_t>, std::vector<uint8_t>>
+quantize_symmetric_per_block_dynamic<float, Int4, float>(
+    const void* src, size_t height, size_t width, size_t quant_width, size_t stride, size_t dst_size);
+template std::tuple<std::vector<uint8_t>, std::vector<uint8_t>>
+quantize_symmetric_per_block_dynamic<float, Int4, BFloat16>(
+    const void* src, size_t height, size_t width, size_t quant_width, size_t stride, size_t dst_size);
+template std::tuple<std::vector<uint8_t>, std::vector<uint8_t>>
+quantize_symmetric_per_block_dynamic<float, int8_t, Float16>(
+    const void* src, size_t height, size_t width, size_t quant_width, size_t stride, size_t dst_size);
+template std::tuple<std::vector<uint8_t>, std::vector<uint8_t>>
+quantize_symmetric_per_block_dynamic<float, int8_t, float>(
+    const void* src, size_t height, size_t width, size_t quant_width, size_t stride, size_t dst_size);
 
 template <typename SrcType, typename DstType, typename ScaleType, typename ZeroPointType>
 std::tuple<std::vector<uint8_t>, std::vector<uint8_t>> compute_asymmetric_per_block_quantization_info(

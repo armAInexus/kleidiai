@@ -147,7 +147,8 @@ std::vector<uint8_t> compute_symmetric_per_block_quantization_info(
 /// @return The quantized data matrix.
 template <typename SrcType, typename DstType, typename ScaleType>
 std::vector<uint8_t> quantize_symmetric_per_block(
-    const void* src, const void* scales, size_t height, size_t width, size_t quant_width,  size_t stride, size_t dst_size);
+    const void* src, const void* scales, size_t height, size_t width, size_t quant_width, size_t stride,
+    size_t dst_size);
 
 /// Dynamically quantizes each block of the matrix using symmetric quantization method.
 ///

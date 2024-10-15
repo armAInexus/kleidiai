@@ -397,7 +397,8 @@ INSTANTIATE_TEST_SUITE_P(
     MatMul, MatMulTest_f32_qai8dxp_qsi4cxp,
     testing::Combine(
         testing::Range<size_t>(0, variants_kai_matmul_clamp_f32_qai8dxp_qsi4cxp.size()),
-        testing::Values(MatMulShape{16, 32, 64}, MatMulShape{16, 32, 36}, MatMulShape{8, 32, 64}, MatMulShape{15, 31, 45})),
+        testing::Values(
+            MatMulShape{16, 32, 64}, MatMulShape{16, 32, 36}, MatMulShape{8, 32, 64}, MatMulShape{15, 31, 45})),
     [](const auto& info) {
         const std::string name{variants_kai_matmul_clamp_f32_qai8dxp_qsi4cxp.at(std::get<size_t>(info.param)).name};
         const auto shape = std::get<MatMulShape>(info.param);
