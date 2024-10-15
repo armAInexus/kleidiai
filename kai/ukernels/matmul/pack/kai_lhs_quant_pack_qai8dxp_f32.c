@@ -17,7 +17,7 @@
 static const size_t kai_num_bytes_per_multiplier = sizeof(float);
 static const size_t kai_num_bytes_per_offset = sizeof(int32_t);
 
-inline static size_t kai_k_roundedup(size_t k, size_t kr, size_t sr) {
+inline static size_t kai_k_roundedup(size_t k, size_t kr) {
     // Since we pack a float and int32 value at the end of the row,
     // we must make sure that k is a multiple of 4 for memory alignment.
     size_t kr_sr_roundedup4 = 32;
@@ -25,7 +25,7 @@ inline static size_t kai_k_roundedup(size_t k, size_t kr, size_t sr) {
 }
 
 inline static size_t kai_lhs_packed_stride(size_t k, size_t mr, size_t kr, size_t sr) {
-    const size_t k_internal = kai_k_roundedup(k, kr, sr);
+    const size_t k_internal = kai_k_roundedup(k, kr);
 
     KAI_ASSERT((k_internal % 2) == 0);
 
@@ -66,7 +66,7 @@ void kai_run_lhs_quant_pack_qai8dxp_f32(
     const float* src_ptr = lhs;
 
     const size_t dst_stride = kai_lhs_packed_stride(k, mr, kr, sr);
-    const size_t k_internal = kai_k_roundedup(k, kr, sr);
+    const size_t k_internal = kai_k_roundedup(k, kr);
     const int32_t k_block_len = (int32_t)(kr / sr);
 
     for (size_t row_idx = 0; row_idx < num_rows; ++row_idx) {
