@@ -16,7 +16,7 @@ static const size_t kai_num_bytes_sum_rhs = sizeof(int32_t);
 static const size_t kai_num_bytes_multiplier_rhs = sizeof(float);
 static const size_t kai_num_bytes_bias = sizeof(float);
 
-inline static size_t kai_k_roundedup(size_t k, size_t kr, size_t sr) {
+inline static size_t kai_k_roundedup(size_t k, size_t kr) {
     // Since we pack a float and int32 value at the end of the row,
     // we must make sure that k is a multiple of 4 for alignment
     size_t kr_sr_roundedup4 = 32;
@@ -32,7 +32,7 @@ size_t kai_get_rhs_offset_rhs_pack_nxk_qsi4cxp_qs4cxs1s0(size_t n_idx, size_t rh
 }
 
 size_t kai_get_rhs_packed_stride_rhs_pack_nxk_qsi4cxp_qs4cxs1s0(size_t k, size_t nr, size_t kr, size_t sr) {
-    const size_t k_internal = kai_k_roundedup(k, kr, sr);
+    const size_t k_internal = kai_k_roundedup(k, kr);
 
     KAI_ASSERT((k_internal % 2) == 0);
 
@@ -68,9 +68,9 @@ void kai_run_rhs_pack_nxk_qsi4cxp_qs4cxs1s0(
 
     const size_t rhs_zero_point = params->rhs_zero_point;
     const size_t rhs_packed_stride = kai_get_rhs_packed_stride_rhs_pack_nxk_qsi4cxp_qs4cxs1s0(k, nr, kr, sr);
-    const size_t k_internal = kai_k_roundedup(k, kr, sr);
+    const size_t k_internal = kai_k_roundedup(k, kr);
     const size_t dst_num_rows = kai_roundup(n, nr) / nr;
-    const size_t dst_num_bytes_per_row = nr * (kai_k_roundedup(k, kr, sr) / 2);
+    const size_t dst_num_bytes_per_row = nr * (kai_k_roundedup(k, kr) / 2);
     const size_t block_length_in_bytes = kr / sr;
     const size_t k_interleaved_v = 16U;
     const size_t rhs_stride = kai_roundup(k, 2) / 2;
