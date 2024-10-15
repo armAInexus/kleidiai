@@ -20,7 +20,7 @@ static const size_t kai_num_bytes_per_offset = sizeof(int32_t);
 inline static size_t kai_k_roundedup(size_t k, size_t kr, size_t sr) {
     // Since we pack a float and int32 value at the end of the row,
     // we must make sure that k is a multiple of 4 for memory alignment.
-    size_t kr_sr_roundedup4 = kai_roundup(kr * sr, 4);
+    size_t kr_sr_roundedup4 = 32;
     return kai_roundup(k, kr_sr_roundedup4);
 }
 
