@@ -62,10 +62,10 @@ def kai_cpu_neon():
     return ""
 
 def kai_cpu_sme():
-    return "+sve+sve2"
+    return "+sve+sve2+sme"
 
 def kai_cpu_sme2():
-    return "+sve+sve2"
+    return "+sve+sve2+sme+sme2"
 
 # MSVC compiler options
 def kai_msvc_std_copts():
