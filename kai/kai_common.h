@@ -78,13 +78,13 @@ inline static size_t kai_get_datatype_size_in_bytes(enum kai_datatype dt) {
 /// @param[in] f16 The f16 value
 ///
 /// @return the f32 value
-inline static float kai_cast_f32_f16(uint16_t f16) {
 #if defined(__ARM_NEON)
+inline static float kai_cast_f32_f16(uint16_t f16) {
     __fp16 f32 = 0;
     memcpy(&f32, &f16, sizeof(uint16_t));
     return (float)f32;
-#endif
 }
+#endif
 
 /// Converts a scalar bf16 value to f32
 /// @param[in] bf16 The f16 value
@@ -116,14 +116,14 @@ inline static uint16_t kai_cast_bf16_f32(float f32) {
 /// @param[in] f32 The f32 value
 ///
 /// @return the f16 value
-inline static uint16_t kai_cast_f16_f32(float f32) {
 #if defined(__ARM_NEON)
+inline static uint16_t kai_cast_f16_f32(float f32) {
     uint16_t f16 = 0;
     __fp16 tmp = f32;
     memcpy(&f16, &tmp, sizeof(uint16_t));
     return f16;
-#endif
 }
+#endif
 
 inline static size_t kai_roundup(size_t a, size_t b) {
     return ((a + b - 1) / b) * b;
