@@ -133,7 +133,12 @@ inline static size_t kai_roundup(size_t a, size_t b) {
 /// Gets the SME vector length for 8-bit elements.
 inline static uint64_t kai_get_sme_vector_length_u8(void) {
     uint64_t res = 0;
-    __asm__ __volatile__("rdsvl %0, #1\n" : "=r"(res) :);
+    __asm__ __volatile__(
+        ".inst 0x04bf5827 // rdsvl x7, #1\n"
+        "mov %0, x7\n"
+        : "=r"(res)
+        : /* no inputs */
+        : "x7");
     return res;
 }
 
