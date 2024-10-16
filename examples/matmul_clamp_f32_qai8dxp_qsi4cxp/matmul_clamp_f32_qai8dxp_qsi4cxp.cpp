@@ -591,7 +591,6 @@ int main(int argc, char** argv) {
             //------------------------------------
             for (size_t idx_variant = 0; idx_variant < num_ukernel_variants; ++idx_variant) {
                 std::cout << "Testing " << ukernel_variants[idx_variant].name << std::endl;
-                ;
 
                 // Get the packing parameters
                 const size_t mr = ukernel_variants[idx_variant].ukernel.get_mr();

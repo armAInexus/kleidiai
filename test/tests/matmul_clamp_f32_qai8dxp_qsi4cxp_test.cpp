@@ -358,6 +358,6 @@ INSTANTIATE_TEST_SUITE_P(
     MatMul, MatMulTest_f32_qai8dxp_qsi4cxp,
     testing::Combine(
         testing::Range<size_t>(0, variants_kai_matmul_clamp_f32_qai8dxp_qsi4cxp.size()),
-        testing::Values(MatMulShape{16, 32, 64})));
+        testing::Values(MatMulShape{16, 32, 64}, MatMulShape{16, 32, 36})));
 
 }  // namespace kai::test
