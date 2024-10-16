@@ -117,10 +117,12 @@ set(KLEIDIAI_FILES_NEON_I8MM
 set(KLEIDIAI_FILES_SME
     kai/ukernels/matmul/pack/kai_rhs_pack_kxn_f32p2vlx1biasf32_f32_f32_sme.c
     kai/ukernels/matmul/pack/kai_lhs_pack_f32p2vlx1_f32_sme.c
+    kai/ukernels/matmul/pack/kai_rhs_pack_kxn_f32pb_f32_f32_16vlx1_sme.c
 )
 
 set(KLEIDIAI_FILES_SME2
     kai/ukernels/matmul/matmul_clamp_f32_f32p_f32p/kai_matmul_clamp_f32_f32p2vlx1_f32p2vlx1biasf32_sme2_mopa.c
+    kai/ukernels/matmul/matmul_clamp_f32_f32_f32p/kai_matmul_clamp_f32_f32_f32pb_1x16vl_sme2_mla.c
 )
 
 add_library(kleidiai)
@@ -199,6 +201,7 @@ if(KLEIDIAI_BUILD_TESTS)
 
     add_executable(kleidiai_test
         test/tests/matmul_test.cpp
+        test/tests/matmul_clamp_f32_f32_f32p_test.cpp
         test/tests/matmul_clamp_f32_qai8dxp_qsi4cxp_test.cpp
         test/tests/matmul_clamp_f32_qsi8d32p_qsi4c32p_test.cpp
         test/tests/matmul_clamp_f32_qai8dxp_qsi4c32p_test.cpp

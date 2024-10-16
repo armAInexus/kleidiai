@@ -10,6 +10,7 @@ KleidiAI follows the [Semantic Versioning](https://semver.org/) specification fo
 
 ## v0.4.0 -- Upcoming Release
 
+- Add SME2 F32 GEMV micro-kernel.
 - Micro-kernels to compute the matrix multiplication of dynamically quantized 8-bit integer (QAI8DX) LHS matrix, which typically holds the neural network activations, and quantized 4-bit integer (QSI4CX) RHS matrix, which typically holds the neural network weights, and the accumulation of the result into a single-precision (F32) output, optimized using the Arm® CPU feature FEAT_DotProd.
 
 ## v0.3.0
