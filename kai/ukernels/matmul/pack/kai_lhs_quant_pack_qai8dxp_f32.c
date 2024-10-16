@@ -18,10 +18,9 @@ static const size_t kai_num_bytes_per_multiplier = sizeof(float);
 static const size_t kai_num_bytes_per_offset = sizeof(int32_t);
 
 inline static size_t kai_k_roundedup(size_t k) {
-    // Since we pack a float and int32 value at the end of the row,
-    // we must make sure that k is a multiple of 4 for memory alignment.
-    size_t kr_sr_roundedup4 = 32;
-    return kai_roundup(k, kr_sr_roundedup4);
+    // Round up k to be a multiple of 32.
+    size_t kai_k_multiple_of = 32;
+    return kai_roundup(k, kai_k_multiple_of);
 }
 
 inline static size_t kai_lhs_packed_stride(size_t k, size_t mr, size_t kr, size_t sr) {

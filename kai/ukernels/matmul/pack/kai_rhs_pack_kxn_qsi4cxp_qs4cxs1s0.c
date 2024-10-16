@@ -17,10 +17,9 @@ static const size_t kai_num_bytes_multiplier_rhs = sizeof(float);
 static const size_t kai_num_bytes_bias = sizeof(float);
 
 inline static size_t kai_k_roundedup(size_t k) {
-    // Since we pack a float and int32 value at the end of the row,
-    // we must make sure that k is a multiple of 4 for alignment
-    size_t kr_sr_roundedup4 = 32;
-    return kai_roundup(k, kr_sr_roundedup4);
+    // Round up k to be a multiple of 32.
+    size_t kai_k_multiple_of = 32;
+    return kai_roundup(k, kai_k_multiple_of);
 }
 
 size_t kai_get_n_step_rhs_pack_kxn_qsi4cxp_qs4cxs1s0(size_t nr) {
