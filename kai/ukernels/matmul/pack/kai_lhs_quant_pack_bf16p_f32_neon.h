@@ -69,7 +69,7 @@ size_t kai_get_lhs_packed_size_lhs_quant_pack_bf16p_f32_neon(size_t m, size_t k,
 /// @param[in] m_idx_start Unused. Must be 0.
 /// @param[in] lhs LHS matrix data buffer.
 /// @param[in] lhs_stride Row stride in bytes of the LHS matrix.
-/// @param[out] lhs_packed Packed RHS matrix.
+/// @param[out] lhs_packed Packed LHS matrix.
 void kai_run_lhs_quant_pack_bf16p_f32_neon(
     size_t m, size_t k, size_t mr, size_t kr, size_t sr, size_t m_idx_start, const void* lhs, size_t lhs_stride,
     void* lhs_packed);

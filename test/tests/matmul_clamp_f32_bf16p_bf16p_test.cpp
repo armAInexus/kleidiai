@@ -32,13 +32,28 @@
 #include "test/reference/pack.hpp"
 
 // matmul_clamp_f32_bf16p_bf16p
-#include "kai/ukernels/matmul/matmul_clamp_f32_bf16p_bf16p/kai_matmul_clamp_f32_bf16p_bf16p12x1biasf32_8x12x4_neon_mmla.h"
+#include "kai/ukernels/matmul/matmul_clamp_f32_bf16p_bf16p/kai_matmul_clamp_f32_bf16p_bf16p12x4biasf32_8x12x4_neon_mmla.h"
 #include "kai/ukernels/matmul/pack/kai_lhs_quant_pack_bf16p_f32_neon.h"
-#include "kai/ukernels/matmul/pack/kai_rhs_quant_pack_bf16pbiasf32_f32_neon.h"
+#include "kai/ukernels/matmul/pack/kai_rhs_quant_pack_kxn_bf16pbiasf32_f32_neon.h"
 namespace kai::test {
 
 /// List of supported matrix multiplication methods.
 namespace {
+
+/// Adapters for using packing and matmul functions with the unified interface of the test framework
+inline void kai_run_rhs_quant_pack_kxn_bf16pbiasf32_f32_neon_adapter(
+    size_t num_groups, size_t n, size_t k, size_t nr, size_t kr, size_t sr, size_t rhs_stride, const void* rhs,
+    const void* bias, const void* scale, void* rhs_packed, size_t extra_bytes, const void* params) {
+    KAI_UNUSED(num_groups);
+    KAI_UNUSED(scale);
+    KAI_UNUSED(extra_bytes);
+    KAI_UNUSED(params);
+
+    kai_run_rhs_quant_pack_kxn_bf16pbiasf32_f32_neon(
+        n, k, nr, kr, sr, rhs_stride, reinterpret_cast<const float*>(rhs), reinterpret_cast<const float*>(bias),
+        rhs_packed);
+}
+
 const std::array matmul_methods = {
     MatMulMethod{
         .name = "matmul_nt_nt_f32_bf16p_bf16p_8x12_neon_mla",
@@ -60,34 +75,34 @@ const std::array matmul_methods = {
         .bias_format = DataFormat(DataType::FP32),
         .fn_is_supported = cpu_has_bf16,
 
-        .fn_get_mr = kai_get_mr_matmul_clamp_f32_bf16p_bf16p12x1biasf32_8x12x4_neon_mmla,
-        .fn_get_nr = kai_get_nr_matmul_clamp_f32_bf16p_bf16p12x1biasf32_8x12x4_neon_mmla,
-        .fn_get_kr = kai_get_kr_matmul_clamp_f32_bf16p_bf16p12x1biasf32_8x12x4_neon_mmla,
-        .fn_get_sr = kai_get_sr_matmul_clamp_f32_bf16p_bf16p12x1biasf32_8x12x4_neon_mmla,
+        .fn_get_mr = kai_get_mr_matmul_clamp_f32_bf16p_bf16p12x4biasf32_8x12x4_neon_mmla,
+        .fn_get_nr = kai_get_nr_matmul_clamp_f32_bf16p_bf16p12x4biasf32_8x12x4_neon_mmla,
+        .fn_get_kr = kai_get_kr_matmul_clamp_f32_bf16p_bf16p12x4biasf32_8x12x4_neon_mmla,
+        .fn_get_sr = kai_get_sr_matmul_clamp_f32_bf16p_bf16p12x4biasf32_8x12x4_neon_mmla,
 
-        .fn_get_main_m_step = kai_get_m_step_matmul_clamp_f32_bf16p_bf16p12x1biasf32_8x12x4_neon_mmla,
-        .fn_get_pack_rhs_n_step = kai_get_n_step_rhs_quant_pack_bf16pbiasf32_f32_neon,
-        .fn_get_main_n_step = kai_get_n_step_matmul_clamp_f32_bf16p_bf16p12x1biasf32_8x12x4_neon_mmla,
+        .fn_get_main_m_step = kai_get_m_step_matmul_clamp_f32_bf16p_bf16p12x4biasf32_8x12x4_neon_mmla,
+        .fn_get_pack_rhs_n_step = kai_get_n_step_rhs_quant_pack_kxn_bf16pbiasf32_f32_neon,
+        .fn_get_main_n_step = kai_get_n_step_matmul_clamp_f32_bf16p_bf16p12x4biasf32_8x12x4_neon_mmla,
 
         .fn_get_lhs_offset = kai_get_lhs_offset_lhs_quant_pack_bf16p_f32_neon,
         .fn_get_packed_lhs_size = kai_get_lhs_packed_size_lhs_quant_pack_bf16p_f32_neon,
-        .fn_get_packed_lhs_offset = kai_get_lhs_packed_offset_matmul_clamp_f32_bf16p_bf16p12x1biasf32_8x12x4_neon_mmla,
+        .fn_get_packed_lhs_offset = kai_get_lhs_packed_offset_matmul_clamp_f32_bf16p_bf16p12x4biasf32_8x12x4_neon_mmla,
         .fn_pack_lhs = kai_run_lhs_quant_pack_bf16p_f32_neon,
 
-        .fn_get_rhs_offset = kai_get_rhs_offset_rhs_quant_pack_bf16pbiasf32_f32_neon,
+        .fn_get_rhs_offset = kai_get_rhs_offset_rhs_quant_pack_kxn_bf16pbiasf32_f32_neon,
         .fn_get_packed_rhs_size = nullptr,
-        .fn_get_packed_rhs_size_generic_block_size = kai_get_rhs_packed_size_rhs_quant_pack_bf16pbiasf32_f32_neon,
+        .fn_get_packed_rhs_size_generic_block_size = kai_get_rhs_packed_size_rhs_quant_pack_kxn_bf16pbiasf32_f32_neon,
         .fn_get_pack_rhs_packed_rhs_offset = nullptr,
         .fn_get_main_packed_rhs_offset =
-            kai_get_rhs_packed_offset_matmul_clamp_f32_bf16p_bf16p12x1biasf32_8x12x4_neon_mmla,
-        .fn_pack_rhs = kai_run_rhs_quant_pack_bf16pbiasf32_f32_neon,
+            kai_get_rhs_packed_offset_matmul_clamp_f32_bf16p_bf16p12x4biasf32_8x12x4_neon_mmla,
+        .fn_pack_rhs = kai_run_rhs_quant_pack_kxn_bf16pbiasf32_f32_neon_adapter,
 
-        .fn_get_bias_offset = kai_get_bias_offset_rhs_quant_pack_bf16pbiasf32_f32_neon,
+        .fn_get_bias_offset = kai_get_bias_offset_rhs_quant_pack_kxn_bf16pbiasf32_f32_neon,
 
-        .fn_get_dst_offset = kai_get_dst_offset_matmul_clamp_f32_bf16p_bf16p12x1biasf32_8x12x4_neon_mmla,
-        .fn_get_dst_size = kai_get_dst_size_matmul_clamp_f32_bf16p_bf16p12x1biasf32_8x12x4_neon_mmla,
+        .fn_get_dst_offset = kai_get_dst_offset_matmul_clamp_f32_bf16p_bf16p12x4biasf32_8x12x4_neon_mmla,
+        .fn_get_dst_size = kai_get_dst_size_matmul_clamp_f32_bf16p_bf16p12x4biasf32_8x12x4_neon_mmla,
 
-        .fn_matmul_f32_bf16p_bf16p = kai_run_matmul_clamp_f32_bf16p_bf16p12x1biasf32_8x12x4_neon_mmla,
+        .fn_matmul_f32_bf16p_bf16p = kai_run_matmul_clamp_f32_bf16p_bf16p12x4biasf32_8x12x4_neon_mmla,
     },
     MatMulMethod{
         .name = "matmul_nt_nt_f32_bf16p_bf16p_8x12_neon_mla_opt_bias",
@@ -109,36 +124,36 @@ const std::array matmul_methods = {
         .bias_format = DataFormat(DataType::UNKNOWN),
         .fn_is_supported = cpu_has_bf16,
 
-        .fn_get_mr = kai_get_mr_matmul_clamp_f32_bf16p_bf16p12x1biasf32_8x12x4_neon_mmla,
-        .fn_get_nr = kai_get_nr_matmul_clamp_f32_bf16p_bf16p12x1biasf32_8x12x4_neon_mmla,
-        .fn_get_kr = kai_get_kr_matmul_clamp_f32_bf16p_bf16p12x1biasf32_8x12x4_neon_mmla,
-        .fn_get_sr = kai_get_sr_matmul_clamp_f32_bf16p_bf16p12x1biasf32_8x12x4_neon_mmla,
+        .fn_get_mr = kai_get_mr_matmul_clamp_f32_bf16p_bf16p12x4biasf32_8x12x4_neon_mmla,
+        .fn_get_nr = kai_get_nr_matmul_clamp_f32_bf16p_bf16p12x4biasf32_8x12x4_neon_mmla,
+        .fn_get_kr = kai_get_kr_matmul_clamp_f32_bf16p_bf16p12x4biasf32_8x12x4_neon_mmla,
+        .fn_get_sr = kai_get_sr_matmul_clamp_f32_bf16p_bf16p12x4biasf32_8x12x4_neon_mmla,
 
-        .fn_get_main_m_step = kai_get_m_step_matmul_clamp_f32_bf16p_bf16p12x1biasf32_8x12x4_neon_mmla,
-        .fn_get_pack_rhs_n_step = kai_get_n_step_rhs_quant_pack_bf16pbiasf32_f32_neon,
-        .fn_get_main_n_step = kai_get_n_step_matmul_clamp_f32_bf16p_bf16p12x1biasf32_8x12x4_neon_mmla,
+        .fn_get_main_m_step = kai_get_m_step_matmul_clamp_f32_bf16p_bf16p12x4biasf32_8x12x4_neon_mmla,
+        .fn_get_pack_rhs_n_step = kai_get_n_step_rhs_quant_pack_kxn_bf16pbiasf32_f32_neon,
+        .fn_get_main_n_step = kai_get_n_step_matmul_clamp_f32_bf16p_bf16p12x4biasf32_8x12x4_neon_mmla,
 
         .fn_get_lhs_offset = kai_get_lhs_offset_lhs_quant_pack_bf16p_f32_neon,
         .fn_get_packed_lhs_size = kai_get_lhs_packed_size_lhs_quant_pack_bf16p_f32_neon,
-        .fn_get_packed_lhs_offset = kai_get_lhs_packed_offset_matmul_clamp_f32_bf16p_bf16p12x1biasf32_8x12x4_neon_mmla,
+        .fn_get_packed_lhs_offset = kai_get_lhs_packed_offset_matmul_clamp_f32_bf16p_bf16p12x4biasf32_8x12x4_neon_mmla,
         .fn_pack_lhs = kai_run_lhs_quant_pack_bf16p_f32_neon,
 
-        .fn_get_rhs_offset = kai_get_rhs_offset_rhs_quant_pack_bf16pbiasf32_f32_neon,
+        .fn_get_rhs_offset = kai_get_rhs_offset_rhs_quant_pack_kxn_bf16pbiasf32_f32_neon,
         .fn_get_packed_rhs_size = nullptr,
-        .fn_get_packed_rhs_size_generic_block_size = kai_get_rhs_packed_size_rhs_quant_pack_bf16pbiasf32_f32_neon,
+        .fn_get_packed_rhs_size_generic_block_size = kai_get_rhs_packed_size_rhs_quant_pack_kxn_bf16pbiasf32_f32_neon,
         .fn_get_pack_rhs_packed_rhs_offset = nullptr,
         .fn_get_main_packed_rhs_offset =
-            kai_get_rhs_packed_offset_matmul_clamp_f32_bf16p_bf16p12x1biasf32_8x12x4_neon_mmla,
-        .fn_pack_rhs = kai_run_rhs_quant_pack_bf16pbiasf32_f32_neon,
+            kai_get_rhs_packed_offset_matmul_clamp_f32_bf16p_bf16p12x4biasf32_8x12x4_neon_mmla,
+        .fn_pack_rhs = kai_run_rhs_quant_pack_kxn_bf16pbiasf32_f32_neon_adapter,
 
-        .fn_get_bias_offset = kai_get_bias_offset_rhs_quant_pack_bf16pbiasf32_f32_neon,
+        .fn_get_bias_offset = kai_get_bias_offset_rhs_quant_pack_kxn_bf16pbiasf32_f32_neon,
 
-        .fn_get_dst_offset = kai_get_dst_offset_matmul_clamp_f32_bf16p_bf16p12x1biasf32_8x12x4_neon_mmla,
-        .fn_get_dst_size = kai_get_dst_size_matmul_clamp_f32_bf16p_bf16p12x1biasf32_8x12x4_neon_mmla,
+        .fn_get_dst_offset = kai_get_dst_offset_matmul_clamp_f32_bf16p_bf16p12x4biasf32_8x12x4_neon_mmla,
+        .fn_get_dst_size = kai_get_dst_size_matmul_clamp_f32_bf16p_bf16p12x4biasf32_8x12x4_neon_mmla,
 
-        .fn_matmul_f32_bf16p_bf16p = kai_run_matmul_clamp_f32_bf16p_bf16p12x1biasf32_8x12x4_neon_mmla,
+        .fn_matmul_f32_bf16p_bf16p = kai_run_matmul_clamp_f32_bf16p_bf16p12x4biasf32_8x12x4_neon_mmla,
     }};
-}
+}  // namespace
 
 /// Matrix multiplication test fixture.
 class MatMulTestBf16 : public testing::TestWithParam<MatMulTestParams> {
@@ -274,8 +289,6 @@ TEST_P(MatMulTestBf16, Output) {
     if (rect.height() == 0 || rect.width() == 0) {
         GTEST_SKIP();
     }
-
-    // ASSERT_FALSE(method.lhs_transposed());
 
     const size_t lhs_w = info.k;
     const size_t rhs_w = rect.width();

@@ -29,40 +29,40 @@
 // Include micro-kernel variants
 #include "kai/kai_common.h"
 #include "kai_lhs_quant_pack_bf16p_f32_neon.h"
-#include "kai_matmul_clamp_f32_bf16p_bf16p12x1biasf32_8x12x4_neon_mmla.h"
+#include "kai_matmul_clamp_f32_bf16p_bf16p12x4biasf32_8x12x4_neon_mmla.h"
 #include "kai_matmul_clamp_f32_bf16p_bf16p_interface.h"
-#include "kai_rhs_quant_pack_bf16pbiasf32_f32_neon.h"
+#include "kai_rhs_quant_pack_kxn_bf16pbiasf32_f32_neon.h"
 
-inline float bf16_to_float(const bfloat16_t* v) {
-    const uint16_t uint_rep = *reinterpret_cast<const uint16_t*>(v);
+inline static float bf16_to_float(const uint16_t* v) {
+    const uint16_t uint_rep = *v;
     return kai_cast_f32_bf16(uint_rep);
 }
 
 namespace {
 /// Micro-kernel interface
 constexpr kai_matmul_clamp_f32_bf16p_bf16p_ukernel ukernel{
-    kai_get_m_step_matmul_clamp_f32_bf16p_bf16p12x1biasf32_8x12x4_neon_mmla,
-    kai_get_n_step_matmul_clamp_f32_bf16p_bf16p12x1biasf32_8x12x4_neon_mmla,
-    kai_get_mr_matmul_clamp_f32_bf16p_bf16p12x1biasf32_8x12x4_neon_mmla,
-    kai_get_nr_matmul_clamp_f32_bf16p_bf16p12x1biasf32_8x12x4_neon_mmla,
-    kai_get_kr_matmul_clamp_f32_bf16p_bf16p12x1biasf32_8x12x4_neon_mmla,
-    kai_get_sr_matmul_clamp_f32_bf16p_bf16p12x1biasf32_8x12x4_neon_mmla,
-    kai_get_lhs_packed_offset_matmul_clamp_f32_bf16p_bf16p12x1biasf32_8x12x4_neon_mmla,
-    kai_get_rhs_packed_offset_matmul_clamp_f32_bf16p_bf16p12x1biasf32_8x12x4_neon_mmla,
-    kai_get_dst_offset_matmul_clamp_f32_bf16p_bf16p12x1biasf32_8x12x4_neon_mmla,
-    kai_get_dst_size_matmul_clamp_f32_bf16p_bf16p12x1biasf32_8x12x4_neon_mmla,
-    kai_run_matmul_clamp_f32_bf16p_bf16p12x1biasf32_8x12x4_neon_mmla};
+    kai_get_m_step_matmul_clamp_f32_bf16p_bf16p12x4biasf32_8x12x4_neon_mmla,
+    kai_get_n_step_matmul_clamp_f32_bf16p_bf16p12x4biasf32_8x12x4_neon_mmla,
+    kai_get_mr_matmul_clamp_f32_bf16p_bf16p12x4biasf32_8x12x4_neon_mmla,
+    kai_get_nr_matmul_clamp_f32_bf16p_bf16p12x4biasf32_8x12x4_neon_mmla,
+    kai_get_kr_matmul_clamp_f32_bf16p_bf16p12x4biasf32_8x12x4_neon_mmla,
+    kai_get_sr_matmul_clamp_f32_bf16p_bf16p12x4biasf32_8x12x4_neon_mmla,
+    kai_get_lhs_packed_offset_matmul_clamp_f32_bf16p_bf16p12x4biasf32_8x12x4_neon_mmla,
+    kai_get_rhs_packed_offset_matmul_clamp_f32_bf16p_bf16p12x4biasf32_8x12x4_neon_mmla,
+    kai_get_dst_offset_matmul_clamp_f32_bf16p_bf16p12x4biasf32_8x12x4_neon_mmla,
+    kai_get_dst_size_matmul_clamp_f32_bf16p_bf16p12x4biasf32_8x12x4_neon_mmla,
+    kai_run_matmul_clamp_f32_bf16p_bf16p12x4biasf32_8x12x4_neon_mmla};
 
 /// @brief Truncate the 32-bit floating point number's least significant 16 mantissa bits
 /// @param x floating-point number
 /// @return truncated floating-point number
-float truncate(float x) {
+inline static float truncate(float x) {
     uint32_t uval = (*reinterpret_cast<uint32_t*>(&x) & 0xffff0000);
     return *reinterpret_cast<float*>(&uval);
 }
 
 /// Reference implementation of matrix multiplication
-void run_matmul_ref(
+static void run_matmul_ref(
     size_t m, size_t n, size_t k, const float* lhs, const float* rhs, const float* bias, float* dst, float scalar_min,
     float scalar_max) {
     for (size_t row_idx = 0; row_idx < m; ++row_idx) {
@@ -88,15 +88,6 @@ void fill_matrix(size_t num_rows, size_t num_cols, float* dst, const float weigh
     }
 }
 
-void fill_identity(size_t num_rows, size_t num_cols, float* dst, const float weight) {
-    for (size_t i = 0; i < num_rows * num_cols; i++) {
-        int col = i % num_cols;
-        int row = i / num_cols;
-
-        dst[i] = (col == row ? 1.f : 0.f);
-    }
-}
-
 /// Print the matrix
 void print_matrix(size_t num_rows, size_t num_cols, const char* name, const float* src) {
     std::cout << name << " = [\n";
@@ -110,7 +101,7 @@ void print_matrix(size_t num_rows, size_t num_cols, const char* name, const floa
     std::cout << ("]\n\n");
 }
 
-void print_matrix(size_t num_rows, size_t num_cols, const char* name, const bfloat16_t* src) {
+void print_matrix(size_t num_rows, size_t num_cols, const char* name, const uint16_t* src) {
     std::cout << name << " = [\n";
     for (size_t y = 0; y < num_rows; ++y) {
         std::cout << "  [";
@@ -131,8 +122,8 @@ void print_mixed_prec_matrix(
         for (size_t x = 0; x < num_cols; ++x) {
             if (x >= nr) {
                 // print bfloat
-                const bfloat16_t* src_elm =
-                    reinterpret_cast<const bfloat16_t*>(src_row + nr * sizeof(float) + (x - nr) * sizeof(bfloat16_t));
+                const uint16_t* src_elm =
+                    reinterpret_cast<const uint16_t*>(src_row + nr * sizeof(float) + (x - nr) * sizeof(uint16_t));
                 std::cout << std::setprecision(2) << std::fixed << bf16_to_float(src_elm) << ", ";
             } else {
                 // print float
@@ -235,7 +226,7 @@ int main() {
     const size_t sr = ukernel.get_sr();
 
     // In a single row, we pack nr bias values followed by K rows of nr RHS values
-    const size_t rhs_packed_size = kai_get_rhs_packed_size_rhs_quant_pack_bf16pbiasf32_f32_neon(N, K, nr, kr);
+    const size_t rhs_packed_size = kai_get_rhs_packed_size_rhs_quant_pack_kxn_bf16pbiasf32_f32_neon(N, K, nr, kr);
     uint8_t* rhs_packed = new uint8_t[rhs_packed_size];
 
     const size_t lhs_stride = K * sizeof(float);
@@ -244,17 +235,15 @@ int main() {
     const size_t dst_stride_col = sizeof(float);
 
     const size_t lhs_packed_size = kai_get_lhs_packed_size_lhs_quant_pack_bf16p_f32_neon(M, K, mr, kr, sr);
-    bfloat16_t* lhs_packed = new bfloat16_t[lhs_packed_size];
+    uint16_t* lhs_packed = new uint16_t[lhs_packed_size];
 
     // Packing only needs to be performed once if the contents of the bias and RHS matrices are expected to be constant.
-    kai_run_rhs_quant_pack_bf16pbiasf32_f32_neon(
-        1, N, K, nr, kr, sr,  // Packing arguments
-        rhs_stride,           // RHS stride
-        rhs,                  // RHS
-        bias,                 // Bias
-        NULL,                 // Scale
-        rhs_packed,           // RHS packed
-        0, NULL);
+    kai_run_rhs_quant_pack_kxn_bf16pbiasf32_f32_neon(
+        N, K, nr, kr, sr,  // Packing arguments
+        rhs_stride,        // RHS stride
+        rhs,               // RHS
+        bias,              // Bias
+        rhs_packed);       // RHS packed
 
     // The RHS and Bias buffers can be freed after packing, however we reuse them for the reference test below
 
@@ -262,7 +251,7 @@ int main() {
     const size_t rhs_packed_cols = nr + kai_roundup(K, kr) * nr;
 
     // Each col has nr floats and then K*nr bfloats
-    int rhs_packed_stride = nr * sizeof(float) + kai_roundup(K, kr) * nr * sizeof(bfloat16_t);
+    int rhs_packed_stride = nr * sizeof(float) + kai_roundup(K, kr) * nr * sizeof(uint16_t);
     const size_t rhs_packed_rows = rhs_packed_size / rhs_packed_stride;
 
     print_mixed_prec_matrix(rhs_packed_rows, rhs_packed_cols, "rhs_packed", rhs_packed, nr, rhs_packed_stride);
@@ -301,7 +290,7 @@ int main() {
     const bool is_valid = is_output_correct(M, N, rel_tolerance, dst_ref, dst);
 
     std::cout << "TEST[matmul_clamp_f32_bf16p_bf16p]\n";
-    std::cout << "- ukernel: matmul_clamp_f32_bf16p_bf16p12x1biasf32_8x12x4_neon_mmla\n";
+    std::cout << "- ukernel: matmul_clamp_f32_bf16p_bf16p12x4biasf32_8x12x4_neon_mmla\n";
     if (is_valid) {
         std::cout << "- Status: PASSED\n";
         std::cout << "- Performance: " << time_matmul.count() << "ns\n";

@@ -101,6 +101,7 @@ Some of the data types currently supported with the KleidiAI library are the fol
 |---------------------------------------------------------------------------------------------------------------------| ----------- | ----------- |
 | Floating-point 32-bit                                                                                               | <b>f32</b> | |
 | Floating-point 16-bit                                                                                               | <b>f16</b> | |
+| Brain Floating-point 16-bit                                                                                               | <b>bf16</b> | |
 | Quantized (q) Symmetric (s) Signed (i) 4-bit (4) Per-Channel (cx) quantization parameters                           | <b>qsi4cx</b> | An <b>fp32</b> multiplier shared among all values of the same channel. `x` denotes the entirety of the channel |
 | Quantized (q) Asymmetric (a) Signed (i) 8-bit (8) Per-Dimension (dx) (for example, Per-Row) quantization parameters | <b>qai8dx</b> | An <b>fp32</b> multiplier and a <b>int32</b> zero offset shared among all values of the same dimension. |
 
@@ -175,6 +176,20 @@ Some of the data types currently supported with the KleidiAI library are the fol
     </td>
     <td>
         <br>
+    </td>
+</tr>
+<tr>
+    <td>Matrix-multiplication with LHS packed and RHS packed matrices</td>
+    <td style="width:10%">matmul_clamp_f32_bf16p_bf16p</td>
+    <td style="width:20%">
+        <b>LHS</b>: bf16p <br>
+        <b>RHS</b>: bf16p <br>
+        <b>DST</b>: f32 <br>
+    </td>
+    <td>
+    </td>
+    <td>
+        The packing function for the RHS and Lhs matrices is listed in the header file of the GEMM micro kernel.  <br>
     </td>
 </tr>
 </table>
