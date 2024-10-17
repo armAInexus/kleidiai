@@ -106,7 +106,6 @@ size_t kai_get_rhs_packed_size_rhs_pack_nxk_qsi4c32p_qsu4c32s1s0(
 }
 
 void static inline kai_run_rhs_pack_nxk_qsi4c32p4x16_qsu4c32s1s0(
-    size_t num_groups,    //
     size_t n,             //
     size_t k,             //
     size_t bl,            //
@@ -116,7 +115,6 @@ void static inline kai_run_rhs_pack_nxk_qsi4c32p4x16_qsu4c32s1s0(
     const void* scale,    //
     size_t scale_stride,  //
     void* rhs_packed,     //
-    size_t extra_bytes,   //
     const struct kai_rhs_pack_nxk_qsi4c32p_qsu4c32s1s0_params* params) {
     const size_t nr = 4;
     const size_t kr = 16;
@@ -163,11 +161,17 @@ void static inline kai_run_rhs_pack_nxk_qsi4c32p4x16_qsu4c32s1s0(
                     num_bytes_multiplier_rhs);  //
             }
 
-            for (size_t dst_byte_idx = 0; dst_byte_idx <= (nr * num_bytes_per_block_k - kai_nr_multiple_of);
-                 dst_byte_idx += kai_nr_multiple_of) {
+            for (size_t dst_byte_idx = 0; dst_byte_idx < nr * num_bytes_per_block_k;
+                 dst_byte_idx += block_length_in_bytes) {
                 const size_t block_idx = dst_byte_idx / block_length_in_bytes;
-                const size_t nr_idx = block_idx % nr;
                 const size_t super_block_idx = block_idx / nr;
+                const size_t nr_idx = block_idx % nr;
+                const size_t n0_idx = dst_row_idx * nr + nr_idx;
+
+                // Clamp the index to avoid out-of-bound reads
+                const size_t n0_valid_idx = KAI_MIN(n0_idx, n - 1);
+
+                float partial_sum = 0.0f;
 
                 float d = 0.0F;
                 switch (scale_dt) {
@@ -185,20 +189,13 @@ void static inline kai_run_rhs_pack_nxk_qsi4c32p4x16_qsu4c32s1s0(
                         break;
                 }
 
-                size_t block_byte_idx = dst_byte_idx % block_length_in_bytes;
-
-                float partial_sum = 0.0;
-                for (size_t t = 0; t < kai_nr_multiple_of; ++t) {
+                for (size_t block_byte_idx = 0; block_byte_idx < block_length_in_bytes; ++block_byte_idx) {
                     const size_t k_adjustment =
                         ((block_byte_idx + super_block_idx * block_length_in_bytes) / k_interleaved_v) *
                         k_interleaved_v;
                     const size_t k0_idx =
                         dst_qblock_idx * bl + block_byte_idx + super_block_idx * block_length_in_bytes + k_adjustment;
                     const size_t k1_idx = k0_idx + k_interleaved_v;
-                    const size_t n0_idx = dst_row_idx * nr + nr_idx;
-
-                    // Clamp the index to avoid out-of-bound reads
-                    const size_t n0_valid_idx = KAI_MIN(n0_idx, n - 1);
 
                     const size_t src_addr_byte0 = (k0_idx / 2) + n0_valid_idx * rhs_stride;
                     const size_t src_addr_byte1 = (k1_idx / 2) + n0_valid_idx * rhs_stride;
@@ -224,8 +221,7 @@ void static inline kai_run_rhs_pack_nxk_qsi4c32p4x16_qsu4c32s1s0(
 
                     const uint8_t dst_qs0 = src_x0_lo | (src_x0_hi << 4);
 
-                    dst_row[dst_byte_idx + t] = dst_qs0 ^ 0x88;
-                    block_byte_idx += 1;
+                    dst_row[dst_byte_idx + block_byte_idx] = dst_qs0 ^ 0x88;
                 }
                 sums[nr_idx] += partial_sum;
             }
@@ -286,7 +282,6 @@ void kai_run_rhs_pack_nxk_qsi4c32p_qsu4c32s1s0(
     if (nr == 4 && kr == 16 && sr == 2) {
         // Specialized RHS packing function for: NR=4, KR=16, SR=2
         kai_run_rhs_pack_nxk_qsi4c32p4x16_qsu4c32s1s0(
-            num_groups,    //
             n,             //
             k,             //
             bl,            //
@@ -296,7 +291,6 @@ void kai_run_rhs_pack_nxk_qsi4c32p_qsu4c32s1s0(
             scale,         //
             scale_stride,  //
             rhs_packed,    //
-            extra_bytes,   //
             params);
     } else {
         const size_t num_bytes_multiplier_rhs = kai_get_datatype_size_in_bytes(params->scale_dt);
@@ -340,11 +334,17 @@ void kai_run_rhs_pack_nxk_qsi4c32p_qsu4c32s1s0(
                         num_bytes_multiplier_rhs);  //
                 }
 
-                for (size_t dst_byte_idx = 0; dst_byte_idx <= (nr * num_bytes_per_block_k - kai_nr_multiple_of);
-                     dst_byte_idx += kai_nr_multiple_of) {
+                for (size_t dst_byte_idx = 0; dst_byte_idx < nr * num_bytes_per_block_k;
+                     dst_byte_idx += block_length_in_bytes) {
                     const size_t block_idx = dst_byte_idx / block_length_in_bytes;
-                    const size_t nr_idx = block_idx % nr;
                     const size_t super_block_idx = block_idx / nr;
+                    const size_t nr_idx = block_idx % nr;
+                    const size_t n0_idx = dst_row_idx * nr + nr_idx;
+
+                    // Clamp the index to avoid out-of-bound reads
+                    const size_t n0_valid_idx = KAI_MIN(n0_idx, n - 1);
+
+                    float partial_sum = 0.0f;
 
                     float d = 0.0F;
                     switch (scale_dt) {
@@ -362,20 +362,13 @@ void kai_run_rhs_pack_nxk_qsi4c32p_qsu4c32s1s0(
                             break;
                     }
 
-                    size_t block_byte_idx = dst_byte_idx % block_length_in_bytes;
-
-                    float partial_sum = 0.0;
-                    for (size_t t = 0; t < kai_nr_multiple_of; ++t) {
+                    for (size_t block_byte_idx = 0; block_byte_idx < block_length_in_bytes; ++block_byte_idx) {
                         const size_t k_adjustment =
                             ((block_byte_idx + super_block_idx * block_length_in_bytes) / k_interleaved_v) *
                             k_interleaved_v;
                         const size_t k0_idx = dst_qblock_idx * bl + block_byte_idx +
                             super_block_idx * block_length_in_bytes + k_adjustment;
                         const size_t k1_idx = k0_idx + k_interleaved_v;
-                        const size_t n0_idx = dst_row_idx * nr + nr_idx;
-
-                        // Clamp the index to avoid out-of-bound reads
-                        const size_t n0_valid_idx = KAI_MIN(n0_idx, n - 1);
 
                         const size_t src_addr_byte0 = (k0_idx / 2) + n0_valid_idx * rhs_stride;
                         const size_t src_addr_byte1 = (k1_idx / 2) + n0_valid_idx * rhs_stride;
@@ -419,8 +412,7 @@ void kai_run_rhs_pack_nxk_qsi4c32p_qsu4c32s1s0(
 
                         const uint8_t dst_qs0 = src_x0_lo | (src_x0_hi << 4);
 
-                        dst_row[dst_byte_idx + t] = dst_qs0 ^ 0x88;
-                        block_byte_idx += 1;
+                        dst_row[dst_byte_idx + block_byte_idx] = dst_qs0 ^ 0x88;
                     }
                     sums[nr_idx] += partial_sum;
                 }
