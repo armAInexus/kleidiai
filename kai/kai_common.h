@@ -129,7 +129,7 @@ inline static size_t kai_roundup(size_t a, size_t b) {
     return ((a + b - 1) / b) * b;
 }
 
-#ifdef __ARM_FEATURE_SME
+#ifdef __ARM_FEATURE_SVE2
 /// Gets the SME vector length for 8-bit elements.
 inline static uint64_t kai_get_sme_vector_length_u8(void) {
     uint64_t res = 0;
@@ -151,7 +151,7 @@ inline static uint64_t kai_get_sme_vector_length_u16(void) {
 inline static uint64_t kai_get_sme_vector_length_u32(void) {
     return kai_get_sme_vector_length_u8() / 4;
 }
-#endif  // __ARM_FEATURE_SME
+#endif  // __ARM_FEATURE_SVE2
 
 /// Extends the sign bit of int 4-bit value (stored in int8_t variable)
 /// @param[in] value The 4-bit int value
