@@ -129,57 +129,29 @@ inline static size_t kai_roundup(size_t a, size_t b) {
     return ((a + b - 1) / b) * b;
 }
 
-#ifdef __ARM_FEATURE_SVE
-
+#ifdef __ARM_FEATURE_SVE2
 /// Gets the SME vector length for 8-bit elements.
 inline static uint64_t kai_get_sme_vector_length_u8(void) {
     uint64_t res = 0;
-
     __asm__ __volatile__(
-        ".inst 0xd503477f  // SMSTART ZA\n"
-        "cntb %0\n"
-        ".inst 0xd503467f  // SMSTOP\n"
+        ".inst 0x04bf5827 // rdsvl x7, #1\n"
+        "mov %0, x7\n"
         : "=r"(res)
-        :
-        : "z0", "z1", "z2", "z3", "z4", "z5", "z6", "z7", "z8", "z9", "z10", "z11", "z12", "z13", "z14", "z15", "z16",
-          "z17", "z18", "z19", "z20", "z21", "z22", "z23", "z24", "z25", "z26", "z27", "z28", "z29", "z30", "z31");
-
+        : /* no inputs */
+        : "x7");
     return res;
 }
 
 /// Gets the SME vector length for 16-bit elements.
 inline static uint64_t kai_get_sme_vector_length_u16(void) {
-    uint64_t res = 0;
-
-    __asm__ __volatile__(
-        ".inst 0xd503477f  // SMSTART ZA\n"
-        "cnth %0\n"
-        ".inst 0xd503467f  // SMSTOP\n"
-        : "=r"(res)
-        :
-        : "z0", "z1", "z2", "z3", "z4", "z5", "z6", "z7", "z8", "z9", "z10", "z11", "z12", "z13", "z14", "z15", "z16",
-          "z17", "z18", "z19", "z20", "z21", "z22", "z23", "z24", "z25", "z26", "z27", "z28", "z29", "z30", "z31");
-
-    return res;
+    return kai_get_sme_vector_length_u8() / 2;
 }
 
 /// Gets the SME vector length for 32-bit elements.
 inline static uint64_t kai_get_sme_vector_length_u32(void) {
-    uint64_t res = 0;
-
-    __asm__ __volatile__(
-        ".inst 0xd503477f  // SMSTART ZA\n"
-        "cntw %0\n"
-        ".inst 0xd503467f  // SMSTOP\n"
-        : "=r"(res)
-        :
-        : "z0", "z1", "z2", "z3", "z4", "z5", "z6", "z7", "z8", "z9", "z10", "z11", "z12", "z13", "z14", "z15", "z16",
-          "z17", "z18", "z19", "z20", "z21", "z22", "z23", "z24", "z25", "z26", "z27", "z28", "z29", "z30", "z31");
-
-    return res;
+    return kai_get_sme_vector_length_u8() / 4;
 }
-
-#endif  // __ARM_FEATURE_SVE
+#endif  // __ARM_FEATURE_SVE2
 
 /// Extends the sign bit of int 4-bit value (stored in int8_t variable)
 /// @param[in] value The 4-bit int value
