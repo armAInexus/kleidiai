@@ -239,11 +239,13 @@ int main() {
 
     // Packing only needs to be performed once if the contents of the bias and RHS matrices are expected to be constant.
     kai_run_rhs_quant_pack_kxn_bf16pbiasf32_f32_neon(
-        N, K, nr, kr, sr,  // Packing arguments
-        rhs_stride,        // RHS stride
-        rhs,               // RHS
-        bias,              // Bias
-        rhs_packed);       // RHS packed
+        1, N, K, nr, kr, sr,  // Packing arguments
+        rhs_stride,           // RHS stride
+        rhs,                  // RHS
+        bias,                 // Bias
+        NULL,                 // Scale
+        rhs_packed,           // RHS packed
+        0, NULL);
 
     // The RHS and Bias buffers can be freed after packing, however we reuse them for the reference test below
 

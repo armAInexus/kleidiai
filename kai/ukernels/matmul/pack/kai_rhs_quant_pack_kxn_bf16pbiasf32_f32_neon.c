@@ -41,11 +41,15 @@ size_t kai_get_rhs_packed_size_rhs_quant_pack_kxn_bf16pbiasf32_f32_neon(size_t n
 }
 
 void kai_run_rhs_quant_pack_kxn_bf16pbiasf32_f32_neon(
-    size_t n, size_t k, size_t nr, size_t kr, size_t sr, size_t rhs_stride, const float* rhs, const float* bias,
-    void* rhs_packed) {
+    size_t num_groups, size_t n, size_t k, size_t nr, size_t kr, size_t sr, size_t rhs_stride, const void* rhs,
+    const void* bias, const void* scale, void* rhs_packed, size_t extra_bytes, const void* params) {
+    KAI_ASSUME(num_groups == 1);
     KAI_ASSUME(sr == 1);
     KAI_ASSUME(rhs != NULL);
+    KAI_ASSUME(scale == NULL);
     KAI_ASSUME(rhs_packed != NULL);
+    KAI_ASSUME(extra_bytes == 0);
+    KAI_ASSUME(params == NULL);
     KAI_ASSUME(nr <= MAX_NR);
 
     size_t height = k;

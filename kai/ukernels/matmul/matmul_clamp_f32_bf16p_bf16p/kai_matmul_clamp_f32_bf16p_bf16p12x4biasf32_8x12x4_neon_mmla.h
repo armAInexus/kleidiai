@@ -115,10 +115,10 @@ size_t kai_get_dst_size_matmul_clamp_f32_bf16p_bf16p12x4biasf32_8x12x4_neon_mmla
 /// @param[in]  clamp_min Minimum value to clamp the final result.
 /// @param[in]  clamp_max Maximum value to clamp the final result.
 void kai_run_matmul_clamp_f32_bf16p_bf16p12x4biasf32_8x12x4_neon_mmla(
-    size_t m, size_t n, size_t k,                              //
-    const uint16_t* lhs_packed,                                //
-    const void* rhs_packed,                                    //
-    float* dst, size_t dst_stride_row, size_t dst_stride_col,  //
+    size_t m, size_t n, size_t k,                             //
+    const void* lhs_packed,                                   //
+    const void* rhs_packed,                                   //
+    void* dst, size_t dst_stride_row, size_t dst_stride_col,  //
     float clamp_min, float clamp_max);
 
 #ifdef __cplusplus

@@ -260,10 +260,10 @@ struct MatMulMethod {
     /// @param[in] clamp_min Lower bound of the output data.
     /// @param[in] clamp_max Upper bound of the output data.
     std::function<void(
-        size_t m, size_t n, size_t k,                              //
-        const uint16_t* packed_lhs,                                //
-        const void* packed_rhs,                                    //
-        float* dst, size_t dst_stride_row, size_t dst_stride_col,  //
+        size_t m, size_t n, size_t k,                             //
+        const void* packed_lhs,                                   //
+        const void* packed_rhs,                                   //
+        void* dst, size_t dst_stride_row, size_t dst_stride_col,  //
         float clamp_min, float clamp_max)>
         fn_matmul_f32_bf16p_bf16p = nullptr;
 

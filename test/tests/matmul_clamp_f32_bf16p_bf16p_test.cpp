@@ -39,21 +39,6 @@ namespace kai::test {
 
 /// List of supported matrix multiplication methods.
 namespace {
-
-/// Adapters for using packing and matmul functions with the unified interface of the test framework
-inline void kai_run_rhs_quant_pack_kxn_bf16pbiasf32_f32_neon_adapter(
-    size_t num_groups, size_t n, size_t k, size_t nr, size_t kr, size_t sr, size_t rhs_stride, const void* rhs,
-    const void* bias, const void* scale, void* rhs_packed, size_t extra_bytes, const void* params) {
-    KAI_UNUSED(num_groups);
-    KAI_UNUSED(scale);
-    KAI_UNUSED(extra_bytes);
-    KAI_UNUSED(params);
-
-    kai_run_rhs_quant_pack_kxn_bf16pbiasf32_f32_neon(
-        n, k, nr, kr, sr, rhs_stride, reinterpret_cast<const float*>(rhs), reinterpret_cast<const float*>(bias),
-        rhs_packed);
-}
-
 const std::array matmul_methods = {
     MatMulMethod{
         .name = "matmul_nt_nt_f32_bf16p_bf16p_8x12_neon_mla",
@@ -95,7 +80,7 @@ const std::array matmul_methods = {
         .fn_get_pack_rhs_packed_rhs_offset = nullptr,
         .fn_get_main_packed_rhs_offset =
             kai_get_rhs_packed_offset_matmul_clamp_f32_bf16p_bf16p12x4biasf32_8x12x4_neon_mmla,
-        .fn_pack_rhs = kai_run_rhs_quant_pack_kxn_bf16pbiasf32_f32_neon_adapter,
+        .fn_pack_rhs = kai_run_rhs_quant_pack_kxn_bf16pbiasf32_f32_neon,
 
         .fn_get_bias_offset = kai_get_bias_offset_rhs_quant_pack_kxn_bf16pbiasf32_f32_neon,
 
@@ -144,7 +129,7 @@ const std::array matmul_methods = {
         .fn_get_pack_rhs_packed_rhs_offset = nullptr,
         .fn_get_main_packed_rhs_offset =
             kai_get_rhs_packed_offset_matmul_clamp_f32_bf16p_bf16p12x4biasf32_8x12x4_neon_mmla,
-        .fn_pack_rhs = kai_run_rhs_quant_pack_kxn_bf16pbiasf32_f32_neon_adapter,
+        .fn_pack_rhs = kai_run_rhs_quant_pack_kxn_bf16pbiasf32_f32_neon,
 
         .fn_get_bias_offset = kai_get_bias_offset_rhs_quant_pack_kxn_bf16pbiasf32_f32_neon,
 

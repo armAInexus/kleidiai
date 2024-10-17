@@ -62,6 +62,7 @@ size_t kai_get_rhs_packed_size_rhs_quant_pack_kxn_bf16pbiasf32_f32_neon(size_t n
 ///   * Bias: @ref kai_get_bias_offset_rhs_quant_pack_kxn_bf16pbiasf32_f32_neon.
 ///   * Output: @ref kai_get_rhs_packed_offset_rhs_quant_pack_kxn_bf16pbiasf32_f32_neon.
 ///
+/// @param[in] num_groups Number of groups. It must be 1.
 /// @param[in] n Number of columns of the output matrix.
 /// @param[in] k Common dimension between the LHS and RHS matrix.
 /// @param[in] nr Block size in N dimension.
@@ -70,10 +71,13 @@ size_t kai_get_rhs_packed_size_rhs_quant_pack_kxn_bf16pbiasf32_f32_neon(size_t n
 /// @param[in] rhs_stride Row stride in bytes of the RHS matrix.
 /// @param[in] rhs RHS matrix data buffer.
 /// @param[in] bias Bias matrix data buffer.
+/// @param[in] scale Scale data buffer. It must be NULL.
 /// @param[out] rhs_packed Packed RHS matrix.
+/// @param[in] extra_bytes Extra bytes to append to the end of each row of the packed RHS matrix. It must be 0.
+/// @param[in] params Extra packing parameters. It must be NULL.
 void kai_run_rhs_quant_pack_kxn_bf16pbiasf32_f32_neon(
-    size_t n, size_t k, size_t nr, size_t kr, size_t sr, size_t rhs_stride, const float* rhs, const float* bias,
-    void* rhs_packed);
+    size_t num_groups, size_t n, size_t k, size_t nr, size_t kr, size_t sr, size_t rhs_stride, const void* rhs,
+    const void* bias, const void* scale, void* rhs_packed, size_t extra_bytes, const void* params);
 
 #ifdef __cplusplus
 }  // extern "C"
