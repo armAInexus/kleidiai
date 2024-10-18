@@ -50,6 +50,25 @@ std::vector<uint8_t> sub(
     const void* lhs, DataType lhs_dt, size_t lhs_height, size_t lhs_width,  //
     const void* rhs, DataType rhs_dt, size_t rhs_height, size_t rhs_width);
 
+/// Elementwise subtraction.
+///
+/// Broadcasting is supported for any dimension and both LHS and RHS operands.
+///
+/// @tparam T The data type.
+///
+/// @param[in] lhs The LHS data buffer.
+/// @param[in] lhs_height The number of rows of the LHS matrix.
+/// @param[in] lhs_width The number of columns of the LHS matrix.
+/// @param[in] rhs The RHS data buffer.
+/// @param[in] rhs_height The number of rows of the RHS matrix.
+/// @param[in] rhs_width The number of columns of the LHS matrix.
+///
+/// @return The result matrix.
+template <typename T>
+std::vector<uint8_t> sub(
+    const void* lhs, size_t lhs_height, size_t lhs_width,  //
+    const void* rhs, size_t rhs_height, size_t rhs_width);
+
 /// Elementwise multiplication.
 ///
 /// Broadcasting is supported for any dimension and both LHS and RHS operands.
@@ -67,6 +86,25 @@ std::vector<uint8_t> sub(
 std::vector<uint8_t> mul(
     const void* lhs, DataType lhs_dt, size_t lhs_height, size_t lhs_width,  //
     const void* rhs, DataType rhs_dt, size_t rhs_height, size_t rhs_width);
+
+/// Elementwise multiplication.
+///
+/// Broadcasting is supported for any dimension and both LHS and RHS operands.
+///
+/// @tparam T The data type.
+///
+/// @param[in] lhs The LHS data buffer.
+/// @param[in] lhs_height The number of rows of the LHS matrix.
+/// @param[in] lhs_width The number of columns of the LHS matrix.
+/// @param[in] rhs The RHS data buffer.
+/// @param[in] rhs_height The number of rows of the RHS matrix.
+/// @param[in] rhs_width The number of columns of the LHS matrix.
+///
+/// @return The result matrix.
+template <typename T>
+std::vector<uint8_t> mul(
+    const void* lhs, size_t lhs_height, size_t lhs_width,  //
+    const void* rhs, size_t rhs_height, size_t rhs_width);
 
 /// Elementwise division.
 ///

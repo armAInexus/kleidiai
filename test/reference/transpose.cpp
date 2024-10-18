@@ -13,6 +13,8 @@
 
 #include "kai/kai_common.h"
 #include "test/common/data_type.hpp"
+#include "test/common/memory.hpp"
+#include "test/common/round.hpp"
 
 namespace kai::test {
 
@@ -35,5 +37,21 @@ std::vector<uint8_t> transpose(const void* data, DataType data_type, size_t heig
 
     return output;
 }
+
+template <typename T>
+std::vector<uint8_t> transpose(const void* src, size_t height, size_t width) {
+    std::vector<uint8_t> dst(round_up_division(height * width * size_in_bits<T>, 8));
+
+    for (size_t y = 0; y < width; ++y) {
+        for (size_t x = 0; x < height; ++x) {
+            write_array<T>(dst.data(), y * height + x, read_array<T>(src, x * width + y));
+        }
+    }
+
+    return dst;
+}
+
+template std::vector<uint8_t> transpose<float>(const void* src, size_t height, size_t width);
+template std::vector<uint8_t> transpose<int8_t>(const void* src, size_t height, size_t width);
 
 }  // namespace kai::test
