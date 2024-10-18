@@ -29,6 +29,7 @@
 // Include micro-kernel variants
 #include "kai/kai_common.h"
 #include "kai_lhs_quant_pack_bf16p_f32_neon.h"
+#include "kai_matmul_clamp_f32_bf16p_bf16p12x4b_1x12x4_neon_mmla.h"
 #include "kai_matmul_clamp_f32_bf16p_bf16p12x4b_8x12x4_neon_mmla.h"
 #include "kai_matmul_clamp_f32_bf16p_bf16p_interface.h"
 #include "kai_rhs_quant_pack_kxn_bf16pbiasf32_f32_neon.h"
@@ -39,8 +40,22 @@ inline static float bf16_to_float(const uint16_t* v) {
 }
 
 namespace {
+
 /// Micro-kernel interface
-constexpr kai_matmul_clamp_f32_bf16p_bf16p_ukernel ukernel{
+constexpr kai_matmul_clamp_f32_bf16p_bf16p_ukernel ukernel_gemv{
+    kai_get_m_step_matmul_clamp_f32_bf16p_bf16p12x4b_1x12x4_neon_mmla,
+    kai_get_n_step_matmul_clamp_f32_bf16p_bf16p12x4b_1x12x4_neon_mmla,
+    kai_get_mr_matmul_clamp_f32_bf16p_bf16p12x4b_1x12x4_neon_mmla,
+    kai_get_nr_matmul_clamp_f32_bf16p_bf16p12x4b_1x12x4_neon_mmla,
+    kai_get_kr_matmul_clamp_f32_bf16p_bf16p12x4b_1x12x4_neon_mmla,
+    kai_get_sr_matmul_clamp_f32_bf16p_bf16p12x4b_1x12x4_neon_mmla,
+    kai_get_lhs_packed_offset_matmul_clamp_f32_bf16p_bf16p12x4b_1x12x4_neon_mmla,
+    kai_get_rhs_packed_offset_matmul_clamp_f32_bf16p_bf16p12x4b_1x12x4_neon_mmla,
+    kai_get_dst_offset_matmul_clamp_f32_bf16p_bf16p12x4b_1x12x4_neon_mmla,
+    kai_get_dst_size_matmul_clamp_f32_bf16p_bf16p12x4b_1x12x4_neon_mmla,
+    kai_run_matmul_clamp_f32_bf16p_bf16p12x4b_1x12x4_neon_mmla};
+
+constexpr kai_matmul_clamp_f32_bf16p_bf16p_ukernel ukernel_gemm{
     kai_get_m_step_matmul_clamp_f32_bf16p_bf16p12x4b_8x12x4_neon_mmla,
     kai_get_n_step_matmul_clamp_f32_bf16p_bf16p12x4b_8x12x4_neon_mmla,
     kai_get_mr_matmul_clamp_f32_bf16p_bf16p12x4b_8x12x4_neon_mmla,
@@ -171,9 +186,11 @@ bool is_output_correct(
 int main() {
     // Parameters of the matrix multiplication. Change these values to see how the micro-kernels operate on different
     // sized matrices
-    const size_t M = 25;   // Rows of LHS and DST matrices
-    const size_t N = 28;   // Columns of RHS and DST matrices, and length of the Bias vector.
-    const size_t K = 117;  // Columns of LHS, rows of RHS matrices
+    const size_t M = 1;   // Rows of LHS and DST matrices
+    const size_t N = 1;   // Columns of RHS and DST matrices, and length of the Bias vector.
+    const size_t K = 15;  // Columns of LHS, rows of RHS matrices
+
+    const auto ukernel = (M == 1 ? ukernel_gemv : ukernel_gemm);
 
     const size_t lhs_size = M * K;
     const size_t rhs_size = N * K;
@@ -185,9 +202,9 @@ int main() {
     float* rhs = new float[rhs_size];
     float* bias = new float[bias_size];
 
-    fill_matrix(M, K, lhs, 0.1);
-    fill_matrix(K, N, rhs, 0.1);
-    fill_matrix(1, N, bias, 1);
+    fill_matrix(M, K, lhs, 0.4);
+    fill_matrix(K, N, rhs, 0.3);
+    fill_matrix(1, N, bias, 0.2);
 
 #ifdef KAI_DEBUG
     // std::cout << "Floats: " << std::endl;
@@ -234,8 +251,10 @@ int main() {
     const size_t dst_stride_row = N * sizeof(float);
     const size_t dst_stride_col = sizeof(float);
 
-    const size_t lhs_packed_size = kai_get_lhs_packed_size_lhs_quant_pack_bf16p_f32_neon(M, K, mr, kr, sr);
-    uint16_t* lhs_packed = new uint16_t[lhs_packed_size];
+    size_t lhs_packed_size = kai_get_lhs_packed_size_lhs_quant_pack_bf16p_f32_neon(M, K, mr, kr, sr);
+
+    uint8_t* lhs_packed = new uint8_t[lhs_packed_size];
+    memset(lhs_packed, 0, lhs_packed_size);
 
     // Packing only needs to be performed once if the contents of the bias and RHS matrices are expected to be constant.
     kai_run_rhs_quant_pack_kxn_bf16pbiasf32_f32_neon(
@@ -264,6 +283,12 @@ int main() {
     const auto timer_matmul_start = std::chrono::high_resolution_clock::now();
 
     kai_run_lhs_quant_pack_bf16p_f32_neon(M, K, mr, kr, sr, 0 /* m_idx_start */, lhs, lhs_stride, lhs_packed);
+#ifdef KAI_DEBUG
+    int num_lhs_rows = (M + mr - 1) / mr;
+    int num_lhs_cols = mr * kai_roundup(K, kr);
+
+    print_matrix(num_lhs_rows, num_lhs_cols, "lhs_packed", reinterpret_cast<uint16_t*>(lhs_packed));
+#endif  // KAI_DEBUG
 
     ukernel.run_matmul(
         M, N, K,           // Dimensions
@@ -282,10 +307,6 @@ int main() {
     int ret = 0;
 
 #ifdef KAI_DEBUG
-    int num_lhs_rows = (M + mr - 1) / mr;
-    int num_lhs_cols = mr * kai_roundup(K, kr);
-
-    print_matrix(num_lhs_rows, num_lhs_cols, "lhs_packed", lhs_packed);
     print_matrix(M, N, "dst", dst);
     print_matrix(M, N, "ref", dst_ref);
 #endif  // KAI_DEBUG

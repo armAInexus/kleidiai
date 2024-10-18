@@ -32,6 +32,7 @@
 #include "test/reference/pack.hpp"
 
 // matmul_clamp_f32_bf16p_bf16p
+#include "kai/ukernels/matmul/matmul_clamp_f32_bf16p_bf16p/kai_matmul_clamp_f32_bf16p_bf16p12x4b_1x12x4_neon_mmla.h"
 #include "kai/ukernels/matmul/matmul_clamp_f32_bf16p_bf16p/kai_matmul_clamp_f32_bf16p_bf16p12x4b_8x12x4_neon_mmla.h"
 #include "kai/ukernels/matmul/pack/kai_lhs_quant_pack_bf16p_f32_neon.h"
 #include "kai/ukernels/matmul/pack/kai_rhs_quant_pack_kxn_bf16pbiasf32_f32_neon.h"
@@ -39,7 +40,7 @@ namespace kai::test {
 
 /// List of supported matrix multiplication methods.
 namespace {
-const std::array matmul_methods = {
+const std::array gemm_methods = {
     MatMulMethod{
         .name = "matmul_nt_nt_f32_bf16p_bf16p_8x12_neon_mla",
 
@@ -129,6 +130,104 @@ const std::array matmul_methods = {
         .fn_get_dst_size = kai_get_dst_size_matmul_clamp_f32_bf16p_bf16p12x4b_8x12x4_neon_mmla,
 
         .fn_matmul_f32_bf16p_bf16p = kai_run_matmul_clamp_f32_bf16p_bf16p12x4b_8x12x4_neon_mmla,
+    }};
+
+const std::array gemv_methods = {
+    MatMulMethod{
+        .name = "matmul_nt_nt_f32_bf16p_bf16p_1x12_neon_dot",
+
+        .m0 = 1,
+        .n0 = 12,
+        .k0 = 4,
+
+        .lhs_transposed = false,
+        .rhs_transposed = false,
+
+        .dst_format = DataFormat(DataType::FP32),
+        .lhs_format = DataFormat(DataType::FP32),
+        .packed_lhs_format =
+            DataFormat(DataType::BF16, 1, 4, DataFormat::PackFormat::NONE, DataType::FP32, DataType::UNKNOWN, 1, 4),
+        .rhs_format = DataFormat(DataType::FP32),
+        .packed_rhs_format = DataFormat(
+            DataType::BF16, 12, 4, DataFormat::PackFormat::BIAS_PER_ROW, DataType::FP32, DataType::UNKNOWN, 12, 4),
+        .bias_format = DataFormat(DataType::FP32),
+        .fn_is_supported = cpu_has_bf16,
+
+        .fn_get_mr = kai_get_mr_matmul_clamp_f32_bf16p_bf16p12x4b_1x12x4_neon_mmla,
+        .fn_get_nr = kai_get_nr_matmul_clamp_f32_bf16p_bf16p12x4b_1x12x4_neon_mmla,
+        .fn_get_kr = kai_get_kr_matmul_clamp_f32_bf16p_bf16p12x4b_1x12x4_neon_mmla,
+        .fn_get_sr = kai_get_sr_matmul_clamp_f32_bf16p_bf16p12x4b_1x12x4_neon_mmla,
+
+        .fn_get_main_m_step = kai_get_m_step_matmul_clamp_f32_bf16p_bf16p12x4b_1x12x4_neon_mmla,
+        .fn_get_pack_rhs_n_step = kai_get_n_step_rhs_quant_pack_kxn_bf16pbiasf32_f32_neon,
+        .fn_get_main_n_step = kai_get_n_step_matmul_clamp_f32_bf16p_bf16p12x4b_1x12x4_neon_mmla,
+
+        .fn_get_lhs_offset = kai_get_lhs_offset_lhs_quant_pack_bf16p_f32_neon,
+        .fn_get_packed_lhs_size = kai_get_lhs_packed_size_lhs_quant_pack_bf16p_f32_neon,
+        .fn_get_packed_lhs_offset = kai_get_lhs_packed_offset_matmul_clamp_f32_bf16p_bf16p12x4b_1x12x4_neon_mmla,
+        .fn_pack_lhs = kai_run_lhs_quant_pack_bf16p_f32_neon,
+
+        .fn_get_rhs_offset = kai_get_rhs_offset_rhs_quant_pack_kxn_bf16pbiasf32_f32_neon,
+        .fn_get_packed_rhs_size = nullptr,
+        .fn_get_packed_rhs_size_generic_block_size = kai_get_rhs_packed_size_rhs_quant_pack_kxn_bf16pbiasf32_f32_neon,
+        .fn_get_pack_rhs_packed_rhs_offset = nullptr,
+        .fn_get_main_packed_rhs_offset = kai_get_rhs_packed_offset_matmul_clamp_f32_bf16p_bf16p12x4b_1x12x4_neon_mmla,
+        .fn_pack_rhs = kai_run_rhs_quant_pack_kxn_bf16pbiasf32_f32_neon,
+
+        .fn_get_bias_offset = kai_get_bias_offset_rhs_quant_pack_kxn_bf16pbiasf32_f32_neon,
+
+        .fn_get_dst_offset = kai_get_dst_offset_matmul_clamp_f32_bf16p_bf16p12x4b_1x12x4_neon_mmla,
+        .fn_get_dst_size = kai_get_dst_size_matmul_clamp_f32_bf16p_bf16p12x4b_1x12x4_neon_mmla,
+
+        .fn_matmul_f32_bf16p_bf16p = kai_run_matmul_clamp_f32_bf16p_bf16p12x4b_1x12x4_neon_mmla,
+    },
+    MatMulMethod{
+        .name = "matmul_nt_nt_f32_bf16p_bf16p_1x12_neon_dot_opt_bias",
+
+        .m0 = 1,
+        .n0 = 12,
+        .k0 = 4,
+
+        .lhs_transposed = false,
+        .rhs_transposed = false,
+
+        .dst_format = DataFormat(DataType::FP32),
+        .lhs_format = DataFormat(DataType::FP32),
+        .packed_lhs_format =
+            DataFormat(DataType::BF16, 1, 4, DataFormat::PackFormat::NONE, DataType::FP32, DataType::UNKNOWN, 1, 4),
+        .rhs_format = DataFormat(DataType::FP32),
+        .packed_rhs_format = DataFormat(
+            DataType::BF16, 12, 4, DataFormat::PackFormat::BIAS_PER_ROW, DataType::FP32, DataType::UNKNOWN, 12, 4),
+        .bias_format = DataFormat(DataType::UNKNOWN),
+        .fn_is_supported = cpu_has_bf16,
+
+        .fn_get_mr = kai_get_mr_matmul_clamp_f32_bf16p_bf16p12x4b_1x12x4_neon_mmla,
+        .fn_get_nr = kai_get_nr_matmul_clamp_f32_bf16p_bf16p12x4b_1x12x4_neon_mmla,
+        .fn_get_kr = kai_get_kr_matmul_clamp_f32_bf16p_bf16p12x4b_1x12x4_neon_mmla,
+        .fn_get_sr = kai_get_sr_matmul_clamp_f32_bf16p_bf16p12x4b_1x12x4_neon_mmla,
+
+        .fn_get_main_m_step = kai_get_m_step_matmul_clamp_f32_bf16p_bf16p12x4b_1x12x4_neon_mmla,
+        .fn_get_pack_rhs_n_step = kai_get_n_step_rhs_quant_pack_kxn_bf16pbiasf32_f32_neon,
+        .fn_get_main_n_step = kai_get_n_step_matmul_clamp_f32_bf16p_bf16p12x4b_1x12x4_neon_mmla,
+
+        .fn_get_lhs_offset = kai_get_lhs_offset_lhs_quant_pack_bf16p_f32_neon,
+        .fn_get_packed_lhs_size = kai_get_lhs_packed_size_lhs_quant_pack_bf16p_f32_neon,
+        .fn_get_packed_lhs_offset = kai_get_lhs_packed_offset_matmul_clamp_f32_bf16p_bf16p12x4b_1x12x4_neon_mmla,
+        .fn_pack_lhs = kai_run_lhs_quant_pack_bf16p_f32_neon,
+
+        .fn_get_rhs_offset = kai_get_rhs_offset_rhs_quant_pack_kxn_bf16pbiasf32_f32_neon,
+        .fn_get_packed_rhs_size = nullptr,
+        .fn_get_packed_rhs_size_generic_block_size = kai_get_rhs_packed_size_rhs_quant_pack_kxn_bf16pbiasf32_f32_neon,
+        .fn_get_pack_rhs_packed_rhs_offset = nullptr,
+        .fn_get_main_packed_rhs_offset = kai_get_rhs_packed_offset_matmul_clamp_f32_bf16p_bf16p12x4b_1x12x4_neon_mmla,
+        .fn_pack_rhs = kai_run_rhs_quant_pack_kxn_bf16pbiasf32_f32_neon,
+
+        .fn_get_bias_offset = kai_get_bias_offset_rhs_quant_pack_kxn_bf16pbiasf32_f32_neon,
+
+        .fn_get_dst_offset = kai_get_dst_offset_matmul_clamp_f32_bf16p_bf16p12x4b_1x12x4_neon_mmla,
+        .fn_get_dst_size = kai_get_dst_size_matmul_clamp_f32_bf16p_bf16p12x4b_1x12x4_neon_mmla,
+
+        .fn_matmul_f32_bf16p_bf16p = kai_run_matmul_clamp_f32_bf16p_bf16p12x4b_1x12x4_neon_mmla,
     }};
 }  // namespace
 
@@ -343,10 +442,11 @@ TEST_P(MatMulTestBf16, Output) {
 }
 
 INSTANTIATE_TEST_SUITE_P(
-    MatMul, MatMulTestBf16,
+    MatMulGemm, MatMulTestBf16,
     testing::Combine(
-        testing::ValuesIn(matmul_methods),
+        testing::ValuesIn(gemm_methods),
         testing::Values(
+            MatMulShape{1, 1, 1},        // Smallest Possible Shape
             MatMulShape{3, 7, 3},        // Smaller than block size
             MatMulShape{12, 8, 4},       // Same block size
             MatMulShape{1, 1, 1023},     // Long K
@@ -363,6 +463,29 @@ INSTANTIATE_TEST_SUITE_P(
             MatrixPortion(0.75, 0.75, 1, 1),   // Bottom-right corner.
             MatrixPortion(0.75, 0, 1, 1),      // Partial rows
             MatrixPortion(0.4, 0.5, 0.6, 0.8)  // Somewhere Middle
+            )),
+    testing::PrintToStringParamName());
+
+INSTANTIATE_TEST_SUITE_P(
+    MatMulGemv, MatMulTestBf16,
+    testing::Combine(
+        testing::ValuesIn(gemv_methods),
+        testing::Values(
+            MatMulShape{1, 1, 1},        // Smallest Possible Shape
+            MatMulShape{1, 1, 1023},     // Long K
+            MatMulShape{1, 1023, 1},     // Long N
+            MatMulShape{1, 1013, 1023},  // Large Rhs
+            MatMulShape{1, 37, 23}, MatMulShape{1, 57, 89}, MatMulShape{1, 36, 89}, MatMulShape{1, 98, 23},
+            MatMulShape{1, 64, 1024},  // Nice shapes - Long Rhs Rect
+            MatMulShape{1, 1024, 64},  // Nice shapes - Wide Rhs Rect
+            MatMulShape{1, 256, 256},  // Nice shapes - Square
+            MatMulShape{1, 113, 373}   // Prime numbers
+            ),
+        testing::Values(
+            MatrixPortion(0, 0, 1, 1),     // Full matrix.
+            MatrixPortion(0, 0, 1, 0.25),  // Leftmost portion.
+            MatrixPortion(0, 0.75, 1, 1),  // Rightmost portion.
+            MatrixPortion(0, 0.5, 1, 0.8)  // Somewhere Middle
             )),
     testing::PrintToStringParamName());
 }  // namespace kai::test
