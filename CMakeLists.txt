@@ -124,6 +124,7 @@ set(KLEIDIAI_FILES_SME
     kai/ukernels/matmul/pack/kai_rhs_pack_kxn_f32p2vlx1biasf32_f32_f32_sme.c
     kai/ukernels/matmul/pack/kai_lhs_pack_f32p2vlx1_f32_sme.c
     kai/ukernels/matmul/pack/kai_rhs_pack_kxn_f32pb_f32_f32_16vlx1_sme.c
+    kai/ukernels/matmul/pack/kai_lhs_pack_x8p2vlx1_x8_sme.c
 )
 
 set(KLEIDIAI_FILES_SME2
