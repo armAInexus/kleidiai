@@ -91,7 +91,7 @@ set(KLEIDIAI_FILES_NEON_FP16
 set(KLEIDIAI_FILES_NEON_BF16
     kai/ukernels/matmul/pack/kai_lhs_quant_pack_bf16p_f32_neon.c
     kai/ukernels/matmul/pack/kai_rhs_quant_pack_kxn_bf16pbiasf32_f32_neon.c
-    kai/ukernels/matmul/matmul_clamp_f32_bf16p_bf16p/kai_matmul_clamp_f32_bf16p_bf16p12x4biasf32_8x12x4_neon_mmla.c
+    kai/ukernels/matmul/matmul_clamp_f32_bf16p_bf16p/kai_matmul_clamp_f32_bf16p_bf16p12x4b_8x12x4_neon_mmla.c
 )
 
 set(KLEIDIAI_FILES_NEON

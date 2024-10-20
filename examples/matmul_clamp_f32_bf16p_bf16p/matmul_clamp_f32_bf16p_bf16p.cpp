@@ -29,7 +29,7 @@
 // Include micro-kernel variants
 #include "kai/kai_common.h"
 #include "kai_lhs_quant_pack_bf16p_f32_neon.h"
-#include "kai_matmul_clamp_f32_bf16p_bf16p12x4biasf32_8x12x4_neon_mmla.h"
+#include "kai_matmul_clamp_f32_bf16p_bf16p12x4b_8x12x4_neon_mmla.h"
 #include "kai_matmul_clamp_f32_bf16p_bf16p_interface.h"
 #include "kai_rhs_quant_pack_kxn_bf16pbiasf32_f32_neon.h"
 
@@ -41,17 +41,17 @@ inline static float bf16_to_float(const uint16_t* v) {
 namespace {
 /// Micro-kernel interface
 constexpr kai_matmul_clamp_f32_bf16p_bf16p_ukernel ukernel{
-    kai_get_m_step_matmul_clamp_f32_bf16p_bf16p12x4biasf32_8x12x4_neon_mmla,
-    kai_get_n_step_matmul_clamp_f32_bf16p_bf16p12x4biasf32_8x12x4_neon_mmla,
-    kai_get_mr_matmul_clamp_f32_bf16p_bf16p12x4biasf32_8x12x4_neon_mmla,
-    kai_get_nr_matmul_clamp_f32_bf16p_bf16p12x4biasf32_8x12x4_neon_mmla,
-    kai_get_kr_matmul_clamp_f32_bf16p_bf16p12x4biasf32_8x12x4_neon_mmla,
-    kai_get_sr_matmul_clamp_f32_bf16p_bf16p12x4biasf32_8x12x4_neon_mmla,
-    kai_get_lhs_packed_offset_matmul_clamp_f32_bf16p_bf16p12x4biasf32_8x12x4_neon_mmla,
-    kai_get_rhs_packed_offset_matmul_clamp_f32_bf16p_bf16p12x4biasf32_8x12x4_neon_mmla,
-    kai_get_dst_offset_matmul_clamp_f32_bf16p_bf16p12x4biasf32_8x12x4_neon_mmla,
-    kai_get_dst_size_matmul_clamp_f32_bf16p_bf16p12x4biasf32_8x12x4_neon_mmla,
-    kai_run_matmul_clamp_f32_bf16p_bf16p12x4biasf32_8x12x4_neon_mmla};
+    kai_get_m_step_matmul_clamp_f32_bf16p_bf16p12x4b_8x12x4_neon_mmla,
+    kai_get_n_step_matmul_clamp_f32_bf16p_bf16p12x4b_8x12x4_neon_mmla,
+    kai_get_mr_matmul_clamp_f32_bf16p_bf16p12x4b_8x12x4_neon_mmla,
+    kai_get_nr_matmul_clamp_f32_bf16p_bf16p12x4b_8x12x4_neon_mmla,
+    kai_get_kr_matmul_clamp_f32_bf16p_bf16p12x4b_8x12x4_neon_mmla,
+    kai_get_sr_matmul_clamp_f32_bf16p_bf16p12x4b_8x12x4_neon_mmla,
+    kai_get_lhs_packed_offset_matmul_clamp_f32_bf16p_bf16p12x4b_8x12x4_neon_mmla,
+    kai_get_rhs_packed_offset_matmul_clamp_f32_bf16p_bf16p12x4b_8x12x4_neon_mmla,
+    kai_get_dst_offset_matmul_clamp_f32_bf16p_bf16p12x4b_8x12x4_neon_mmla,
+    kai_get_dst_size_matmul_clamp_f32_bf16p_bf16p12x4b_8x12x4_neon_mmla,
+    kai_run_matmul_clamp_f32_bf16p_bf16p12x4b_8x12x4_neon_mmla};
 
 /// @brief Truncate the 32-bit floating point number's least significant 16 mantissa bits
 /// @param x floating-point number
@@ -279,6 +279,8 @@ int main() {
     const auto time_matmul =
         std::chrono::duration_cast<std::chrono::nanoseconds>(timer_matmul_end - timer_matmul_start);
 
+    int ret = 0;
+
 #ifdef KAI_DEBUG
     int num_lhs_rows = (M + mr - 1) / mr;
     int num_lhs_cols = mr * kai_roundup(K, kr);
@@ -292,13 +294,13 @@ int main() {
     const bool is_valid = is_output_correct(M, N, rel_tolerance, dst_ref, dst);
 
     std::cout << "TEST[matmul_clamp_f32_bf16p_bf16p]\n";
-    std::cout << "- ukernel: matmul_clamp_f32_bf16p_bf16p12x4biasf32_8x12x4_neon_mmla\n";
+    std::cout << "- ukernel: matmul_clamp_f32_bf16p_bf16p12x4b_8x12x4_neon_mmla\n";
     if (is_valid) {
         std::cout << "- Status: PASSED\n";
         std::cout << "- Performance: " << time_matmul.count() << "ns\n";
     } else {
         std::cout << "- Status: FAILED\n";
-        return 1;
+        ret = 1;
     }
 
     //----------- END MICRO-KERNELS TESTS
@@ -313,7 +315,7 @@ int main() {
     delete[] dst;
     delete[] dst_ref;
 
-    return 0;
+    return ret;
 }
 
 #endif  // Architectural features check.
