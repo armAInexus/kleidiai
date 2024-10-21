@@ -108,6 +108,7 @@ build-examples:
     matrix:
       - EXAMPLE:
           - matmul_clamp_f16_f16_f16p
+          - matmul_clamp_f32_bf16p_bf16p
           - matmul_clamp_f32_qai8dxp_qsi4cxp
           - matmul_clamp_f32_qsi8d32p_qsi4c32p
           - matmul_clamp_f32_qai8dxp_qsi4c32p
@@ -130,6 +131,7 @@ test-examples:
     matrix:
       - EXAMPLE:
           - matmul_clamp_f16_f16_f16p
+          - matmul_clamp_f32_bf16p_bf16p
           - matmul_clamp_f32_qai8dxp_qsi4cxp
           - matmul_clamp_f32_qsi8d32p_qsi4c32p
           - matmul_clamp_f32_qai8dxp_qsi4c32p

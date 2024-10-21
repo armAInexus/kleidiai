@@ -10,29 +10,31 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
-#include <limits>
 #include <vector>
 
 #include "kai/kai_common.h"
+#include "test/common/bfloat16.hpp"
 #include "test/common/data_format.hpp"
 #include "test/common/data_type.hpp"
-#include "test/common/float16.hpp"
 #include "test/common/memory.hpp"
 #include "test/common/round.hpp"
-#include "test/reference/quantize.hpp"
 
 namespace kai::test {
 
 namespace {
 
-std::vector<uint8_t> pack_block(
-    const void* src, size_t data_esize, size_t full_height, size_t full_width, size_t block_height, size_t block_width,
-    size_t subblock_height, size_t subblock_width) {
-    const auto dst_bytes =
-        round_up_multiple(full_height, block_height) * round_up_multiple(full_width, block_width) * data_esize;
+uint16_t convert(const uint8_t* src_ptr_elm, DataType src_dtype, DataType dst_dtype) {
+    KAI_ASSUME(src_dtype == DataType::FP32 && dst_dtype == DataType::BF16);
+    return BFloat16(*reinterpret_cast<const float*>(src_ptr_elm)).data();
+}
 
-    std::vector<uint8_t> dst;
-    dst.resize(dst_bytes);
+std::vector<uint8_t> pack_block(
+    const void* src, DataType src_dtype, DataType dst_dtype, size_t src_esize, size_t dst_esize, size_t full_height,
+    size_t full_width, size_t block_height, size_t block_width, size_t subblock_height, size_t subblock_width) {
+    const auto dst_bytes =
+        round_up_multiple(full_height, block_height) * round_up_multiple(full_width, block_width) * dst_esize;
+
+    std::vector<uint8_t> dst(dst_bytes, 0);
 
     const auto* src_ptr = reinterpret_cast<const uint8_t*>(src);
     auto* dst_ptr = dst.data();
@@ -42,18 +44,38 @@ std::vector<uint8_t> pack_block(
             for (size_t y_subblock = 0; y_subblock < block_height; y_subblock += subblock_height) {
                 for (size_t x_subblock = 0; x_subblock < block_width; x_subblock += subblock_width) {
                     for (size_t y_element = 0; y_element < subblock_height; ++y_element) {
-                        if (y_block + y_subblock + y_element < full_height) {
-                            const auto len = std::min(subblock_width, full_width - x_block - x_subblock);
+                        if (src_dtype == dst_dtype) {
+                            const size_t esize = dst_esize;
 
-                            memcpy(
-                                dst_ptr,
-                                src_ptr +
-                                    ((y_block + y_subblock + y_element) * full_width + x_block + x_subblock) *
-                                        data_esize,
-                                len * data_esize);
+                            if (y_block + y_subblock + y_element < full_height) {
+                                const auto len = std::min(subblock_width, full_width - x_block - x_subblock);
+
+                                memcpy(
+                                    dst_ptr,
+                                    src_ptr +
+                                        ((y_block + y_subblock + y_element) * full_width + x_block + x_subblock) *
+                                            esize,
+                                    len * esize);
+                            }
+
+                            dst_ptr += subblock_width * esize;
+                        } else if (dst_esize == 2 /* 16 bits */) {
+                            for (size_t x_element = 0; x_element < subblock_width; ++x_element) {
+                                if (y_block + y_subblock + y_element < full_height) {
+                                    if (x_block + x_subblock + x_element < full_width) {
+                                        const uint8_t* src_ptr_elm = src_ptr +
+                                            ((y_block + y_subblock + y_element) * full_width + x_block + x_subblock +
+                                             x_element) *
+                                                src_esize;
+
+                                        uint16_t src_value = convert(src_ptr_elm, src_dtype, dst_dtype);
+                                        memcpy(dst_ptr, &src_value, dst_esize);
+                                    }
+                                }
+
+                                dst_ptr += dst_esize;
+                            }
                         }
-
-                        dst_ptr += subblock_width * data_esize;
                     }
                 }
             }
@@ -67,43 +89,65 @@ std::vector<uint8_t> pack_block(
 
 /// Packs the matrix from raw to per-row bias format.
 std::vector<uint8_t> pack_bias_per_row(
-    size_t data_esize, size_t zero_point_esize, const void* src, const void* bias, size_t height, size_t width,
-    size_t block_height, size_t block_width, size_t subblock_height, size_t subblock_width) {
+    DataType src_dtype, DataType bias_dtype, DataType dst_dtype, size_t src_esize, size_t bias_esize, size_t dst_esize,
+    const void* src, const void* bias, size_t height, size_t width, size_t block_height, size_t block_width,
+    size_t subblock_height, size_t subblock_width) {
+    KAI_ASSUME(src_dtype == bias_dtype);
+
     const auto num_groups = (height + block_height - 1) / block_height;
     const auto group_num_blocks = (width + block_width - 1) / block_width;
-
-    const auto group_zero_points_bytes = block_height * zero_point_esize;
-    const auto block_data_bytes = block_height * block_width * data_esize;
-    const auto group_bytes = group_zero_points_bytes + group_num_blocks * block_data_bytes;
+    const auto group_bias_bytes = block_height * bias_esize;
+    const auto block_data_bytes = block_height * block_width * dst_esize;
+    const auto group_bytes = group_bias_bytes + group_num_blocks * block_data_bytes;
     const auto dst_bytes = num_groups * group_bytes;
 
-    std::vector<uint8_t> dst;
-    dst.resize(dst_bytes);
+    std::vector<uint8_t> dst(dst_bytes, 0);
 
     const auto* src_ptr = reinterpret_cast<const uint8_t*>(src);
     const auto* bias_ptr = reinterpret_cast<const uint8_t*>(bias);
     auto* dst_ptr = dst.data();
 
     for (size_t y_block = 0; y_block < height; y_block += block_height) {
-        // Packs the zero points.
+        // Packs the bias.
         const auto bias_len = std::min(block_height, height - y_block);
-        memcpy(dst_ptr, bias_ptr, bias_len * zero_point_esize);
-        bias_ptr += block_height * zero_point_esize;
-        dst_ptr += block_height * zero_point_esize;
+        memcpy(dst_ptr, bias_ptr, bias_len * bias_esize);
+        bias_ptr += block_height * bias_esize;
+        dst_ptr += block_height * bias_esize;
 
         for (size_t x_block = 0; x_block < width; x_block += block_width) {
             for (size_t y_subblock = 0; y_subblock < block_height; y_subblock += subblock_height) {
                 for (size_t x_subblock = 0; x_subblock < block_width; x_subblock += subblock_width) {
                     for (size_t y_element = 0; y_element < subblock_height; ++y_element) {
-                        if (y_block + y_subblock + y_element < height) {
-                            const auto len = std::min(subblock_width, width - x_block - x_subblock);
-                            memcpy(
-                                dst_ptr,
-                                src_ptr +
-                                    ((y_block + y_subblock + y_element) * width + x_block + x_subblock) * data_esize,
-                                len * data_esize);
+                        if (src_dtype == dst_dtype) {
+                            const size_t esize = dst_esize;
+                            if (y_block + y_subblock + y_element < height) {
+                                const auto len = std::min(subblock_width, width - x_block - x_subblock);
+
+                                memcpy(
+                                    dst_ptr,
+                                    src_ptr +
+                                        ((y_block + y_subblock + y_element) * width + x_block + x_subblock) * esize,
+                                    len * esize);
+                            }
+
+                            dst_ptr += subblock_width * esize;
+                        } else if (dst_esize == 2 /* 16 bits */) {
+                            for (size_t x_element = 0; x_element < subblock_width; ++x_element) {
+                                if (y_block + y_subblock + y_element < height) {
+                                    if (x_block + x_subblock + x_element < width) {
+                                        const uint8_t* src_ptr_elm = src_ptr +
+                                            ((y_block + y_subblock + y_element) * width + x_block + x_subblock +
+                                             x_element) *
+                                                src_esize;
+
+                                        const uint16_t dst_value = convert(src_ptr_elm, src_dtype, dst_dtype);
+                                        memcpy(dst_ptr, &dst_value, dst_esize);
+                                    }
+                                }
+
+                                dst_ptr += dst_esize;
+                            }
                         }
-                        dst_ptr += subblock_width * data_esize;
                     }
                 }
             }
@@ -118,7 +162,7 @@ std::vector<uint8_t> pack_bias_per_row(
 }  // namespace
 
 std::vector<uint8_t> pack(
-    const DataFormat& dst_format, const void* src, [[maybe_unused]] const void* scales, const void* zero_points,
+    const DataFormat& dst_format, const void* src, [[maybe_unused]] const void* scales, const void* bias,
     const DataFormat& src_format, size_t height, size_t width) {
     const auto dst_dt = dst_format.data_type();
     const auto dst_qf = dst_format.pack_format();
@@ -131,27 +175,31 @@ std::vector<uint8_t> pack(
     const auto subblock_width = dst_format.actual_subblock_width(width);
 
     if (src_qf == DataFormat::PackFormat::NONE && dst_qf == DataFormat::PackFormat::BIAS_PER_ROW) {
-        KAI_ASSUME(src_dt == dst_dt);
+        KAI_ASSUME((src_dt == dst_dt) || (src_dt == DataType::FP32 && dst_dt == DataType::BF16));
 
-        const auto data_esize = data_type_size_in_bits(dst_dt);
-        const auto zero_point_esize = data_type_size_in_bits(dst_format.zero_point_data_type());
+        const auto src_esize = data_type_size_in_bits(src_dt);
+        const auto dst_esize = data_type_size_in_bits(dst_dt);
+        const auto bias_esize = data_type_size_in_bits(dst_format.zero_point_data_type());
+        const auto bias_dt = dst_format.zero_point_data_type();
 
-        if (data_esize % 8 == 0 && zero_point_esize % 8 == 0) {
-            return pack_bias_per_row(
-                data_esize / 8, zero_point_esize / 8, src, zero_points, height, width, block_height, block_width,
-                subblock_height, subblock_width);
-        }
+        KAI_ASSUME(dst_esize % 8 == 0 && bias_esize % 8 == 0 && src_esize % 8 == 0);
+
+        return pack_bias_per_row(
+            src_dt, bias_dt, dst_dt, src_esize / 8, bias_esize / 8, dst_esize / 8, src, bias, height, width,
+            block_height, block_width, subblock_height, subblock_width);
     }
 
     if (src_qf == DataFormat::PackFormat::NONE && dst_qf == DataFormat::PackFormat::NONE) {
-        KAI_ASSUME(src_dt == dst_dt);
+        KAI_ASSUME((src_dt == dst_dt) || (src_dt == DataType::FP32 && dst_dt == DataType::BF16));
 
-        const auto data_esize = data_type_size_in_bits(dst_dt);
+        const auto dst_esize = data_type_size_in_bits(dst_dt);
+        const auto src_esize = data_type_size_in_bits(src_dt);
 
-        if (data_esize % 8 == 0) {
-            return pack_block(
-                src, data_esize / 8, height, width, block_height, block_width, subblock_height, subblock_width);
-        }
+        KAI_ASSUME(src_esize % 8 == 0 && dst_esize % 8 == 0);
+
+        return pack_block(
+            src, src_dt, dst_dt, src_esize / 8, dst_esize / 8, height, width, block_height, block_width,
+            subblock_height, subblock_width);
     }
 
     KAI_ERROR("Unsupported operation!");

@@ -213,6 +213,9 @@ bool compare(
                 case DataType::FP16:
                     return compare_raw<Float16>(imp_data, ref_data, format, full_height, full_width, rect, handler);
 
+                case DataType::BF16:
+                    return compare_raw<BFloat16>(imp_data, ref_data, format, full_height, full_width, rect, handler);
+
                 default:
                     break;
             }
