@@ -3,9 +3,10 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 //
-#if !defined(__ARM_FEATURE_SME2)
-#error "SME2 extension required to compile this micro-kernel"
+#if !defined(__aarch64__) || !defined(__ARM_FEATURE_SVE2)
+#error This file must be compiled for AArch64, FEAT_SVE2.
 #else  // Architectural feature check
+
 #include <stddef.h>
 #include <stdint.h>
 
