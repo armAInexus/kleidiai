@@ -3,9 +3,10 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 //
+
 #if !defined(__ARM_FEATURE_DOTPROD)
 #error "Dotprod extension required to compile this micro-kernel"
-#else
+#else  // Architectural features check.
 #include "kai_matmul_clamp_f32_qai8dxp1x8_qsi4cxp4x8_1x4x32_neon_dotprod.h"
 
 #include <arm_neon.h>
@@ -106,124 +107,99 @@ void kai_run_matmul_clamp_f32_qai8dxp1x8_qsi4cxp4x8_1x4x32_neon_dotprod(
         return;
     }
 
-    const size_t kai_k0 = kai_kr * kai_sr;
-
-    const size_t num_rows = m;
-    const size_t num_cols = n;
-
-    const size_t lhs_packed_stride = kai_lhs_packed_stride(k);
     const size_t k_internal = kai_k_roundedup(k);
 
-    const int8x16_t nibble_mask = vdupq_n_s8(0xF0);
+    size_t num_blocks = k_internal / 32;
 
-    const uint8_t* lhs_ptr_start = lhs_packed;
-
-    for (size_t row_idx = 0; row_idx < num_rows; row_idx += kai_mr) {
-        const uint8_t* rhs_ptr = rhs_packed;
-        for (size_t col_idx = 0; col_idx < num_cols; col_idx += kai_nr) {
-            const uint8_t* lhs_ptr = lhs_ptr_start;
-
-            // Main f32 accumulator
-            int32x4_t iacc0011 = vdupq_n_s32(0);
-            int32x4_t iacc2233 = vdupq_n_s32(0);
-
-            for (size_t b = 0; b < k_internal; b += kai_k0) {
-                // Set up RHS
-                const int8x16_t rhs_raw_vec_0 = vld1q_s8((const int8_t*)(rhs_ptr + 0));
-                const int8x16_t rhs_raw_vec_1 = vld1q_s8((const int8_t*)(rhs_ptr + 16));
-                const int8x16_t rhs_raw_vec_2 = vld1q_s8((const int8_t*)(rhs_ptr + 32));
-                const int8x16_t rhs_raw_vec_3 = vld1q_s8((const int8_t*)(rhs_ptr + 48));
-
-                // Low nibble
-                const int8x16_t rhs_vec_0_0 = vshlq_n_s8(rhs_raw_vec_0, 4);
-                const int8x16_t rhs_vec_1_0 = vshlq_n_s8(rhs_raw_vec_1, 4);
-                const int8x16_t rhs_vec_2_0 = vshlq_n_s8(rhs_raw_vec_2, 4);
-                const int8x16_t rhs_vec_3_0 = vshlq_n_s8(rhs_raw_vec_3, 4);
-
-                // High nibble
-                const int8x16_t rhs_vec_0_1 = vandq_s8(rhs_raw_vec_0, nibble_mask);
-                const int8x16_t rhs_vec_1_1 = vandq_s8(rhs_raw_vec_1, nibble_mask);
-                const int8x16_t rhs_vec_2_1 = vandq_s8(rhs_raw_vec_2, nibble_mask);
-                const int8x16_t rhs_vec_3_1 = vandq_s8(rhs_raw_vec_3, nibble_mask);
-
-                const int8x16_t lhs_vec_0 = vld1q_s8((const int8_t*)(lhs_ptr + 0));
-                const int8x16_t lhs_vec_1 = vld1q_s8((const int8_t*)(lhs_ptr + 16));
-
-                lhs_ptr += 32;
-                rhs_ptr += 64;
-
-                int8x16_t t;
-
-                t = vcombine_s8(vget_low_s8(lhs_vec_0), vget_low_s8(lhs_vec_0));
-                iacc0011 = vdotq_s32(iacc0011, rhs_vec_0_0, t);
-                iacc2233 = vdotq_s32(iacc2233, rhs_vec_1_0, t);
-                t = vcombine_s8(vget_high_s8(lhs_vec_0), vget_high_s8(lhs_vec_0));
-                iacc0011 = vdotq_s32(iacc0011, rhs_vec_2_0, t);
-                iacc2233 = vdotq_s32(iacc2233, rhs_vec_3_0, t);
-                t = vcombine_s8(vget_low_s8(lhs_vec_1), vget_low_s8(lhs_vec_1));
-                iacc0011 = vdotq_s32(iacc0011, rhs_vec_0_1, t);
-                iacc2233 = vdotq_s32(iacc2233, rhs_vec_1_1, t);
-                t = vcombine_s8(vget_high_s8(lhs_vec_1), vget_high_s8(lhs_vec_1));
-                iacc0011 = vdotq_s32(iacc0011, rhs_vec_2_1, t);
-                iacc2233 = vdotq_s32(iacc2233, rhs_vec_3_1, t);
-            }
-
-            int32x4_t iacc = vpaddq_s32(iacc0011, iacc2233);
-
-            // LHS offset
-            const int32x4_t lhs_offset = vld1q_dup_s32((const int32_t*)lhs_ptr);
-            lhs_ptr += sizeof(int32_t);
-
-            // LHS scale
-            const float32x4_t lhs_scale = vld1q_dup_f32((const float*)lhs_ptr);
-            lhs_ptr += sizeof(float);
-
-            // RHS sum values
-            const int32x4_t sum_n_s32 = vld1q_s32((const int32_t*)(rhs_ptr));
-            rhs_ptr += sizeof(int32x4_t);
-
-            // RHS scale
-            const float32x4_t rhs_scale = vld1q_f32((const float*)rhs_ptr);
-            rhs_ptr += sizeof(float32x4_t);
-
-            // Load the bias
-            const float32x4_t bias0 = vld1q_f32((const float*)rhs_ptr);
-            rhs_ptr += sizeof(float32x4_t);
-
-            // Add the reduction sum
-            iacc = vmlaq_s32(iacc, sum_n_s32, lhs_offset);
-
-            float32x4_t main_acc = vmulq_f32(vcvtq_f32_s32(iacc), rhs_scale);
-
-            main_acc = vmulq_f32(main_acc, lhs_scale);
-
-            // Add the bias
-            main_acc = vaddq_f32(main_acc, bias0);
-
-            // clamp (min-max) operation
-            const float32x4_t vmin_f32 = vdupq_n_f32(scalar_min);
-            const float32x4_t vmax_f32 = vdupq_n_f32(scalar_max);
-
-            main_acc = vmaxq_f32(main_acc, vmin_f32);
-            main_acc = vminq_f32(main_acc, vmax_f32);
-
-            if (col_idx + kai_nr <= n) {
-                vst1q_f32((float*)((uint8_t*)dst + col_idx * sizeof(float) + row_idx * dst_stride_row), main_acc);
-            } else {
-                size_t leftover = n % kai_nr;
-                *(float*)((uint8_t*)dst + (col_idx + 0) * sizeof(float) + row_idx * dst_stride_row) =
-                    vgetq_lane_f32(main_acc, 0);
-                if (leftover > 1) {
-                    *(float*)((uint8_t*)dst + (col_idx + 1) * sizeof(float) + row_idx * dst_stride_row) =
-                        vgetq_lane_f32(main_acc, 1);
-                }
-                if (leftover > 2) {
-                    *(float*)((uint8_t*)dst + (col_idx + 2) * sizeof(float) + row_idx * dst_stride_row) =
-                        vgetq_lane_f32(main_acc, 2);
-                }
-            }
-        }
-        lhs_ptr_start += lhs_packed_stride;
-    }
+    float clamp_vals[2] = {scalar_min, scalar_max};
+    __asm__ __volatile__(
+        "mov x26, #0x20\n"
+        "mov x20, #0x8\n"
+        "movi v30.16b, #0xf0\n"
+        "mov x25, %x[m]\n"
+        "madd x26, %x[num_blocks], x26, x20\n"
+        "1:"  // Row loop
+        "mov x24, %x[rhs_packed]\n"
+        "mov x23, %x[n]\n"
+        "add x22, %x[dst], %x[dst_stride_row]\n"
+        "2:"  // Column loop
+        "mov x21, %x[lhs_packed]\n"
+        "movi v29.4s, #0x0\n"
+        "movi v28.4s, #0x0\n"
+        "mov x20, %x[num_blocks]\n"
+        "3:"  // Sub block loop
+        "ldr q27, [x24, #0x0]\n"
+        "ldr q26, [x24, #0x10]\n"
+        "subs x20, x20, #0x1\n"
+        "ld1r { v25.2d }, [x21], #0x8\n"
+        "ldr q24, [x24, #0x20]\n"
+        "ldr q23, [x24, #0x30]\n"
+        "add x24, x24, #0x40\n"
+        "ld1r { v22.2d }, [x21], #0x8\n"
+        "ld1r { v21.2d }, [x21], #0x8\n"
+        "shl v20.16b, v27.16b, #0x4\n"
+        "shl v19.16b, v26.16b, #0x4\n"
+        "ld1r { v18.2d }, [x21], #0x8\n"
+        "shl v17.16b, v24.16b, #0x4\n"
+        "and v27.16b, v27.16b, v30.16b\n"
+        "shl v16.16b, v23.16b, #0x4\n"
+        "and v26.16b, v26.16b, v30.16b\n"
+        ".inst 0x4e99969d  // sdot v29.4s, v20.16b, v25.16b\n"
+        ".inst 0x4e99967c  // sdot v28.4s, v19.16b, v25.16b\n"
+        "and v24.16b, v24.16b, v30.16b\n"
+        "and v23.16b, v23.16b, v30.16b\n"
+        ".inst 0x4e96963d  // sdot v29.4s, v17.16b, v22.16b\n"
+        ".inst 0x4e96961c  // sdot v28.4s, v16.16b, v22.16b\n"
+        ".inst 0x4e95977d  // sdot v29.4s, v27.16b, v21.16b\n"
+        ".inst 0x4e95975c  // sdot v28.4s, v26.16b, v21.16b\n"
+        ".inst 0x4e92971d  // sdot v29.4s, v24.16b, v18.16b\n"
+        ".inst 0x4e9296fc  // sdot v28.4s, v23.16b, v18.16b\n"
+        "bgt 3b\n"
+        "ldr q22, [x24, #0x0]\n"
+        "ld1r { v21.4s }, [x21]\n"
+        "addp v29.4s, v29.4s, v28.4s\n"
+        "add x21, x21, #0x4\n"
+        "ld1r { v20.4s }, [x21]\n"
+        "ldr q16, [x24, #0x10]\n"
+        "add x20, %x[clamp_vals], #0x4\n"
+        "cmp x23, #0x4\n"
+        "ldr q19, [x24, #0x20]\n"
+        "ld1r { v18.4s }, [%x[clamp_vals]]\n"
+        "add x24, x24, #0x30\n"
+        "ld1r { v17.4s }, [x20]\n"
+        "mla v29.4s, v22.4s, v21.s[0]\n"
+        "fmul v16.4s, v16.4s, v20.4s\n"
+        "scvtf v29.4s, v29.4s\n"
+        "fmul v16.4s, v29.4s, v16.4s\n"
+        "fadd v16.4s, v16.4s, v19.4s\n"
+        "fmax v16.4s, v16.4s, v18.4s\n"
+        "fmin v16.4s, v16.4s, v17.4s\n"
+        "blt 4f\n"
+        "str q16, [%x[dst], #0x0]\n"
+        "b 7f\n"
+        "4:"  // Partial output
+        "mov x20, %x[dst]\n"
+        "tbz x23, #1, 5f\n"
+        "st1 { v16.d }[0], [x20], #0x8\n"
+        "tbz x23, #0, 6f\n"
+        "st1 { v16.s }[2], [x20]\n"
+        "b 6f\n"
+        "5:"  // Output block 0: partial_1_0
+        "st1 { v16.s }[0], [x20]\n"
+        "6:"  // Output block 0: Done
+        "7:"  // Stores done
+        "subs x23, x23, #0x4\n"
+        "add %x[dst], %x[dst], #0x10\n"
+        "bgt 2b\n"
+        "subs x25, x25, #0x1\n"
+        "add %x[lhs_packed], %x[lhs_packed], x26\n"
+        "mov %x[dst], x22\n"
+        "bgt 1b\n"
+        : [dst] "+&r"(dst), [lhs_packed] "+&r"(lhs_packed)
+        : [clamp_vals] "r"(clamp_vals), [dst_stride_row] "r"(dst_stride_row), [m] "r"(m), [n] "r"(n),
+          [num_blocks] "r"(num_blocks), [rhs_packed] "r"(rhs_packed)
+        : "cc", "memory", "v16", "v17", "v18", "v19", "v20", "v21", "v22", "v23", "v24", "v25", "v26", "v27", "v28",
+          "v29", "v30", "x20", "x21", "x22", "x23", "x24", "x25", "x26");
 }
-#endif  // Architectural feature check
+
+#endif  // Architectural features check.
