@@ -154,7 +154,8 @@ uintptr_t DataFormat::default_offset_in_bytes(size_t row, size_t col, size_t wid
 
     switch (_pack_format) {
         case PackFormat::NONE:
-            return row * row_stride + col * data_type_size_in_bits(_data_type) / 8;
+            return row * row_stride / (_block_height > 0 ? _block_height : 1) +
+                col * data_type_size_in_bits(_data_type) / 8;
 
         case PackFormat::BIAS_PER_ROW:
         case PackFormat::QUANTIZE_PER_ROW:

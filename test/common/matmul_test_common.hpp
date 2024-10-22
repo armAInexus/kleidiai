@@ -34,9 +34,6 @@ struct MatMulMethod {
     size_t n0{0};  ///< Block size in N dimension.
     size_t k0{0};  ///< Block size in K dimension.
 
-    bool lhs_transposed;  ///< LHS matrix is transposed.
-    bool rhs_transposed;  ///< RHS matrix is transposed.
-
     DataFormat dst_format;         ///< Data format of the destination matrix.
     DataFormat lhs_format;         ///< Data format of the LHS matrix.
     DataFormat packed_lhs_format;  ///< Data format of the packed LHS matrix.
@@ -192,6 +189,71 @@ struct MatMulMethod {
         const void* bias, const void* scale, void* rhs_packed, size_t extra_bytes, const void* params)>
         fn_pack_rhs;
 
+    /// Gets n step value.
+    ///
+    /// The starting row index must be divisible by `n_step`.
+    ///
+    /// @return The n step value.
+    std::function<size_t()> fn_pack_rhs_nxk_get_n_step{nullptr};
+
+    /// Gets the offset in bytes to the data element in the RHS matrix buffer.
+    ///
+    /// @param[in] n_idx Column index.
+    /// @param[in] rhs_offset Row stride in bytes of the RHS matrix.
+    ///
+    /// @return The offset in bytes to the data element.
+    std::function<size_t(size_t n_idx, size_t rhs_stride)> fn_pack_rhs_nxk_get_rhs_offset{nullptr};
+
+    /// Gets the offset in bytes to the data element in the bias buffer.
+    ///
+    /// @param[in] n_idx Column index.
+    ///
+    /// @return The offset in bytes to the data element.
+    std::function<size_t(size_t n_idx)> fn_pack_rhs_nxk_get_bias_offset{nullptr};
+
+    /// Gets the offset in bytes to the data element in the packed RHS buffer.
+    ///
+    /// @param[in] n_idx Row index.
+    /// @param[in] k Number of columns.
+    ///
+    /// @return The offset in bytes to the data element.
+    std::function<size_t(size_t n_idx, size_t k)> fn_pack_rhs_nxk_get_packed_rhs_offset{nullptr};
+
+    /// Gets the size in bytes of the packed RHS buffer.
+    ///
+    /// @param[in] n Number of rows.
+    /// @param[in] k Number of columns.
+    ///
+    /// @return The size in bytes of the packed RHS buffer.
+    std::function<size_t(size_t n, size_t k)> fn_pack_rhs_nxk_get_packed_rhs_size{nullptr};
+
+    /// Runs the RHS packing function for matrix multiplication.
+    ///
+    /// The pointer of each buffers (RHS, bias and packed RHS) needs to be added with offset
+    /// calculated using the following functions:
+    ///
+    ///   * RHS: @ref kai_get_rhs_offset_rhs_pack_nxk_f32p2vlx1b_f32_f32_sme.
+    ///   * Bias: @ref kai_get_bias_offset_rhs_pack_nxk_f32p2vlx1b_f32_f32_sme.
+    ///   * Output: @ref kai_get_rhs_packed_offset_rhs_pack_nxk_f32p2vlx1b_f32_f32_sme.
+    ///
+    /// @param[in] num_groups Number of groups. It must be 1.
+    /// @param[in] n Number of columns of the output matrix.
+    /// @param[in] k Common dimension between the LHS and RHS matrix.
+    /// @param[in] nr Block size in N dimension. It must be 2 * kai_get_sme_vector_length_u32().
+    /// @param[in] kr Block size in K dimension. It must be 1.
+    /// @param[in] sr Number of kr splits. It must be 1.
+    /// @param[in] rhs_stride Row stride in bytes of the RHS matrix.
+    /// @param[in] rhs RHS matrix data buffer.
+    /// @param[in] bias Bias matrix data buffer.
+    /// @param[in] scale Scale data buffer. It must be NULL.
+    /// @param[out] rhs_packed Packed RHS matrix.
+    /// @param[in] extra_bytes Extra bytes to append to the end of each row of the packed RHS matrix. It must be 0.
+    /// @param[in] params Extra packing parameters. It must be NULL.
+    std::function<void(
+        size_t num_groups, size_t n, size_t k, size_t nr, size_t kr, size_t sr, size_t rhs_stride, const void* rhs,
+        const void* bias, const void* scale, void* rhs_packed, size_t extra_bytes, const void* params)>
+        fn_pack_rhs_nxk{nullptr};
+
     /// Gets the offset in bytes to the data element in the bias buffer.
     ///
     /// @param[in] n_idx Column index.
@@ -290,6 +352,11 @@ struct MatMulMethod {
         return fn_pack_rhs != nullptr;
     }
 
+    /// Gets a value indicating whether pre-processing the transposed RHS matrix is needed.
+    [[nodiscard]] bool is_pack_rhs_nxk_needed() const {
+        return fn_pack_rhs_nxk != nullptr;
+    }
+
     /// Preprocesses the RHS matrix.
     ///
     /// @param[in] n Size of the matrix in N dimension.
@@ -311,6 +378,35 @@ struct MatMulMethod {
 
         if (fn_pack_rhs != nullptr) {
             fn_pack_rhs(
+                1, n, k, fn_get_nr(), fn_get_kr(), fn_get_sr(), rhs_row_stride, rhs, bias, nullptr, packed_rhs, 0,
+                nullptr);
+        } else {
+            KAI_ERROR("RHS pre-processing is not supported!");
+        }
+    }
+
+    /// Preprocesses the transposed RHS matrix.
+    ///
+    /// @param[in] n Size of the matrix in N dimension.
+    /// @param[in] k Size of the matrix in K dimension.
+    /// @param[in] rhs RHS data buffer.
+    /// @param[in] rhs_row_stride RHS row stride.
+    /// @param[in] bias Bias data buffer.
+    /// @param[in] scale Quantization scales data buffer.
+    /// @param[out] packed_rhs Packed RHS data buffer.
+    void pack_rhs_nxk(
+        size_t n, size_t k, const void* rhs, size_t rhs_row_stride, const void* bias, const void* scale,
+        void* packed_rhs) const {
+        KAI_UNUSED(n);
+        KAI_UNUSED(k);
+        KAI_UNUSED(rhs);
+        KAI_UNUSED(rhs_row_stride);
+        KAI_UNUSED(bias);
+        KAI_UNUSED(scale);
+        KAI_UNUSED(packed_rhs);
+
+        if (fn_pack_rhs_nxk != nullptr) {
+            fn_pack_rhs_nxk(
                 1, n, k, fn_get_nr(), fn_get_kr(), fn_get_sr(), rhs_row_stride, rhs, bias, nullptr, packed_rhs, 0,
                 nullptr);
         } else {
