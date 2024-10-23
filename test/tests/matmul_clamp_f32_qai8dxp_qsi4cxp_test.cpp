@@ -277,9 +277,8 @@ TEST_P(MatMulTest_f32_qai8dxp_qsi4cxp, EndToEnd_RHS_kxn_qsi4cx) {
     std::vector<uint8_t> imp_packed_rhs(imp_packed_rhs_size);
     const kai_rhs_pack_kxn_qsi4cxp_qs4cxs1s0_params params{.lhs_zero_point = 1, .rhs_zero_point = 0};
     kai_run_rhs_pack_kxn_qsi4cxp_qs4cxs1s0(
-        1, N, K, nr, kr, sr, reinterpret_cast<const uint8_t*>(ref_rhs_qsi4.data()),
-        reinterpret_cast<const float*>(ref_biases.data()), reinterpret_cast<const float*>(ref_rhs_scales.data()),
-        imp_packed_rhs.data(), 0, &params);
+        1, N, K, nr, kr, sr, ref_rhs_qsi4.data(), reinterpret_cast<const float*>(ref_biases.data()),
+        reinterpret_cast<const float*>(ref_rhs_scales.data()), imp_packed_rhs.data(), 0, &params);
 
     // Runs the GEMM micro-kernel.
     const auto imp_dst_size = ukernel_variant.interface.get_dst_size(M, N);

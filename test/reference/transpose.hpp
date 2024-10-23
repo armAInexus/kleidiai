@@ -37,7 +37,7 @@ std::vector<uint8_t> transpose(const void* data, DataType data_type, size_t heig
 /// @return The transposed matrix.
 ///
 template <typename T>
-std::vector<T> transpose(
+std::vector<uint8_t> transpose(
     const void* data, size_t height, size_t width, size_t src_stride, size_t dst_stride, size_t dst_size);
 
 }  // namespace kai::test
