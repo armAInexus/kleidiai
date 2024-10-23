@@ -38,15 +38,7 @@ size_t kai_get_lhs_packed_size_lhs_quant_pack_bf16p_f32_neon(size_t m, size_t k,
     return kai_roundup(m, mr) * kai_roundup(k, kr) * sizeof(uint16_t);
 }
 
-void kai_run_lhs_quant_pack_bf16p_f32_neon_1x4(
-    size_t m, size_t k, size_t mr, size_t kr, size_t sr, size_t m_idx_start, const void* lhs, size_t lhs_stride,
-    void* lhs_packed) {
-    KAI_UNUSED(m);
-    KAI_UNUSED(m_idx_start);
-    KAI_UNUSED(mr);
-    KAI_UNUSED(sr);
-    KAI_UNUSED(lhs_stride);
-
+static void kai_run_lhs_quant_pack_bf16p_f32_neon_1x4(size_t k, size_t kr, const void* lhs, void* lhs_packed) {
     const float* lhs_ptr = (float*)(lhs);
     uint16_t* lhs_packed_ptr = (uint16_t*)(lhs_packed);
 
@@ -105,7 +97,7 @@ void kai_run_lhs_quant_pack_bf16p_f32_neon(
     size_t m, size_t k, size_t mr, size_t kr, size_t sr, size_t m_idx_start, const float* lhs, size_t lhs_stride,
     uint16_t* lhs_packed) {
     if (mr == 1) {
-        kai_run_lhs_quant_pack_bf16p_f32_neon_1x4(m, k, mr, kr, sr, m_idx_start, lhs, lhs_stride, lhs_packed);
+        kai_run_lhs_quant_pack_bf16p_f32_neon_1x4(k, kr, lhs, lhs_packed);
         return;
     }
 

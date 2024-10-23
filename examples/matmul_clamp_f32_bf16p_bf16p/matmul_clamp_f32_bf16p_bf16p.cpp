@@ -29,7 +29,7 @@
 // Include micro-kernel variants
 #include "kai/kai_common.h"
 #include "kai_lhs_quant_pack_bf16p_f32_neon.h"
-#include "kai_matmul_clamp_f32_bf16p_bf16p12x4b_1x12x4_neon_mmla.h"
+#include "kai_matmul_clamp_f32_bf16p_bf16p12x4b_1x36x4_neon_mmla.h"
 #include "kai_matmul_clamp_f32_bf16p_bf16p12x4b_8x12x4_neon_mmla.h"
 #include "kai_matmul_clamp_f32_bf16p_bf16p_interface.h"
 #include "kai_rhs_quant_pack_kxn_bf16pbiasf32_f32_neon.h"
@@ -43,17 +43,17 @@ namespace {
 
 /// Micro-kernel interface
 constexpr kai_matmul_clamp_f32_bf16p_bf16p_ukernel ukernel_gemv{
-    kai_get_m_step_matmul_clamp_f32_bf16p_bf16p12x4b_1x12x4_neon_mmla,
-    kai_get_n_step_matmul_clamp_f32_bf16p_bf16p12x4b_1x12x4_neon_mmla,
-    kai_get_mr_matmul_clamp_f32_bf16p_bf16p12x4b_1x12x4_neon_mmla,
-    kai_get_nr_matmul_clamp_f32_bf16p_bf16p12x4b_1x12x4_neon_mmla,
-    kai_get_kr_matmul_clamp_f32_bf16p_bf16p12x4b_1x12x4_neon_mmla,
-    kai_get_sr_matmul_clamp_f32_bf16p_bf16p12x4b_1x12x4_neon_mmla,
-    kai_get_lhs_packed_offset_matmul_clamp_f32_bf16p_bf16p12x4b_1x12x4_neon_mmla,
-    kai_get_rhs_packed_offset_matmul_clamp_f32_bf16p_bf16p12x4b_1x12x4_neon_mmla,
-    kai_get_dst_offset_matmul_clamp_f32_bf16p_bf16p12x4b_1x12x4_neon_mmla,
-    kai_get_dst_size_matmul_clamp_f32_bf16p_bf16p12x4b_1x12x4_neon_mmla,
-    kai_run_matmul_clamp_f32_bf16p_bf16p12x4b_1x12x4_neon_mmla};
+    kai_get_m_step_matmul_clamp_f32_bf16p_bf16p12x4b_1x36x4_neon_mmla,
+    kai_get_n_step_matmul_clamp_f32_bf16p_bf16p12x4b_1x36x4_neon_mmla,
+    kai_get_mr_matmul_clamp_f32_bf16p_bf16p12x4b_1x36x4_neon_mmla,
+    kai_get_nr_matmul_clamp_f32_bf16p_bf16p12x4b_1x36x4_neon_mmla,
+    kai_get_kr_matmul_clamp_f32_bf16p_bf16p12x4b_1x36x4_neon_mmla,
+    kai_get_sr_matmul_clamp_f32_bf16p_bf16p12x4b_1x36x4_neon_mmla,
+    kai_get_lhs_packed_offset_matmul_clamp_f32_bf16p_bf16p12x4b_1x36x4_neon_mmla,
+    kai_get_rhs_packed_offset_matmul_clamp_f32_bf16p_bf16p12x4b_1x36x4_neon_mmla,
+    kai_get_dst_offset_matmul_clamp_f32_bf16p_bf16p12x4b_1x36x4_neon_mmla,
+    kai_get_dst_size_matmul_clamp_f32_bf16p_bf16p12x4b_1x36x4_neon_mmla,
+    kai_run_matmul_clamp_f32_bf16p_bf16p12x4b_1x36x4_neon_mmla};
 
 constexpr kai_matmul_clamp_f32_bf16p_bf16p_ukernel ukernel_gemm{
     kai_get_m_step_matmul_clamp_f32_bf16p_bf16p12x4b_8x12x4_neon_mmla,
