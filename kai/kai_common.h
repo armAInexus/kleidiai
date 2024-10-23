@@ -161,6 +161,17 @@ inline static int8_t kai_ext_sign_i8_i4(int8_t value) {
     return (value ^ 0x8) - 8;
 }
 
+struct kai_rhs_pack_qsi8_params {
+    int32_t input_zero_point;
+    float scale_multiplier;
+};
+
+struct kai_matmul_requantize32_params {
+    int32_t min_value;
+    int32_t max_value;
+    int32_t output_zero_point;
+};
+
 #ifdef __cplusplus
 }
 #endif

@@ -24,4 +24,16 @@ namespace kai::test {
 /// @return The transposed matrix.
 std::vector<uint8_t> transpose(const void* data, DataType data_type, size_t height, size_t width);
 
+/// Transposes the matrix.
+///
+/// @tparam T The data type.
+///
+/// @param[in] src The data buffer of the source matrix.
+/// @param[in] height The number of rows of the source matrix.
+/// @param[in] width The number of columns of the source matrix.
+///
+/// @return The transposed matrix.
+template <typename T>
+std::vector<uint8_t> transpose(const void* src, size_t height, size_t width);
+
 }  // namespace kai::test

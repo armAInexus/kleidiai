@@ -136,12 +136,40 @@ std::vector<uint8_t> sub(
         lhs, lhs_dt, lhs_height, lhs_width, rhs, rhs_dt, rhs_height, rhs_width);
 }
 
+template <typename T>
+std::vector<uint8_t> sub(
+    const void* lhs, size_t lhs_height, size_t lhs_width,  //
+    const void* rhs, size_t rhs_height, size_t rhs_width) {
+    return binary_elementwise_any_op_type<BinaryElementwiseOperator::SUB, T>(
+        lhs, rhs, lhs_height, lhs_width, rhs_height, rhs_width);
+}
+
+template std::vector<uint8_t> sub<int32_t>(
+    const void* lhs, size_t lhs_height, size_t lhs_width,  //
+    const void* rhs, size_t rhs_height, size_t rhs_width);
+
 std::vector<uint8_t> mul(
     const void* lhs, DataType lhs_dt, size_t lhs_height, size_t lhs_width,  //
     const void* rhs, DataType rhs_dt, size_t rhs_height, size_t rhs_width) {
     return binary_elementwise_any_type<BinaryElementwiseOperator::MUL>(
         lhs, lhs_dt, lhs_height, lhs_width, rhs, rhs_dt, rhs_height, rhs_width);
 }
+
+template <typename T>
+std::vector<uint8_t> mul(
+    const void* lhs, size_t lhs_height, size_t lhs_width,  //
+    const void* rhs, size_t rhs_height, size_t rhs_width) {
+    return binary_elementwise_any_op_type<BinaryElementwiseOperator::MUL, T>(
+        lhs, rhs, lhs_height, lhs_width, rhs_height, rhs_width);
+}
+
+template std::vector<uint8_t> mul<float>(
+    const void* lhs, size_t lhs_height, size_t lhs_width,  //
+    const void* rhs, size_t rhs_height, size_t rhs_width);
+
+template std::vector<uint8_t> mul<int32_t>(
+    const void* lhs, size_t lhs_height, size_t lhs_width,  //
+    const void* rhs, size_t rhs_height, size_t rhs_width);
 
 std::vector<uint8_t> div(
     const void* lhs, DataType lhs_dt, size_t lhs_height, size_t lhs_width,  //

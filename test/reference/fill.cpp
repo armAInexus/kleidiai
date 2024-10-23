@@ -20,6 +20,9 @@
 #include "test/common/float16.hpp"
 #include "test/common/int4.hpp"
 #include "test/common/memory.hpp"
+#include "test/common/numeric_limits.hpp"
+#include "test/common/round.hpp"
+#include "test/common/type_traits.hpp"
 
 namespace kai::test {
 
@@ -119,10 +122,66 @@ std::vector<uint8_t> fill_matrix_random(size_t height, size_t width, const DataF
 }
 
 template <typename Value>
+Value get_random(uint64_t seed, Value min_value, Value max_value) {
+    static_assert(is_floating_point<Value> || is_integral<Value>);
+    static_assert(size_in_bits<Value> <= 32);
+
+    using Distribution = std::conditional_t<
+        is_floating_point<Value>, std::uniform_real_distribution<float>,
+        std::conditional_t<
+            is_signed<Value>, std::uniform_int_distribution<int32_t>, std::uniform_int_distribution<uint32_t>>>;
+
+    std::mt19937 rnd(seed);
+    Distribution dist(min_value, max_value);
+
+    return static_cast<Value>(dist(rnd));
+}
+
+template <typename Value>
+Value get_random(uint64_t seed) {
+    if constexpr (is_floating_point<Value>) {
+        return get_random<Value>(seed, static_cast<Value>(0.0F), static_cast<Value>(1.0F));
+    } else {
+        return get_random<Value>(seed, numeric_lowest<Value>, numeric_highest<Value>);
+    }
+}
+
+template float get_random(uint64_t seed);
+template int32_t get_random(uint64_t seed);
+
+template <typename Value>
+std::vector<uint8_t> fill_random(size_t length, uint64_t seed, Value min_value, Value max_value) {
+    static_assert(is_floating_point<Value> || is_integral<Value>);
+    static_assert(size_in_bits<Value> <= 32);
+
+    using Distribution = std::conditional_t<
+        is_floating_point<Value>, std::uniform_real_distribution<float>,
+        std::conditional_t<
+            is_signed<Value>, std::uniform_int_distribution<int32_t>, std::uniform_int_distribution<uint32_t>>>;
+
+    std::mt19937 rnd(seed);
+    Distribution dist(min_value, max_value);
+
+    std::vector<uint8_t> data(round_up_division(length * size_in_bits<Value>, 8));
+
+    for (size_t i = 0; i < length; ++i) {
+        write_array<Value>(data.data(), i, static_cast<Value>(dist(rnd)));
+    }
+
+    return data;
+}
+
+template <typename Value>
 std::vector<uint8_t> fill_random(size_t length, uint64_t seed) {
-    return fill_matrix_random_raw<Value>(1, length, seed);
+    if constexpr (is_floating_point<Value>) {
+        return fill_random<Value>(length, seed, static_cast<Value>(0.0F), static_cast<Value>(1.0F));
+    } else {
+        return fill_random<Value>(length, seed, numeric_lowest<Value>, numeric_highest<Value>);
+    }
 }
 
 template std::vector<uint8_t> fill_random<float>(size_t length, uint64_t seed);
+template std::vector<uint8_t> fill_random<int32_t>(size_t length, uint64_t seed);
+template std::vector<uint8_t> fill_random<int8_t>(size_t length, uint64_t seed);
 
 }  // namespace kai::test

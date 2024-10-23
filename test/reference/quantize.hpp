@@ -19,6 +19,12 @@ enum class QuantizationMethod : uint32_t {
     PER_ROW,     ///< Per-row, i.e. one quantization scale and zero point for each row.
 };
 
+template <typename IntType>
+IntType quantize_symmetric(float value, float scale);
+
+template <typename FloatType, typename IntType, typename ZeroPointType>
+IntType quantize_asymmetric(FloatType value, FloatType scale, ZeroPointType zero_point);
+
 /// Computes the quantization information using symmetric per-block quantization method.
 ///
 /// The input matrix is divided into quantization blocks of the same size.
