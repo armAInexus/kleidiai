@@ -134,7 +134,7 @@ const std::array gemm_methods = {
 
 const std::array gemv_methods = {
     MatMulMethod{
-        .name = "matmul_nt_nt_f32_bf16p_bf16p_1x12_neon_dot",
+        .name = "matmul_nt_nt_f32_bf16p_bf16p_1x36_neon_dot",
 
         .m0 = 1,
         .n0 = 12,
@@ -182,7 +182,7 @@ const std::array gemv_methods = {
         .fn_matmul_f32_bf16p_bf16p = kai_run_matmul_clamp_f32_bf16p_bf16p12x4b_1x36x4_neon_mmla,
     },
     MatMulMethod{
-        .name = "matmul_nt_nt_f32_bf16p_bf16p_1x12_neon_dot_opt_bias",
+        .name = "matmul_nt_nt_f32_bf16p_bf16p_1x36_neon_dot_opt_bias",
 
         .m0 = 1,
         .n0 = 12,
@@ -355,12 +355,12 @@ TEST_P(MatMulTestBf16, Output) {
     }
 
     const auto m_step = method.fn_get_main_m_step();
-    ASSERT_EQ(m_step, method.m0);
+    ASSERT_TRUE(m_step % method.m0 == 0);
 
     const auto n_step = method.fn_get_main_n_step();
-    ASSERT_EQ(n_step, method.n0);
+    ASSERT_TRUE(n_step % method.n0 == 0);
 
-    const auto rect = portion.compute_portion(info.m, info.n, method.m0, method.n0);
+    const auto rect = portion.compute_portion(info.m, info.n, m_step, n_step);
 
     if (rect.height() == 0 || rect.width() == 0) {
         GTEST_SKIP();
@@ -475,11 +475,14 @@ INSTANTIATE_TEST_SUITE_P(
             MatMulShape{1, 1, 1023},     // Long K
             MatMulShape{1, 1023, 1},     // Long N
             MatMulShape{1, 1013, 1023},  // Large Rhs
-            MatMulShape{1, 37, 23}, MatMulShape{1, 57, 89}, MatMulShape{1, 36, 89}, MatMulShape{1, 98, 23},
-            MatMulShape{1, 64, 1024},  // Nice shapes - Long Rhs Rect
-            MatMulShape{1, 1024, 64},  // Nice shapes - Wide Rhs Rect
-            MatMulShape{1, 256, 256},  // Nice shapes - Square
-            MatMulShape{1, 113, 373}   // Prime numbers
+            MatMulShape{1, 37, 23},      //
+            MatMulShape{1, 57, 89},      //
+            MatMulShape{1, 36, 89},      //
+            MatMulShape{1, 98, 23},      //
+            MatMulShape{1, 64, 1024},    // Nice shapes - Long Rhs Rect
+            MatMulShape{1, 1024, 64},    // Nice shapes - Wide Rhs Rect
+            MatMulShape{1, 256, 256},    // Nice shapes - Square
+            MatMulShape{1, 113, 373}     // Prime numbers
             ),
         testing::Values(
             MatrixPortion(0, 0, 1, 1),     // Full matrix.
