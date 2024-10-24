@@ -3,8 +3,8 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 //
-#if !defined(__ARM_FEATURE_DOTPROD) && !defined(__ARM_FEATURE_MATMUL_INT8)
-#error "Dotprod and I8mm extensions required to compile this example"
+#if !defined(__ARM_FEATURE_DOTPROD) && !defined(__ARM_FEATURE_MATMUL_INT8) && !defined(__ARM_FEATURE_SVE2)
+#error "Dotprod and I8mm extensions and SVE2 required to compile this example"
 #else
 #include <cassert>
 #include <cfloat>
@@ -16,6 +16,7 @@
 
 // Include micro-kernel variants
 #include "kai_lhs_quant_pack_qai8dxp_f32.h"
+#include "kai_matmul_clamp_f32_qai8dxp1vlx8_qsi4cxp4vlx8_1vlx4vl_sme2_mopa.h"
 #include "kai_matmul_clamp_f32_qai8dxp1x8_qsi4cxp4x8_1x4x32_neon_dotprod.h"
 #include "kai_matmul_clamp_f32_qai8dxp1x8_qsi4cxp8x8_1x8x32_neon_dotprod.h"
 #include "kai_matmul_clamp_f32_qai8dxp4x8_qsi4cxp4x4_16x4x32_neon_dotprod.h"
@@ -27,6 +28,7 @@
 #include "kai_matmul_clamp_f32_qai8dxp_qsi4cxp_interface.h"
 #include "kai_rhs_pack_kxn_qsi4cxp_qs4cxs1s0.h"
 #include "kai_rhs_pack_nxk_qsi4cxp_qs4cxs1s0.h"
+#include "kai_rhs_pack_nxk_qsi4cxpo_qsu4cxs1s0.h"
 
 #define INT4_MIN (-8)
 #define INT4_MAX (7)
@@ -41,14 +43,30 @@ struct mnk {
     size_t n = 0;
     size_t k = 0;
 };
-mnk matmul_shapes[] = {{13, 33, 32}, {37, 75, 17}, {16, 32, 64}, {7, 17, 33}, {15, 31, 45}};
+mnk matmul_shapes[] = {{13, 33, 32}, {37, 75, 17}, {16, 32, 64}, {7, 17, 33}, {15, 31, 45}, {16, 112, 64}};
 // Micro-kernel interface
 struct kai_matmul_ukernel_f32_qa8dxp_qs4cxp {
     kai_matmul_clamp_f32_qai8dxp_qsi4cxp_ukernel ukernel;
+    bool q4_interleaved;
+    bool kxn_impl;
     std::string name = {};
 };
 
 kai_matmul_ukernel_f32_qa8dxp_qs4cxp ukernel_variants[] = {
+     {kai_get_m_step_matmul_clamp_f32_qai8dxp1vlx8_qsi4cxp4vlx8_1vlx4vl_sme2_mopa,
+     kai_get_n_step_matmul_clamp_f32_qai8dxp1vlx8_qsi4cxp4vlx8_1vlx4vl_sme2_mopa,
+     kai_get_mr_matmul_clamp_f32_qai8dxp1vlx8_qsi4cxp4vlx8_1vlx4vl_sme2_mopa,
+     kai_get_nr_matmul_clamp_f32_qai8dxp1vlx8_qsi4cxp4vlx8_1vlx4vl_sme2_mopa,
+     kai_get_kr_matmul_clamp_f32_qai8dxp1vlx8_qsi4cxp4vlx8_1vlx4vl_sme2_mopa,
+     kai_get_sr_matmul_clamp_f32_qai8dxp1vlx8_qsi4cxp4vlx8_1vlx4vl_sme2_mopa,
+     kai_get_lhs_packed_offset_matmul_clamp_f32_qai8dxp1vlx8_qsi4cxp4vlx8_1vlx4vl_sme2_mopa,
+     kai_get_rhs_packed_offset_matmul_clamp_f32_qai8dxp1vlx8_qsi4cxp4vlx8_1vlx4vl_sme2_mopa,
+     kai_get_dst_offset_matmul_clamp_f32_qai8dxp1vlx8_qsi4cxp4vlx8_1vlx4vl_sme2_mopa,
+     kai_get_dst_size_matmul_clamp_f32_qai8dxp1vlx8_qsi4cxp4vlx8_1vlx4vl_sme2_mopa,
+     kai_run_matmul_clamp_f32_qai8dxp1vlx8_qsi4cxp4vlx8_1vlx4vl_sme2_mopa,
+     false,
+     false,
+     "matmul_clamp_f32_qai8dxp1vlx8_qsi4cxp4vlx8_1vlx4vl_sme2_mopa"},
     {kai_get_m_step_matmul_clamp_f32_qai8dxp1x8_qsi4cxp4x8_1x4x32_neon_dotprod,
      kai_get_n_step_matmul_clamp_f32_qai8dxp1x8_qsi4cxp4x8_1x4x32_neon_dotprod,
      kai_get_mr_matmul_clamp_f32_qai8dxp1x8_qsi4cxp4x8_1x4x32_neon_dotprod,
@@ -60,6 +78,8 @@ kai_matmul_ukernel_f32_qa8dxp_qs4cxp ukernel_variants[] = {
      kai_get_dst_offset_matmul_clamp_f32_qai8dxp1x8_qsi4cxp4x8_1x4x32_neon_dotprod,
      kai_get_dst_size_matmul_clamp_f32_qai8dxp1x8_qsi4cxp4x8_1x4x32_neon_dotprod,
      kai_run_matmul_clamp_f32_qai8dxp1x8_qsi4cxp4x8_1x4x32_neon_dotprod,
+     true,
+     true,
      "matmul_clamp_f32_qai8dxp1x8_qsi4cxp4x8_1x4x32_neon_dotprod"},
     {kai_get_m_step_matmul_clamp_f32_qai8dxp1x8_qsi4cxp8x8_1x8x32_neon_dotprod,
      kai_get_n_step_matmul_clamp_f32_qai8dxp1x8_qsi4cxp8x8_1x8x32_neon_dotprod,
@@ -72,6 +92,8 @@ kai_matmul_ukernel_f32_qa8dxp_qs4cxp ukernel_variants[] = {
      kai_get_dst_offset_matmul_clamp_f32_qai8dxp1x8_qsi4cxp8x8_1x8x32_neon_dotprod,
      kai_get_dst_size_matmul_clamp_f32_qai8dxp1x8_qsi4cxp8x8_1x8x32_neon_dotprod,
      kai_run_matmul_clamp_f32_qai8dxp1x8_qsi4cxp8x8_1x8x32_neon_dotprod,
+     true,
+     true,
      "matmul_clamp_f32_qai8dxp1x8_qsi4cxp8x8_1x8x32_neon_dotprod"},
     {kai_get_m_step_matmul_clamp_f32_qai8dxp4x8_qsi4cxp4x8_4x4x32_neon_i8mm,
      kai_get_n_step_matmul_clamp_f32_qai8dxp4x8_qsi4cxp4x8_4x4x32_neon_i8mm,
@@ -84,6 +106,8 @@ kai_matmul_ukernel_f32_qa8dxp_qs4cxp ukernel_variants[] = {
      kai_get_dst_offset_matmul_clamp_f32_qai8dxp4x8_qsi4cxp4x8_4x4x32_neon_i8mm,
      kai_get_dst_size_matmul_clamp_f32_qai8dxp4x8_qsi4cxp4x8_4x4x32_neon_i8mm,
      kai_run_matmul_clamp_f32_qai8dxp4x8_qsi4cxp4x8_4x4x32_neon_i8mm,
+     true,
+     true,
      "matmul_clamp_f32_qai8dxp4x8_qsi4cxp4x8_4x4x32_neon_i8mm"},
     {kai_get_m_step_matmul_clamp_f32_qai8dxp4x8_qsi4cxp4x8_8x4x32_neon_i8mm,
      kai_get_n_step_matmul_clamp_f32_qai8dxp4x8_qsi4cxp4x8_8x4x32_neon_i8mm,
@@ -96,6 +120,8 @@ kai_matmul_ukernel_f32_qa8dxp_qs4cxp ukernel_variants[] = {
      kai_get_dst_offset_matmul_clamp_f32_qai8dxp4x8_qsi4cxp4x8_8x4x32_neon_i8mm,
      kai_get_dst_size_matmul_clamp_f32_qai8dxp4x8_qsi4cxp4x8_8x4x32_neon_i8mm,
      kai_run_matmul_clamp_f32_qai8dxp4x8_qsi4cxp4x8_8x4x32_neon_i8mm,
+     true,
+     true,
      "matmul_clamp_f32_qai8dxp4x8_qsi4cxp4x8_8x4x32_neon_i8mm"},
     {kai_get_m_step_matmul_clamp_f32_qai8dxp4x8_qsi4cxp8x8_4x8x32_neon_i8mm,
      kai_get_n_step_matmul_clamp_f32_qai8dxp4x8_qsi4cxp8x8_4x8x32_neon_i8mm,
@@ -108,6 +134,8 @@ kai_matmul_ukernel_f32_qa8dxp_qs4cxp ukernel_variants[] = {
      kai_get_dst_offset_matmul_clamp_f32_qai8dxp4x8_qsi4cxp8x8_4x8x32_neon_i8mm,
      kai_get_dst_size_matmul_clamp_f32_qai8dxp4x8_qsi4cxp8x8_4x8x32_neon_i8mm,
      kai_run_matmul_clamp_f32_qai8dxp4x8_qsi4cxp8x8_4x8x32_neon_i8mm,
+     true,
+     true,
      "matmul_clamp_f32_qai8dxp4x8_qsi4cxp8x8_4x8x32_neon_i8mm"},
     {kai_get_m_step_matmul_clamp_f32_qai8dxp4x8_qsi4cxp8x8_8x8x32_neon_i8mm,
      kai_get_n_step_matmul_clamp_f32_qai8dxp4x8_qsi4cxp8x8_8x8x32_neon_i8mm,
@@ -120,6 +148,8 @@ kai_matmul_ukernel_f32_qa8dxp_qs4cxp ukernel_variants[] = {
      kai_get_dst_offset_matmul_clamp_f32_qai8dxp4x8_qsi4cxp8x8_8x8x32_neon_i8mm,
      kai_get_dst_size_matmul_clamp_f32_qai8dxp4x8_qsi4cxp8x8_8x8x32_neon_i8mm,
      kai_run_matmul_clamp_f32_qai8dxp4x8_qsi4cxp8x8_8x8x32_neon_i8mm,
+     true,
+     true,
      "matmul_clamp_f32_qai8dxp4x8_qsi4cxp8x8_8x8x32_neon_i8mm"},
     {kai_get_m_step_matmul_clamp_f32_qai8dxp4x8_qsi4cxp8x4_8x8x32_neon_dotprod,
      kai_get_n_step_matmul_clamp_f32_qai8dxp4x8_qsi4cxp8x4_8x8x32_neon_dotprod,
@@ -132,6 +162,8 @@ kai_matmul_ukernel_f32_qa8dxp_qs4cxp ukernel_variants[] = {
      kai_get_dst_offset_matmul_clamp_f32_qai8dxp4x8_qsi4cxp8x4_8x8x32_neon_dotprod,
      kai_get_dst_size_matmul_clamp_f32_qai8dxp4x8_qsi4cxp8x4_8x8x32_neon_dotprod,
      kai_run_matmul_clamp_f32_qai8dxp4x8_qsi4cxp8x4_8x8x32_neon_dotprod,
+     true,
+     true,
      "matmul_clamp_f32_qai8dxp4x8_qsi4cxp8x4_8x8x32_neon_dotprod"},
     {kai_get_m_step_matmul_clamp_f32_qai8dxp4x8_qsi4cxp4x4_16x4x32_neon_dotprod,
      kai_get_n_step_matmul_clamp_f32_qai8dxp4x8_qsi4cxp4x4_16x4x32_neon_dotprod,
@@ -144,8 +176,9 @@ kai_matmul_ukernel_f32_qa8dxp_qs4cxp ukernel_variants[] = {
      kai_get_dst_offset_matmul_clamp_f32_qai8dxp4x8_qsi4cxp4x4_16x4x32_neon_dotprod,
      kai_get_dst_size_matmul_clamp_f32_qai8dxp4x8_qsi4cxp4x4_16x4x32_neon_dotprod,
      kai_run_matmul_clamp_f32_qai8dxp4x8_qsi4cxp4x4_16x4x32_neon_dotprod,
+     true,
+     true,
      "matmul_clamp_f32_qai8dxp4x8_qsi4cxp4x4_16x4x32_neon_dotprod"},
-
 };
 
 // Number of micro-kernel variants stored in the array
@@ -590,6 +623,15 @@ int main(int argc, char** argv) {
             //------------------------------------
             //------------------------------------
             for (size_t idx_variant = 0; idx_variant < num_ukernel_variants; ++idx_variant) {
+
+                // Bypass unsupported kxn tests.
+                if ((format == rhs_format::kxn) && (ukernel_variants[idx_variant].kxn_impl == false))
+                    continue;
+
+                // Bypass SME2 kernels (idx_variant = 0) when k is odd
+                if (((k % 2) > 0) && (idx_variant == 0))
+                    continue;
+
                 std::cout << "Testing " << ukernel_variants[idx_variant].name << std::endl;
 
                 // Get the packing parameters
@@ -619,19 +661,34 @@ int main(int argc, char** argv) {
                 // If the RHS matrix contains constant values, the packing can be performed
                 // only once
                 if (format == rhs_format::nxk) {
-                    struct kai_rhs_pack_nxk_qsi4cxp_qs4cxs1s0_params nxk_params;
-
-                    nxk_params.lhs_zero_point = 1;
-                    nxk_params.rhs_zero_point = 8;
                     // RHS packing
-                    kai_run_rhs_pack_nxk_qsi4cxp_qs4cxs1s0(
-                        1, n, k, nr, kr, sr,                     // Packing arguments
-                        (const uint8_t*)(rhs_native_mtx_qs4cx),  // RHS
-                        NULL,                                    // Bias
-                        (const float*)(rhs_scales_f32),          // Scale
-                        rhs_packed_mtx_qs4cx,                    // RHS packed
-                        0, &nxk_params);
+                    if (ukernel_variants[idx_variant].q4_interleaved) {
+                        struct kai_rhs_pack_nxk_qsi4cxp_qs4cxs1s0_params nxk_params;
+                        nxk_params.lhs_zero_point = 1;
+                        nxk_params.rhs_zero_point = 8;
 
+                        kai_run_rhs_pack_nxk_qsi4cxp_qs4cxs1s0(
+                            1, n, k, nr, kr, sr,                     // Packing arguments
+                            (const uint8_t*)(rhs_native_mtx_qs4cx),  // RHS
+                            NULL,                                    // Bias
+                            (const float*)(rhs_scales_f32),          // Scale
+                            rhs_packed_mtx_qs4cx,                    // RHS packed
+                            0, &nxk_params);
+                    }
+                    else {
+                        struct kai_rhs_pack_nxk_qsi4cxpo_qsu4cxs1s0_params nxk_params;
+                        nxk_params.lhs_zero_point = 1;
+                        nxk_params.rhs_zero_point = 8;
+
+                        // Pack without interleaving or usage of Sr
+                        kai_run_rhs_pack_nxk_qsi4cxpo_qsu4cxs1s0(
+                            1, n, k, nr, kr,                         // Packing arguments
+                            (const uint8_t*)(rhs_native_mtx_qs4cx),  // RHS
+                            NULL,                                    // Bias
+                            (const float*)(rhs_scales_f32),          // Scale
+                            rhs_packed_mtx_qs4cx,                    // RHS packed
+                            0, &nxk_params);
+                    }
                 } else {
                     struct kai_rhs_pack_kxn_qsi4cxp_qs4cxs1s0_params kxn_params;
                     kxn_params.lhs_zero_point = 1;
