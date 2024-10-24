@@ -84,8 +84,12 @@ TEST_P(kai_matmul_clamp_f32_f32_f32pb_1x16vl_sme2_mla, EndToEnd) {
 INSTANTIATE_TEST_SUITE_P(
     MatMul, kai_matmul_clamp_f32_f32_f32pb_1x16vl_sme2_mla,
     testing::Values(
-        MatMulShape{1, 1, 1}, MatMulShape{1, 16, 1}, MatMulShape{1, 32, 64}, MatMulShape{1, 7, 74},
-        MatMulShape{1, 800, 64}, MatMulShape{1, 512, 130}),
+        MatMulShape{1, 1, 1},     //
+        MatMulShape{1, 16, 1},    //
+        MatMulShape{1, 32, 64},   //
+        MatMulShape{1, 7, 74},    //
+        MatMulShape{1, 800, 64},  //
+        MatMulShape{1, 512, 130}),
     [](const testing::TestParamInfo<kai_matmul_clamp_f32_f32_f32pb_1x16vl_sme2_mla::ParamType>& info) {
         std::stringstream sstream;
         sstream << "kai_matmul_clamp_f32_f32_f32pb_1x16vl_sme2_mla_"

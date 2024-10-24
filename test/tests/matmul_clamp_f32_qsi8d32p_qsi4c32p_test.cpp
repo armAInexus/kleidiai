@@ -131,7 +131,10 @@ INSTANTIATE_TEST_SUITE_P(
     testing::Combine(
         testing::Range<size_t>(0, variants_kai_matmul_clamp_f32_qsi8d32p_qsi4c32p.size()),
         testing::Values(
-            MatMulShape{32, 64, 64}, MatMulShape{16, 32, 64}, MatMulShape{8, 32, 64}, MatMulShape{15, 32, 32})),
+            MatMulShape{32, 64, 64},  //
+            MatMulShape{16, 32, 64},  //
+            MatMulShape{8, 32, 64},   //
+            MatMulShape{15, 32, 32})),
     [](const auto& info) {
         const std::string name{variants_kai_matmul_clamp_f32_qsi8d32p_qsi4c32p.at(std::get<size_t>(info.param)).name};
         const auto shape = std::get<MatMulShape>(info.param);

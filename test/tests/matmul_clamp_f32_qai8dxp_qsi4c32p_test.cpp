@@ -39,8 +39,8 @@
 
 namespace kai::test {
 
-static const auto cpu_has_dotprod_and_bf16 = []() { return cpu_has_dotprod() && cpu_has_bf16(); };
-static const auto cpu_has_i8mm_and_bf16 = []() { return cpu_has_i8mm() && cpu_has_bf16(); };
+static auto cpu_has_dotprod_and_bf16 = []() { return cpu_has_dotprod() && cpu_has_bf16(); };
+static auto cpu_has_i8mm_and_bf16 = []() { return cpu_has_i8mm() && cpu_has_bf16(); };
 
 static const std::array<UkernelVariant<kai_matmul_clamp_f32_qai8dxp_qsi4c32p_ukernel>, 5>
     variants_kai_matmul_clamp_f32_qai8dxp_qsi4c32p = {{
@@ -244,7 +244,11 @@ INSTANTIATE_TEST_SUITE_P(
     MatMul, MatMulTest_f32_qmatmul_clamp_f32_qai8dxp_qsi4c32p,
     testing::Combine(
         testing::Range<size_t>(0, variants_kai_matmul_clamp_f32_qai8dxp_qsi4c32p.size()),
-        testing::Values(MatMulShape{16, 32, 64}, MatMulShape{8, 32, 64}, MatMulShape{15, 31, 45}),
+        testing::Values(
+            MatMulShape{16, 32, 64},  //
+            MatMulShape{8, 32, 64},   //
+            MatMulShape{15, 31, 45}   //
+            ),
         testing::Values(32, 64)),
     [](const auto& info) {
         const std::string name{variants_kai_matmul_clamp_f32_qai8dxp_qsi4c32p.at(std::get<0>(info.param)).name};
