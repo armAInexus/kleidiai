@@ -29,7 +29,7 @@
 // Include micro-kernel variants
 #include "kai/kai_common.h"
 #include "kai_lhs_quant_pack_bf16p_f32_neon.h"
-#include "kai_matmul_clamp_f32_bf16p_bf16p12x4b_1x36x4_neon_mmla.h"
+#include "kai_matmul_clamp_f32_bf16p_bf16p12x4b_1x36x4_neon_dot.h"
 #include "kai_matmul_clamp_f32_bf16p_bf16p12x4b_8x12x4_neon_mmla.h"
 #include "kai_matmul_clamp_f32_bf16p_bf16p_interface.h"
 #include "kai_rhs_quant_pack_kxn_bf16pbiasf32_f32_neon.h"
@@ -41,30 +41,37 @@ inline static float bf16_to_float(const uint16_t* v) {
 
 namespace {
 
+struct kai_matmul_clamp_f32_bf16p_bf16p {
+    kai_matmul_clamp_f32_bf16p_bf16p_ukernel ukernel;
+    std::string name = {};
+};
+
 /// Micro-kernel interface
-constexpr kai_matmul_clamp_f32_bf16p_bf16p_ukernel ukernel_variants[] = {
-    {kai_get_m_step_matmul_clamp_f32_bf16p_bf16p12x4b_1x36x4_neon_mmla,
-     kai_get_n_step_matmul_clamp_f32_bf16p_bf16p12x4b_1x36x4_neon_mmla,
-     kai_get_mr_matmul_clamp_f32_bf16p_bf16p12x4b_1x36x4_neon_mmla,
-     kai_get_nr_matmul_clamp_f32_bf16p_bf16p12x4b_1x36x4_neon_mmla,
-     kai_get_kr_matmul_clamp_f32_bf16p_bf16p12x4b_1x36x4_neon_mmla,
-     kai_get_sr_matmul_clamp_f32_bf16p_bf16p12x4b_1x36x4_neon_mmla,
-     kai_get_lhs_packed_offset_matmul_clamp_f32_bf16p_bf16p12x4b_1x36x4_neon_mmla,
-     kai_get_rhs_packed_offset_matmul_clamp_f32_bf16p_bf16p12x4b_1x36x4_neon_mmla,
-     kai_get_dst_offset_matmul_clamp_f32_bf16p_bf16p12x4b_1x36x4_neon_mmla,
-     kai_get_dst_size_matmul_clamp_f32_bf16p_bf16p12x4b_1x36x4_neon_mmla,
-     kai_run_matmul_clamp_f32_bf16p_bf16p12x4b_1x36x4_neon_mmla},
-    {kai_get_m_step_matmul_clamp_f32_bf16p_bf16p12x4b_8x12x4_neon_mmla,
-     kai_get_n_step_matmul_clamp_f32_bf16p_bf16p12x4b_8x12x4_neon_mmla,
-     kai_get_mr_matmul_clamp_f32_bf16p_bf16p12x4b_8x12x4_neon_mmla,
-     kai_get_nr_matmul_clamp_f32_bf16p_bf16p12x4b_8x12x4_neon_mmla,
-     kai_get_kr_matmul_clamp_f32_bf16p_bf16p12x4b_8x12x4_neon_mmla,
-     kai_get_sr_matmul_clamp_f32_bf16p_bf16p12x4b_8x12x4_neon_mmla,
-     kai_get_lhs_packed_offset_matmul_clamp_f32_bf16p_bf16p12x4b_8x12x4_neon_mmla,
-     kai_get_rhs_packed_offset_matmul_clamp_f32_bf16p_bf16p12x4b_8x12x4_neon_mmla,
-     kai_get_dst_offset_matmul_clamp_f32_bf16p_bf16p12x4b_8x12x4_neon_mmla,
-     kai_get_dst_size_matmul_clamp_f32_bf16p_bf16p12x4b_8x12x4_neon_mmla,
-     kai_run_matmul_clamp_f32_bf16p_bf16p12x4b_8x12x4_neon_mmla}};
+const kai_matmul_clamp_f32_bf16p_bf16p ukernel_variants[] = {
+    {{kai_get_m_step_matmul_clamp_f32_bf16p_bf16p12x4b_1x36x4_neon_dot,
+      kai_get_n_step_matmul_clamp_f32_bf16p_bf16p12x4b_1x36x4_neon_dot,
+      kai_get_mr_matmul_clamp_f32_bf16p_bf16p12x4b_1x36x4_neon_dot,
+      kai_get_nr_matmul_clamp_f32_bf16p_bf16p12x4b_1x36x4_neon_dot,
+      kai_get_kr_matmul_clamp_f32_bf16p_bf16p12x4b_1x36x4_neon_dot,
+      kai_get_sr_matmul_clamp_f32_bf16p_bf16p12x4b_1x36x4_neon_dot,
+      kai_get_lhs_packed_offset_matmul_clamp_f32_bf16p_bf16p12x4b_1x36x4_neon_dot,
+      kai_get_rhs_packed_offset_matmul_clamp_f32_bf16p_bf16p12x4b_1x36x4_neon_dot,
+      kai_get_dst_offset_matmul_clamp_f32_bf16p_bf16p12x4b_1x36x4_neon_dot,
+      kai_get_dst_size_matmul_clamp_f32_bf16p_bf16p12x4b_1x36x4_neon_dot,
+      kai_run_matmul_clamp_f32_bf16p_bf16p12x4b_1x36x4_neon_dot},
+     "matmul_clamp_f32_bf16p_bf16p12x4b_1x36x4_neon_dot"},
+    {{kai_get_m_step_matmul_clamp_f32_bf16p_bf16p12x4b_8x12x4_neon_mmla,
+      kai_get_n_step_matmul_clamp_f32_bf16p_bf16p12x4b_8x12x4_neon_mmla,
+      kai_get_mr_matmul_clamp_f32_bf16p_bf16p12x4b_8x12x4_neon_mmla,
+      kai_get_nr_matmul_clamp_f32_bf16p_bf16p12x4b_8x12x4_neon_mmla,
+      kai_get_kr_matmul_clamp_f32_bf16p_bf16p12x4b_8x12x4_neon_mmla,
+      kai_get_sr_matmul_clamp_f32_bf16p_bf16p12x4b_8x12x4_neon_mmla,
+      kai_get_lhs_packed_offset_matmul_clamp_f32_bf16p_bf16p12x4b_8x12x4_neon_mmla,
+      kai_get_rhs_packed_offset_matmul_clamp_f32_bf16p_bf16p12x4b_8x12x4_neon_mmla,
+      kai_get_dst_offset_matmul_clamp_f32_bf16p_bf16p12x4b_8x12x4_neon_mmla,
+      kai_get_dst_size_matmul_clamp_f32_bf16p_bf16p12x4b_8x12x4_neon_mmla,
+      kai_run_matmul_clamp_f32_bf16p_bf16p12x4b_8x12x4_neon_mmla},
+     "matmul_clamp_f32_bf16p_bf16p12x4b_8x12x4_neon_mmla"}};
 
 // Number of micro-kernel variants stored in the array
 constexpr size_t num_ukernel_variants = sizeof(ukernel_variants) / sizeof(ukernel_variants[0]);
@@ -199,7 +206,7 @@ int main() {
         const size_t bias_size = N;
         const size_t dst_size = M * N;
 
-        const auto ukernel = ukernel_variants[variant_idx];
+        const auto ukernel = ukernel_variants[variant_idx].ukernel;
 
         // Allocate the memory
         float* lhs = new float[lhs_size];
@@ -283,27 +290,29 @@ int main() {
         const auto timer_matmul_start = std::chrono::high_resolution_clock::now();
 
         // This can be anything for GEMM kernels. It does not have to be equal to m_step() returned
-        // from the kernel.
-        size_t m_step = ukernel.get_m_step();
+        // from the kernel. But, for GEMV, it must be m_step (which will be equal to 1).
+        const size_t m_step = ukernel.get_m_step();
         for (size_t m_idx = 0; m_idx < M; m_idx += m_step) {
-            size_t lhs_packed_size = kai_get_lhs_packed_size_lhs_quant_pack_bf16p_f32_neon(m_step, K, mr, kr, sr);
+            const size_t height = KAI_MIN(m_step, M - m_idx);
+
+            size_t lhs_packed_size = kai_get_lhs_packed_size_lhs_quant_pack_bf16p_f32_neon(height, K, mr, kr, sr);
 
             uint8_t* lhs_packed = new uint8_t[lhs_packed_size];
             memset(lhs_packed, 0, lhs_packed_size);
 
             kai_run_lhs_quant_pack_bf16p_f32_neon(
-                m_step, K, mr, kr, sr, 0 /* m_idx_start */, reinterpret_cast<uint8_t*>(lhs) + m_idx * lhs_stride,
+                height, K, mr, kr, sr, 0 /* m_idx_start */, reinterpret_cast<uint8_t*>(lhs) + m_idx * lhs_stride,
                 lhs_stride, lhs_packed);
 
 #ifdef KAI_DEBUG
-            int num_lhs_rows = (m_step + mr - 1) / mr;
+            int num_lhs_rows = (height + mr - 1) / mr;
             int num_lhs_cols = mr * kai_roundup(K, kr);
 
             print_matrix(num_lhs_rows, num_lhs_cols, "lhs_packed", reinterpret_cast<uint16_t*>(lhs_packed));
 #endif  // KAI_DEBUG
 
             ukernel.run_matmul(
-                m_step, N, K,                                              // Dimensions
+                height, N, K,                                              // Dimensions
                 lhs_packed,                                                // LHS packed
                 rhs_packed,                                                // RHS packed
                 reinterpret_cast<uint8_t*>(dst) + m_idx * dst_stride_row,  // DST
@@ -328,7 +337,7 @@ int main() {
         const bool is_valid = is_output_correct(M, N, rel_tolerance, dst_ref, dst);
 
         std::cout << "TEST[matmul_clamp_f32_bf16p_bf16p]\n";
-        std::cout << "- ukernel: matmul_clamp_f32_bf16p_bf16p12x4b_8x12x4_neon_mmla\n";
+        std::cout << "- ukernel: " << ukernel_variants[variant_idx].name << std::endl;
         if (is_valid) {
             std::cout << "- Status: PASSED\n";
             std::cout << "- Performance: " << time_matmul.count() << "ns\n";
