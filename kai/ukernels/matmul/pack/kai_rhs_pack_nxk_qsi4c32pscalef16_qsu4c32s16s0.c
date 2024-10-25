@@ -111,12 +111,19 @@ void kai_run_rhs_pack_nxk_qsi4c32pscalef16_qsu4c32s16s0(
 
         for (size_t x = 0; x < num_blocks_per_row; ++x) {
             // Store the scales at the end of the block
-            uint8_t* scales = (dst_row + (bl / 2) * nr);
+            uint8_t* scales = (dst_row);
 
             for (size_t i = 0; i < nr; ++i) {
                 memcpy(scales + i * kai_num_bytes_multiplier, src_row + i * rhs_stride, kai_num_bytes_multiplier);
             }
             src_row += kai_num_bytes_multiplier;
+
+            for (size_t i = 0; i < nr; ++i) {
+                const float d = kai_cast_f32_f16(((uint16_t*)scales)[i]);
+                ((uint16_t*)scales)[i] = kai_cast_f16_f32(d);
+            }
+
+            dst_row += (kai_num_bytes_multiplier * nr);
 
             // Store the segments
             for (size_t s = 0; s < num_segments_per_block; ++s) {
@@ -134,13 +141,6 @@ void kai_run_rhs_pack_nxk_qsi4c32pscalef16_qsu4c32s16s0(
                 src_row += num_bytes_per_segment;
                 dst_row += num_bytes_per_segment * nr;
             }
-
-            for (size_t i = 0; i < nr; ++i) {
-                const float d = kai_cast_f32_f16(((uint16_t*)scales)[i]);
-                ((uint16_t*)scales)[i] = kai_cast_f16_f32(d * 0.0625F);
-            }
-
-            dst_row += (kai_num_bytes_multiplier * nr);
         }
     }
 }
