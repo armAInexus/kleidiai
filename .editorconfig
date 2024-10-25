@@ -24,6 +24,10 @@ indent_size = unset
 [*.{json,yml,yaml}]
 indent_size = 2
 
+# YAML files as well.
+[.clang-{tidy,format}]
+indent_size = 2
+
 # Override settings.
 [LICENSES/*]
 indent_size = unset

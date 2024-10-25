@@ -91,20 +91,20 @@ void kai_run_lhs_quant_pack_qsi8d32p_f32(
 
             // Calculate scale and reciprocal
             const float scale = abs_max / ((1 << 7) - 1);
-            const float rep_scale = scale ? 1.0f / scale : 0.0f;
+            const float rep_scale = scale ? 1.0F / scale : 0.0F;
 
             // Quantize and pack the block
             for (size_t k_idx = 0; k_idx < bl; k_idx += k_block_len) {
-                for (size_t k_block_idx = 0; k_block_idx < (size_t)k_block_len; ++k_block_idx) {
+                for (size_t k_block_idx = 0; k_block_idx < k_block_len; ++k_block_idx) {
                     // Clamp at the last valid k-index
-                    const size_t k_idx_start = KAI_MIN((size_t)k_idx + k_block_idx, k - 1);
+                    const size_t k_idx_start = KAI_MIN(k_idx + k_block_idx, k - 1);
 
                     const float src0_0 = *(src_ptr + k_idx_start);
 
                     // Scale the values
                     int32_t v0_s32 = (int32_t)(roundf(src0_0 * rep_scale));
 
-                    *((int8_t*)(dst_ptr)) = (int8_t)v0_s32;
+                    *dst_ptr = (int8_t)v0_s32;
                     dst_ptr += sizeof(int8_t);
                 }
                 dst_ptr += (mr - 1) * k_block_len * sizeof(int8_t);

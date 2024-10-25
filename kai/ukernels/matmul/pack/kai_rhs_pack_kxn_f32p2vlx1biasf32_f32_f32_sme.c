@@ -15,8 +15,8 @@
 
 static const size_t kai_nr = 2;
 static const size_t kai_kr = 1;
-static const size_t kai_num_bytes_data = sizeof(uint32_t);
-static const size_t kai_num_bytes_bias = sizeof(uint32_t);
+static const size_t kai_data_size_in_bytes = sizeof(uint32_t);
+static const size_t kai_bias_size_in_bytes = sizeof(uint32_t);
 
 size_t kai_get_n_step_rhs_pack_kxn_f32p2vlx1biasf32_f32_f32_sme(void) {
     return kai_nr * kai_get_sme_vector_length_u32();
@@ -25,21 +25,21 @@ size_t kai_get_n_step_rhs_pack_kxn_f32p2vlx1biasf32_f32_f32_sme(void) {
 size_t kai_get_rhs_offset_rhs_pack_kxn_f32p2vlx1biasf32_f32_f32_sme(size_t n_idx) {
     KAI_ASSUME(n_idx % (kai_nr * kai_get_sme_vector_length_u32()) == 0);
 
-    return n_idx * kai_num_bytes_data;
+    return n_idx * kai_data_size_in_bytes;
 }
 
 size_t kai_get_bias_offset_rhs_pack_kxn_f32p2vlx1biasf32_f32_f32_sme(size_t n_idx) {
-    return n_idx * kai_num_bytes_bias;
+    return n_idx * kai_bias_size_in_bytes;
 }
 
 size_t kai_get_rhs_packed_stride_rhs_pack_kxn_f32p2vlx1biasf32_f32_f32_sme(size_t k) {
-    return kai_nr * kai_get_sme_vector_length_u32() * (kai_num_bytes_bias + k * kai_num_bytes_data);
+    return kai_nr * kai_get_sme_vector_length_u32() * (kai_bias_size_in_bytes + k * kai_data_size_in_bytes);
 }
 
 size_t kai_get_rhs_packed_offset_rhs_pack_kxn_f32p2vlx1biasf32_f32_f32_sme(size_t n_idx, size_t k) {
     KAI_ASSUME(n_idx % (kai_nr * kai_get_sme_vector_length_u32()) == 0);
 
-    return n_idx * (kai_num_bytes_bias + k * kai_num_bytes_data);
+    return n_idx * (kai_bias_size_in_bytes + k * kai_data_size_in_bytes);
 }
 
 size_t kai_get_rhs_packed_size_rhs_pack_kxn_f32p2vlx1biasf32_f32_f32_sme(size_t n, size_t k) {
