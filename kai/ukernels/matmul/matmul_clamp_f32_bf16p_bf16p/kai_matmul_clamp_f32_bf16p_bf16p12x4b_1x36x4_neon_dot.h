@@ -97,7 +97,7 @@ size_t kai_get_dst_size_matmul_clamp_f32_bf16p_bf16p12x4b_1x36x4_neon_dot(size_t
 
 /// Runs the matrix multiplication microkernel followed by a clamp operation.
 ///
-/// The pointer of each buffers (LHS, packed RHS and output) needs to be added with offset
+/// The pointer of each buffers (packed LHS, packed RHS and output) needs to be added with offset
 /// calculated using the following functions:
 ///
 ///   * Packed LHS: @ref kai_get_lhs_packed_offset_matmul_clamp_f32_bf16p_bf16p12x4b_1x36x4_neon_dot.
@@ -110,7 +110,7 @@ size_t kai_get_dst_size_matmul_clamp_f32_bf16p_bf16p12x4b_1x36x4_neon_dot(size_t
 /// @param[in]  lhs_packed Packed LHS matrix buffer.
 /// @param[in]  rhs_packed Packed RHS matrix buffer.
 /// @param[out] dst Output matrix buffer.
-/// @param[in]  dst_stride_row Row stride in bytes of the output matrix. Currently, an unused parameter.
+/// @param[in]  dst_stride_row Row stride in bytes of the output matrix.
 /// @param[in]  dst_stride_col Column stride in bytes of the output matrix. Currently, an unused parameter.
 /// @param[in]  clamp_min Minimum value to clamp the final result.
 /// @param[in]  clamp_max Maximum value to clamp the final result.

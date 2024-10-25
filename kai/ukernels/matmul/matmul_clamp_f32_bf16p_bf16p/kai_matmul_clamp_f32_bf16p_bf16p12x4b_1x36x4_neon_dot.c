@@ -19,10 +19,12 @@ static const size_t kai_mr = 1;
 static const size_t kai_nr = 12;
 static const size_t kai_kr = 4;
 static const size_t kai_sr = 1;
+
+static const size_t kai_m_step = 1;
 static const size_t kai_n_step = 36;
 
 size_t kai_get_m_step_matmul_clamp_f32_bf16p_bf16p12x4b_1x36x4_neon_dot(void) {
-    return kai_mr;
+    return kai_m_step;
 }
 
 size_t kai_get_n_step_matmul_clamp_f32_bf16p_bf16p12x4b_1x36x4_neon_dot(void) {
