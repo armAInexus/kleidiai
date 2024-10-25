@@ -76,8 +76,8 @@ void kai_run_matmul_clamp_f32_f32p2vlx1_f32p2vlx1biasf32_sme2_mopa(
         const void* B;
 
         void* C;
-        long ldcb;
-        long M, N, K;
+        uint64_t ldcb;
+        uint64_t M, N, K;
         float min;
         float max;
 

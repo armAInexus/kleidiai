@@ -10,7 +10,6 @@
 
 #include "kai_matmul_clamp_f32_f32_f32p8x1biasf32_6x8x4_neon_mla.h"
 
-#include <math.h>
 #include <stddef.h>
 #include <stdint.h>
 

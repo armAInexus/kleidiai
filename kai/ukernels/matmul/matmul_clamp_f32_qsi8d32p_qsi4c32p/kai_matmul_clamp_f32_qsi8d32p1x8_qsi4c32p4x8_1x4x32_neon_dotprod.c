@@ -125,7 +125,7 @@ void kai_run_matmul_clamp_f32_qsi8d32p1x8_qsi4c32p4x8_1x4x32_neon_dotprod(
     const size_t num_rows = m;
     const size_t lhs_packed_stride = kai_lhs_packed_stride(k, bl);
 
-    const int8x16_t nibble_mask = vdupq_n_s8(0xF0);
+    const int8x16_t nibble_mask = vreinterpretq_s8_u8(vdupq_n_u8(0xF0));
 
     const uint8_t* lhs_ptr_start = lhs_packed;
 
