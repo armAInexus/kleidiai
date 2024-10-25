@@ -41,8 +41,8 @@ kai_c_library(
 
 kai_c_library(
     name = "clamp_f32_bf16p_bf16p12x1biasf32_8x12x4_neon_mmla",
-    srcs = ["matmul_clamp_f32_bf16p_bf16p/kai_matmul_clamp_f32_bf16p_bf16p12x4b_8x12x4_neon_mmla.c"],
-    hdrs = ["matmul_clamp_f32_bf16p_bf16p/kai_matmul_clamp_f32_bf16p_bf16p12x4b_8x12x4_neon_mmla.h"],
+    srcs = ["matmul_clamp_f32_bf16p_bf16p/kai_matmul_clamp_f32_bf16p8x4_bf16p12x4b_8x12_neon_mmla.c"],
+    hdrs = ["matmul_clamp_f32_bf16p_bf16p/kai_matmul_clamp_f32_bf16p8x4_bf16p12x4b_8x12_neon_mmla.h"],
     cpu_uarch = kai_cpu_bf16(),
     deps = [
         ":clamp_f32_bf16p_bf16p_interface",
