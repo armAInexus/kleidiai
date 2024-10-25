@@ -81,8 +81,7 @@ void kai_run_lhs_quant_pack_qsi8d32p_f32(
             float abs_max = 0.0F;
 
             const size_t dst_x = ((row_idx + m_idx_start) % mr);
-            int8_t* dst_ptr =
-                (int8_t*)lhs_packed + dst_x * k_block_len * sizeof(int8_t) + (b * mr) * num_bytes_per_block;
+            int8_t* dst_ptr = (int8_t*)lhs_packed + (b * mr) * num_bytes_per_block;
 
             for (size_t idx_v = 0; idx_v < bl; ++idx_v) {
                 const float val = src_ptr[idx_v];
@@ -92,6 +91,11 @@ void kai_run_lhs_quant_pack_qsi8d32p_f32(
             // Calculate scale and reciprocal
             const float scale = abs_max / ((1 << 7) - 1);
             const float rep_scale = scale ? 1.0F / scale : 0.0F;
+
+            *((uint16_t*)(dst_ptr + dst_x * kai_num_bytes_multiplier)) = kai_cast_f16_f32(scale);
+            dst_ptr += mr * kai_num_bytes_multiplier;
+
+            dst_ptr += dst_x * k_block_len * sizeof(int8_t);
 
             // Quantize and pack the block
             for (size_t k_idx = 0; k_idx < bl; k_idx += k_block_len) {
@@ -111,9 +115,8 @@ void kai_run_lhs_quant_pack_qsi8d32p_f32(
             }
             dst_ptr = (int8_t*)lhs_packed + mr * (bl * sizeof(int8_t));
 
-            dst_ptr += dst_x * kai_num_bytes_multiplier + b * mr * num_bytes_per_block;
+            dst_ptr += b * mr * num_bytes_per_block;
 
-            *((uint16_t*)(dst_ptr)) = kai_cast_f16_f32(scale);
             src_ptr += bl;
         }
         // Move to the next row if we have interleaved all Mr rows
