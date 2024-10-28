@@ -12,7 +12,6 @@
 #include "kai/kai_common.h"
 
 static const size_t kai_num_bytes_multiplier = sizeof(uint16_t);
-static const size_t kai_nr_multiple_of = 4;
 static const size_t kai_bl = 32;
 
 inline static size_t kai_num_blocks_per_row(size_t k, size_t bl) {
