@@ -5,7 +5,6 @@
 //
 #include "kai_rhs_pack_nxk_qsi4c32pscalef16_qsu4c32s16s0.h"
 
-#include <math.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <string.h>
@@ -106,7 +105,7 @@ void kai_run_rhs_pack_nxk_qsi4c32pscalef16_qsu4c32s16s0(
     const size_t num_bytes_per_segment = kr / 2;
 
     for (size_t y = 0; y < n; y += nr) {
-        const uint8_t* src_row = (const uint8_t*)rhs + y * rhs_stride;
+        const uint8_t* src_row = rhs + y * rhs_stride;
         uint8_t* dst_row = (uint8_t*)rhs_packed + (y / nr) * rhs_packed_stride;
 
         for (size_t x = 0; x < num_blocks_per_row; ++x) {

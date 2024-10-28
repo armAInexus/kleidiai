@@ -92,7 +92,7 @@ inline static float kai_cast_f32_f16(uint16_t f16) {
 /// @return the f32 value
 inline static float kai_cast_f32_bf16(uint16_t bf16) {
     const uint32_t i32 = (bf16 << 16);
-    float f32;
+    float f32 = 0;
     memcpy(&f32, &i32, sizeof(i32));
     return f32;
 }
@@ -119,7 +119,7 @@ inline static uint16_t kai_cast_bf16_f32(float f32) {
 #if defined(__ARM_NEON)
 inline static uint16_t kai_cast_f16_f32(float f32) {
     uint16_t f16 = 0;
-    __fp16 tmp = f32;
+    __fp16 tmp = (__fp16)f32;
     memcpy(&f16, &tmp, sizeof(uint16_t));
     return f16;
 }
@@ -158,7 +158,10 @@ inline static uint64_t kai_get_sme_vector_length_u32(void) {
 ///
 /// @return the int8_t value with sign extended
 inline static int8_t kai_ext_sign_i8_i4(int8_t value) {
-    return (value ^ 0x8) - 8;
+    // Make sure value holds correct int4 value
+    KAI_ASSERT(value <= 0xF);
+
+    return (value ^ 0x8) - 8;  // NOLINT(bugprone-narrowing-conversions,cppcoreguidelines-narrowing-conversions)
 }
 
 struct kai_rhs_pack_qsi8_params {
