@@ -18,20 +18,20 @@ static const size_t kai_kr = 4;
 static const size_t kai_sr = 1;
 
 size_t kai_get_m_step_lhs_pack_x8p2vlx4_x8_sme(size_t mr) {
-    KAI_ASSUME(mr == kai_mr * kai_get_sme_vector_length_u8());
+    KAI_ASSUME(mr == kai_mr * kai_get_sme_vector_length_u8() / kai_kr);
     KAI_UNUSED(mr);
 
     return (kai_mr * kai_get_sme_vector_length_u8()) / kai_kr;
 }
 
 size_t kai_get_lhs_offset_lhs_pack_x8p2vlx4_x8_sme(size_t m_idx, size_t lhs_stride) {
-    KAI_ASSUME(m_idx % (kai_mr * kai_get_sme_vector_length_u8()) == 0);
+    KAI_ASSUME(m_idx % (kai_mr * kai_get_sme_vector_length_u8() / kai_kr) == 0);
 
     return m_idx * lhs_stride;
 }
 
 size_t kai_get_lhs_packed_offset_lhs_pack_x8p2vlx4_x8_sme(size_t m_idx, size_t k, size_t mr, size_t kr, size_t sr) {
-    const size_t scaled_mr = kai_mr * kai_get_sme_vector_length_u8();
+    const size_t scaled_mr = kai_mr * kai_get_sme_vector_length_u8() / kai_kr;
     KAI_ASSUME(m_idx % scaled_mr == 0);
     KAI_ASSUME(mr == scaled_mr);
     KAI_ASSUME(kr == kai_kr);
@@ -45,7 +45,7 @@ size_t kai_get_lhs_packed_offset_lhs_pack_x8p2vlx4_x8_sme(size_t m_idx, size_t k
 }
 
 size_t kai_get_lhs_packed_size_lhs_pack_x8p2vlx4_x8_sme(size_t m, size_t k, size_t mr, size_t kr, size_t sr) {
-    KAI_ASSUME(mr == kai_mr * kai_get_sme_vector_length_u8());
+    KAI_ASSUME(mr == kai_mr * kai_get_sme_vector_length_u8() / kai_kr);
     KAI_ASSUME(kr == kai_kr);
     KAI_ASSUME(sr == kai_sr);
 
@@ -59,7 +59,7 @@ size_t kai_get_lhs_packed_size_lhs_pack_x8p2vlx4_x8_sme(size_t m, size_t k, size
 void kai_run_lhs_pack_x8p2vlx4_x8_sme(
     size_t m, size_t k, size_t mr, size_t kr, size_t sr, size_t m_idx_start, const void* lhs, size_t lhs_stride,
     void* lhs_packed) {
-    KAI_ASSUME(mr == kai_mr * kai_get_sme_vector_length_u8());
+    KAI_ASSUME(mr == kai_mr * kai_get_sme_vector_length_u8() / kai_kr);
     KAI_ASSUME(kr == kai_kr);
     KAI_ASSUME(sr == kai_sr);
     KAI_ASSUME(lhs != NULL);

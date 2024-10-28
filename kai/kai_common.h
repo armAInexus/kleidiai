@@ -164,15 +164,17 @@ inline static int8_t kai_ext_sign_i8_i4(int8_t value) {
     return (value ^ 0x8) - 8;  // NOLINT(bugprone-narrowing-conversions,cppcoreguidelines-narrowing-conversions)
 }
 
+/// RHS packing parameter for static 8-bit quantization.
 struct kai_rhs_pack_qsi8_params {
-    int32_t input_zero_point;
-    float scale_multiplier;
+    int32_t input_zero_point;  ///< Input quantization zero point.
+    float scale_multiplier;    ///< Product of input and output quantization scales.
 };
 
+/// Requantization and clamp parameters for GEMM output stage.
 struct kai_matmul_requantize32_params {
-    int32_t min_value;
-    int32_t max_value;
-    int32_t output_zero_point;
+    int32_t min_value;          ///< Minimum output value.
+    int32_t max_value;          ///< Maximum output value.
+    int32_t output_zero_point;  ///< Output quantization zero point.
 };
 
 #ifdef __cplusplus

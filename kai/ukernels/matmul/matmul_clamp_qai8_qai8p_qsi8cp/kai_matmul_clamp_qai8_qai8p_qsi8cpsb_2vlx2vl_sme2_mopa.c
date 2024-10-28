@@ -15,23 +15,23 @@
 
 static const size_t kai_mr = 2;
 static const size_t kai_nr = 2;
-static const size_t kai_kr = 1;
+static const size_t kai_kr = 4;
 static const size_t kai_sr = 1;
 
 size_t kai_get_m_step_matmul_clamp_qai8_qai8p_qsi8cpsb_2vlx2vl_sme2_mopa(void) {
-    return kai_mr * kai_get_sme_vector_length_u8();
+    return kai_mr * kai_get_sme_vector_length_u32();
 }
 
 size_t kai_get_n_step_matmul_clamp_qai8_qai8p_qsi8cpsb_2vlx2vl_sme2_mopa(void) {
-    return kai_nr * kai_get_sme_vector_length_u8();
+    return kai_nr * kai_get_sme_vector_length_u32();
 }
 
 size_t kai_get_mr_matmul_clamp_qai8_qai8p_qsi8cpsb_2vlx2vl_sme2_mopa(void) {
-    return kai_mr * kai_get_sme_vector_length_u8();
+    return kai_mr * kai_get_sme_vector_length_u32();
 }
 
 size_t kai_get_nr_matmul_clamp_qai8_qai8p_qsi8cpsb_2vlx2vl_sme2_mopa(void) {
-    return kai_nr * kai_get_sme_vector_length_u8();
+    return kai_nr * kai_get_sme_vector_length_u32();
 }
 
 size_t kai_get_kr_matmul_clamp_qai8_qai8p_qsi8cpsb_2vlx2vl_sme2_mopa(void) {
@@ -44,12 +44,12 @@ size_t kai_get_sr_matmul_clamp_qai8_qai8p_qsi8cpsb_2vlx2vl_sme2_mopa(void) {
 
 size_t kai_get_lhs_packed_offset_matmul_clamp_qai8_qai8p_qsi8cpsb_2vlx2vl_sme2_mopa(size_t m_idx, size_t k) {
     KAI_ASSUME(m_idx % kai_get_m_step_matmul_clamp_qai8_qai8p_qsi8cpsb_2vlx2vl_sme2_mopa() == 0);
-    return m_idx * k * sizeof(int8_t);
+    return m_idx * kai_roundup(k, kai_kr) * sizeof(int8_t);
 }
 
 size_t kai_get_rhs_packed_offset_matmul_clamp_qai8_qai8p_qsi8cpsb_2vlx2vl_sme2_mopa(size_t n_idx, size_t k) {
     KAI_ASSUME(n_idx % kai_get_n_step_matmul_clamp_qai8_qai8p_qsi8cpsb_2vlx2vl_sme2_mopa() == 0);
-    return n_idx * (k * sizeof(int8_t) + sizeof(int32_t));
+    return n_idx * (sizeof(int32_t) + kai_roundup(k, kai_kr) * sizeof(int8_t) + sizeof(float));
 }
 
 size_t kai_get_dst_offset_matmul_clamp_qai8_qai8p_qsi8cpsb_2vlx2vl_sme2_mopa(
@@ -66,11 +66,7 @@ size_t kai_get_dst_size_matmul_clamp_qai8_qai8p_qsi8cpsb_2vlx2vl_sme2_mopa(size_
 
 void kai_run_matmul_clamp_qai8_qai8p_qsi8cpsb_2vlx2vl_sme2_mopa(
     size_t m, size_t n, size_t k, const void* lhs_packed, const void* rhs_packed, void* dst, size_t dst_stride_row,
-    size_t dst_stride_col,
-
-    const struct kai_matmul_requantize32_params* params
-
-) {
+    size_t dst_stride_col, const struct kai_matmul_requantize32_params* params) {
     KAI_ASSUME(dst_stride_col == sizeof(int8_t));
 
     typedef struct {
@@ -78,8 +74,8 @@ void kai_run_matmul_clamp_qai8_qai8p_qsi8cpsb_2vlx2vl_sme2_mopa(
         const void* B;
 
         void* C;
-        long ldcb;
-        long M, N, K;
+        uint64_t ldcb;
+        uint64_t M, N, K;
         int32_t min;
         int32_t max;
         int32_t result_zero_point;

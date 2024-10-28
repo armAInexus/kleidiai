@@ -35,6 +35,13 @@ size_t kai_get_rhs_offset_rhs_pack_kxn_qsi8cp2vlx4sb_qsi8_f32_i32_sme(size_t n_i
 /// @return The offset in bytes to the data element.
 size_t kai_get_bias_offset_rhs_pack_kxn_qsi8cp2vlx4sb_qsi8_f32_i32_sme(size_t n_idx);
 
+/// Gets the offset in bytes to the data element in the scale buffer.
+///
+/// @param[in] n_idx Column index.
+///
+/// @return The offset in bytes to the data element.
+size_t kai_get_scale_offset_rhs_pack_kxn_qsi8cp2vlx4sb_qsi8_f32_i32_sme(size_t n_idx);
+
 /// Gets the offset in bytes to the data element in the packed RHS buffer.
 ///
 /// @param[in] n_idx Row index.
@@ -58,6 +65,7 @@ size_t kai_get_rhs_packed_size_rhs_pack_kxn_qsi8cp2vlx4sb_qsi8_f32_i32_sme(size_
 ///
 ///   * RHS: @ref kai_get_rhs_offset_rhs_pack_kxn_qsi8cp2vlx4sb_qsi8_f32_i32_sme.
 ///   * Bias: @ref kai_get_bias_offset_rhs_pack_kxn_qsi8cp2vlx4sb_qsi8_f32_i32_sme.
+///   * Scale: @ref kai_get_scale_offset_rhs_pack_kxn_qsi8cp2vlx4sb_qsi8_f32_i32_sme.
 ///   * Output: @ref kai_get_rhs_packed_offset_rhs_pack_kxn_qsi8cp2vlx4sb_qsi8_f32_i32_sme.
 ///
 /// @param[in] num_groups Number of groups. It must be 1.

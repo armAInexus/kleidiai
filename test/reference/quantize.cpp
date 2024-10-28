@@ -103,7 +103,8 @@ std::vector<uint8_t> compute_symmetric_per_block_quantization_info(
                 }
             }
 
-            const auto scale = max_abs / ((static_cast<uint64_t>(1) << (size_in_bits<DstType> - 1)) - 1);
+            const auto scale =
+                max_abs / static_cast<SrcType>((static_cast<uint64_t>(1) << (size_in_bits<DstType> - 1)) - 1);
 
             // Stores the scales.
             write_array<ScaleType>(scales.data(), y * num_quant_packets_x + x_quant / quant_width, scale);
@@ -150,6 +151,9 @@ std::vector<uint8_t> quantize_symmetric_per_block(
     return data;
 }
 
+template std::vector<uint8_t> quantize_symmetric_per_block<float, int32_t, float>(
+    const void* src, const void* scales, size_t height, size_t width, size_t quant_width, bool is_transposed);
+
 template <typename SrcType, typename DstType, typename ScaleType>
 std::tuple<std::vector<uint8_t>, std::vector<uint8_t>> quantize_symmetric_per_block_dynamic(
     const void* src, size_t height, size_t width, size_t quant_width, bool is_transposed) {
@@ -178,8 +182,6 @@ template std::tuple<std::vector<uint8_t>, std::vector<uint8_t>> quantize_symmetr
     float, int8_t, Float16>(const void* src, size_t height, size_t width, size_t quant_width, bool is_transposed);
 template std::tuple<std::vector<uint8_t>, std::vector<uint8_t>> quantize_symmetric_per_block_dynamic<
     float, int8_t, float>(const void* src, size_t height, size_t width, size_t quant_width, bool is_transposed);
-template std::tuple<std::vector<uint8_t>, std::vector<uint8_t>> quantize_symmetric_per_block_dynamic<
-    float, int32_t, float>(const void* src, size_t height, size_t width, size_t quant_width, bool is_transposed);
 
 template <typename SrcType, typename DstType, typename ScaleType, typename ZeroPointType>
 std::tuple<std::vector<uint8_t>, std::vector<uint8_t>> compute_asymmetric_per_block_quantization_info(

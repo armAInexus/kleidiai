@@ -16,8 +16,8 @@ extern "C" {
 
 /// Micro-kernel dependencies
 ///
-/// -# kai_lhs_pack_f8p2vlx1_f8_sme to pack the LHS matrix.
-/// -# kai_rhs_pack_kxn_f8p2vlx1biasf32_f8_f32_sme to pack the RHS matrix.
+/// -# kai_lhs_pack_x8p2vlx4_x8_sme to pack the LHS matrix.
+/// -# kai_rhs_pack_kxn_qsi8cp2vlx4sb_qsi8_f32_i32_sme to pack the RHS matrix.
 
 /// Gets m step value.
 ///
@@ -81,7 +81,7 @@ size_t kai_get_rhs_packed_offset_matmul_clamp_qai8_qai8p_qsi8cpsb_2vlx2vl_sme2_m
 ///
 /// @param[in] m_idx Row index.
 /// @param[in] n_idx Column index.
-/// @param[in] stride Row stride in bytes.
+/// @param[in] dst_stride Row stride in bytes.
 ///
 /// @return The offset in bytes to the data element.
 size_t kai_get_dst_offset_matmul_clamp_qai8_qai8p_qsi8cpsb_2vlx2vl_sme2_mopa(
@@ -112,15 +112,10 @@ size_t kai_get_dst_size_matmul_clamp_qai8_qai8p_qsi8cpsb_2vlx2vl_sme2_mopa(size_
 /// @param[out] dst Output matrix buffer.
 /// @param[in] dst_stride_row Row stride in bytes of the output matrix.
 /// @param[in] dst_stride_col Column stride in bytes of the output matrix.
-/// @param[in] clamp_min Minimum value to clamp the final result.
-/// @param[in] clamp_max Maximum value to clamp the final result.
+/// @param[in] params Requantization and clamp parmaters.
 void kai_run_matmul_clamp_qai8_qai8p_qsi8cpsb_2vlx2vl_sme2_mopa(
     size_t m, size_t n, size_t k, const void* lhs_packed, const void* rhs_packed, void* dst, size_t dst_stride_row,
-    size_t dst_stride_col,
-
-    const struct kai_matmul_requantize32_params* params
-
-);
+    size_t dst_stride_col, const struct kai_matmul_requantize32_params* params);
 
 #ifdef __cplusplus
 }  // extern "C"
