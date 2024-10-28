@@ -21,35 +21,33 @@ static const size_t kai_mr = 4;
 static const size_t kai_nr = 4;
 static const size_t kai_kr = 16;
 static const size_t kai_sr = 2;
-static const size_t kai_k0 = kai_kr * kai_sr;
-static const size_t kai_block_size = 32;
+static const size_t kai_bl = 32;
 static const size_t kai_num_bytes_multiplier = sizeof(uint16_t);
 
-inline static size_t kai_num_bytes_per_block_lhs(size_t bl) {
-    return bl * sizeof(int8_t) + kai_num_bytes_multiplier;
+inline static size_t kai_num_bytes_per_block_lhs() {
+    return kai_bl * sizeof(int8_t) + kai_num_bytes_multiplier;
 }
 
-inline static size_t kai_num_bytes_per_block_rhs(size_t bl) {
-    return (bl / 2) * sizeof(int8_t) + kai_num_bytes_multiplier;
+inline static size_t kai_num_bytes_per_block_rhs() {
+    return (kai_bl / 2) * sizeof(int8_t) + kai_num_bytes_multiplier;
 }
 
-inline static size_t kai_num_blocks_per_row(size_t k, size_t bl) {
-    KAI_ASSUME((k % bl) == 0);
-    return k / bl;
+inline static size_t kai_num_blocks_per_row(size_t k) {
+    KAI_ASSUME((k % kai_bl) == 0);
+    return k / kai_bl;
 }
 
-inline static size_t kai_lhs_packed_stride(size_t k, size_t bl) {
-    return kai_mr * kai_num_blocks_per_row(k, bl) * kai_num_bytes_per_block_lhs(bl);
+inline static size_t kai_lhs_packed_stride(size_t k) {
+    return kai_mr * kai_num_blocks_per_row(k) * kai_num_bytes_per_block_lhs();
 }
 
-inline static size_t kai_rhs_packed_stride(size_t k, size_t bl) {
+inline static size_t kai_rhs_packed_stride(size_t k) {
     KAI_ASSUME((k % 2) == 0);
     KAI_ASSUME((k % kai_kr) == 0);
-    KAI_ASSUME((k % bl) == 0);
-    KAI_ASSUME((bl % kai_kr) == 0);
+    KAI_ASSUME((k % kai_bl) == 0);
 
-    const size_t num_blocks_per_row = kai_num_blocks_per_row(k, bl);
-    const size_t num_bytes_per_block = kai_num_bytes_per_block_rhs(bl);
+    const size_t num_blocks_per_row = kai_num_blocks_per_row(k);
+    const size_t num_bytes_per_block = kai_num_bytes_per_block_rhs();
 
     return kai_nr * (num_bytes_per_block * num_blocks_per_row);
 }
@@ -80,21 +78,24 @@ size_t kai_get_sr_matmul_clamp_f32_qsi8d32p4x8_qsi4c32p4x8_8x4x32_neon_i8mm(void
 
 size_t kai_get_lhs_packed_offset_matmul_clamp_f32_qsi8d32p4x8_qsi4c32p4x8_8x4x32_neon_i8mm(
     size_t m_idx, size_t k, size_t bl) {
+    KAI_ASSUME(bl == kai_bl);
     KAI_ASSUME((k % 2) == 0);
     KAI_ASSUME((k % kai_kr) == 0);
     KAI_ASSUME((k % bl) == 0);
+    KAI_ASSUME((m_idx % kai_m_step) == 0);
 
-    return (m_idx / kai_mr) * kai_lhs_packed_stride(k, bl);
+    return (m_idx / kai_m_step) * kai_lhs_packed_stride(k);
 }
 
 size_t kai_get_rhs_packed_offset_matmul_clamp_f32_qsi8d32p4x8_qsi4c32p4x8_8x4x32_neon_i8mm(
     size_t n_idx, size_t k, size_t bl) {
+    KAI_ASSUME(bl == kai_bl);
     KAI_ASSUME((k % 2) == 0);
     KAI_ASSUME((k % kai_kr) == 0);
     KAI_ASSUME((k % bl) == 0);
-    KAI_ASSUME((n_idx % kai_nr) == 0);
+    KAI_ASSUME((n_idx % kai_n_step) == 0);
 
-    return (n_idx / kai_nr) * kai_rhs_packed_stride(k, bl);
+    return (n_idx / kai_n_step) * kai_rhs_packed_stride(k);
 }
 
 size_t kai_get_dst_offset_matmul_clamp_f32_qsi8d32p4x8_qsi4c32p4x8_8x4x32_neon_i8mm(
@@ -113,16 +114,15 @@ void kai_run_matmul_clamp_f32_qsi8d32p4x8_qsi4c32p4x8_8x4x32_neon_i8mm(
     size_t m, size_t n, size_t k, size_t bl, const void* lhs_packed, const void* rhs_packed,
     float* dst,  // NOLINT(readability-non-const-parameter)
     size_t dst_stride_row, size_t dst_stride_col, float scalar_min, float scalar_max) {
-    KAI_ASSUME(n % kai_nr == 0);
-    KAI_ASSUME(k % kai_k0 == 0);
-    KAI_ASSUME(bl == 32);
+    KAI_ASSUME(bl == kai_bl);
+    KAI_ASSUME(k % kai_bl == 0);
     KAI_ASSUME(dst_stride_col == sizeof(float));
 
     if (m == 0) {
         return;
     }
 
-    const size_t num_blocks = k / kai_block_size;
+    const size_t num_blocks = k / kai_bl;
     float clamp_vals[2] = {scalar_min, scalar_max};
 
     __asm__ __volatile__(

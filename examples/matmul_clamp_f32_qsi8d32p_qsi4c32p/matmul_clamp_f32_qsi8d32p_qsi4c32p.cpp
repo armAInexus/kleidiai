@@ -270,7 +270,7 @@ static bool is_output_correct(size_t num_rows, size_t num_cols, float tolerance,
 int main(int argc, char** argv) {
     const size_t bl = 32;  // Block length. It must be 32
     const size_t m = 71;
-    const size_t n = 64;
+    const size_t n = 63;
     const size_t k = 128;
     const size_t seed_lhs = 4568;
     const size_t seed_rhs = seed_lhs + 4;
