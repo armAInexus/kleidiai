@@ -115,8 +115,6 @@ void kai_run_lhs_quant_pack_qsi8d32p_f32(
             }
             dst_ptr = (int8_t*)lhs_packed + mr * (bl * sizeof(int8_t));
 
-            dst_ptr += b * mr * num_bytes_per_block;
-
             src_ptr += bl;
         }
         // Move to the next row if we have interleaved all Mr rows
