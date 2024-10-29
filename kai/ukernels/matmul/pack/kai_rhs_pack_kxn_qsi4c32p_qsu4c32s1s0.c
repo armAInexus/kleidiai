@@ -213,7 +213,7 @@ void kai_run_rhs_pack_kxn_qsi4c32p_qsu4c32s1s0(
                 size_t k0_idx = dst_qblock_idx * bl + super_kr_block_idx * block_length_in_bytes + k_adjustment;
                 size_t k1_idx = k0_idx + k_interleaved_v;
 
-                float partial_sum = 0.0f;
+                float partial_sum = 0.0F;
 
                 for (size_t block_byte_idx = 0; block_byte_idx < block_length_in_bytes; ++block_byte_idx) {
                     const size_t src_addr_byte0 = (n0_valid_idx / 2) + k0_idx * rhs_stride;
@@ -234,7 +234,7 @@ void kai_run_rhs_pack_kxn_qsi4c32p_qsu4c32s1s0(
                         const uint8_t src_x0_lo = (byte0 & 0x0F);
                         const uint8_t src_x0_hi = (byte1 & 0x0F);
 
-                        partial_sum += ((int32_t)src_x0_lo + (int32_t)src_x0_hi - 2 * rhs_zero_point) * d;
+                        partial_sum += (float)((int32_t)src_x0_lo + (int32_t)src_x0_hi - 2 * rhs_zero_point) * d;
 
                         const uint8_t dst_qs0 = src_x0_lo | (src_x0_hi << 4);
 
@@ -243,7 +243,7 @@ void kai_run_rhs_pack_kxn_qsi4c32p_qsu4c32s1s0(
                         const uint8_t src_x1_lo = (byte0 >> 4);
                         const uint8_t src_x1_hi = (byte1 >> 4);
 
-                        partial_sum += ((int32_t)src_x1_lo + (int32_t)src_x1_hi - 2 * rhs_zero_point) * d;
+                        partial_sum += (float)((int32_t)src_x1_lo + (int32_t)src_x1_hi - 2 * rhs_zero_point) * d;
 
                         const uint8_t dst_qs1 = src_x1_lo | (src_x1_hi << 4);
 
