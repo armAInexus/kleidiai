@@ -14,8 +14,8 @@ extern "C" {
 
 /// Micro-kernel dependencies
 ///
-/// -# kai_rhs_quant_pack_kxn_bf16pbiasf32_f32_neon to pack the RHS matrix.
-/// -# kai_lhs_quant_pack_bf16p_f32_neon to pack the LHS matrix.
+/// -# kai_rhs_quant_pack_kxn_bf16p12x4biasf32_f32_neon to pack the RHS matrix.
+/// -# kai_lhs_quant_pack_bf16p1x4_f32_neon to pack the LHS matrix.
 
 /// --------------------------------------------------
 

@@ -17,33 +17,45 @@
 
 #include "kai/kai_common.h"
 
-size_t kai_get_n_step_rhs_quant_pack_kxn_bf16pbiasf32_f32_neon(size_t nr) {
+static const size_t kai_nr = 12;
+static const size_t kai_kr = 4;
+static const size_t kai_sr = 1;
+
+size_t kai_get_n_step_rhs_quant_pack_kxn_bf16p12x4biasf32_f32_neon(size_t nr) {
+    KAI_ASSUME(kai_nr == nr);
     return nr;
 }
 
-size_t kai_get_rhs_offset_rhs_quant_pack_kxn_bf16pbiasf32_f32_neon(size_t n_idx) {
+size_t kai_get_rhs_offset_rhs_quant_pack_kxn_bf16p12x4biasf32_f32_neon(size_t n_idx) {
+    KAI_ASSUME(n_idx % kai_nr == 0);
     return n_idx * sizeof(float);
 }
 
-size_t kai_get_bias_offset_rhs_quant_pack_kxn_bf16pbiasf32_f32_neon(size_t n_idx) {
+size_t kai_get_bias_offset_rhs_quant_pack_kxn_bf16p12x4biasf32_f32_neon(size_t n_idx) {
+    KAI_ASSUME(n_idx % kai_nr == 0);
     return n_idx * sizeof(uint32_t);
 }
 
-size_t kai_get_rhs_packed_offset_rhs_quant_pack_kxn_bf16pbiasf32_f32_neon(
+size_t kai_get_rhs_packed_offset_rhs_quant_pack_kxn_bf16p12x4biasf32_f32_neon(
     size_t n_idx, size_t k, size_t nr, size_t kr) {
     KAI_ASSUME(n_idx % nr == 0);
+    KAI_ASSUME(kai_nr == nr);
+    KAI_ASSUME(kai_kr == kr);
 
     return n_idx * (sizeof(uint32_t) + kai_roundup(k, kr) * sizeof(uint16_t));
 }
 
-size_t kai_get_rhs_packed_size_rhs_quant_pack_kxn_bf16pbiasf32_f32_neon(size_t n, size_t k, size_t nr, size_t kr) {
-    return kai_get_rhs_packed_offset_rhs_quant_pack_kxn_bf16pbiasf32_f32_neon(kai_roundup(n, nr), k, nr, kr);
+size_t kai_get_rhs_packed_size_rhs_quant_pack_kxn_bf16p12x4biasf32_f32_neon(size_t n, size_t k, size_t nr, size_t kr) {
+    return kai_get_rhs_packed_offset_rhs_quant_pack_kxn_bf16p12x4biasf32_f32_neon(kai_roundup(n, nr), k, nr, kr);
 }
 
-void kai_run_rhs_quant_pack_kxn_bf16pbiasf32_f32_neon(
+void kai_run_rhs_quant_pack_kxn_bf16p12x4biasf32_f32_neon(
     size_t num_groups, size_t n, size_t k, size_t nr, size_t kr, size_t sr, size_t rhs_stride, const void* rhs,
     const void* bias, const void* scale, void* rhs_packed, size_t extra_bytes, const void* params) {
     KAI_ASSUME(num_groups == 1);
+    KAI_ASSUME(kai_nr == nr);
+    KAI_ASSUME(kai_kr == kr);
+    KAI_ASSUME(kai_sr == sr);
     KAI_ASSUME(sr == 1);
     KAI_ASSUME(rhs != NULL);
     KAI_ASSUME(scale == NULL);

@@ -28,11 +28,12 @@
 
 // Include micro-kernel variants
 #include "kai/kai_common.h"
-#include "kai_lhs_quant_pack_bf16p_f32_neon.h"
+#include "kai_lhs_quant_pack_bf16p1x4_f32_neon.h"
+#include "kai_lhs_quant_pack_bf16p8x4_f32_neon.h"
 #include "kai_matmul_clamp_f32_bf16p1x4_bf16p12x4b_1x36_neon_dot.h"
 #include "kai_matmul_clamp_f32_bf16p_bf16p12x4b_8x12x4_neon_mmla.h"
 #include "kai_matmul_clamp_f32_bf16p_bf16p_interface.h"
-#include "kai_rhs_quant_pack_kxn_bf16pbiasf32_f32_neon.h"
+#include "kai_rhs_quant_pack_kxn_bf16p12x4biasf32_f32_neon.h"
 
 inline static float bf16_to_float(const uint16_t* v) {
     const uint16_t uint_rep = *v;
@@ -41,8 +42,17 @@ inline static float bf16_to_float(const uint16_t* v) {
 
 namespace {
 
+typedef void (*kai_lhs_quant_pack_bf16pmxk_f32_run_func_t)(
+    size_t m, size_t k, size_t mr, size_t kr, size_t sr, size_t m_idx_start, const void* lhs, size_t lhs_stride,
+    void* lhs_packed);
+
+typedef size_t (*kai_lhs_quant_pack_bf16pmxk_f32_get_lhs_packed_size_func_t)(
+    size_t m, size_t k, size_t mr, size_t kr, size_t sr);
+
 struct kai_matmul_clamp_f32_bf16p_bf16p {
-    kai_matmul_clamp_f32_bf16p_bf16p_ukernel ukernel;
+    kai_matmul_clamp_f32_bf16p_bf16p_ukernel matmul_ukernel;
+    kai_lhs_quant_pack_bf16pmxk_f32_run_func_t lhs_pack_ukernel;
+    kai_lhs_quant_pack_bf16pmxk_f32_get_lhs_packed_size_func_t lhs_pack_get_lhs_packed_size;
     std::string name = {};
 };
 
@@ -59,6 +69,8 @@ const kai_matmul_clamp_f32_bf16p_bf16p ukernel_variants[] = {
       kai_get_dst_offset_matmul_clamp_f32_bf16p1x4_bf16p12x4b_1x36_neon_dot,
       kai_get_dst_size_matmul_clamp_f32_bf16p1x4_bf16p12x4b_1x36_neon_dot,
       kai_run_matmul_clamp_f32_bf16p1x4_bf16p12x4b_1x36_neon_dot},
+     kai_run_lhs_quant_pack_bf16p1x4_f32_neon,
+     kai_get_lhs_packed_size_lhs_quant_pack_bf16p1x4_f32_neon,
      "matmul_clamp_f32_bf16p1x4_bf16p12x4b_1x36_neon_dot"},
     {{kai_get_m_step_matmul_clamp_f32_bf16p_bf16p12x4b_8x12x4_neon_mmla,
       kai_get_n_step_matmul_clamp_f32_bf16p_bf16p12x4b_8x12x4_neon_mmla,
@@ -71,6 +83,8 @@ const kai_matmul_clamp_f32_bf16p_bf16p ukernel_variants[] = {
       kai_get_dst_offset_matmul_clamp_f32_bf16p_bf16p12x4b_8x12x4_neon_mmla,
       kai_get_dst_size_matmul_clamp_f32_bf16p_bf16p12x4b_8x12x4_neon_mmla,
       kai_run_matmul_clamp_f32_bf16p_bf16p12x4b_8x12x4_neon_mmla},
+     kai_run_lhs_quant_pack_bf16p8x4_f32_neon,
+     kai_get_lhs_packed_size_lhs_quant_pack_bf16p8x4_f32_neon,
      "matmul_clamp_f32_bf16p_bf16p12x4b_8x12x4_neon_mmla"}};
 
 // Number of micro-kernel variants stored in the array
@@ -206,7 +220,9 @@ int main() {
         const size_t bias_size = N;
         const size_t dst_size = M * N;
 
-        const auto ukernel = ukernel_variants[variant_idx].ukernel;
+        const auto ukernel = ukernel_variants[variant_idx].matmul_ukernel;
+        const auto lhs_pack_ukernel = ukernel_variants[variant_idx].lhs_pack_ukernel;
+        const auto get_lhs_packed_size = ukernel_variants[variant_idx].lhs_pack_get_lhs_packed_size;
 
         // Allocate the memory
         float* lhs = new float[lhs_size];
@@ -254,7 +270,8 @@ int main() {
         const size_t sr = ukernel.get_sr();
 
         // In a single row, we pack nr bias values followed by K rows of nr RHS values
-        const size_t rhs_packed_size = kai_get_rhs_packed_size_rhs_quant_pack_kxn_bf16pbiasf32_f32_neon(N, K, nr, kr);
+        const size_t rhs_packed_size =
+            kai_get_rhs_packed_size_rhs_quant_pack_kxn_bf16p12x4biasf32_f32_neon(N, K, nr, kr);
         uint8_t* rhs_packed = new uint8_t[rhs_packed_size];
 
         const size_t lhs_stride = K * sizeof(float);
@@ -264,7 +281,7 @@ int main() {
 
         // Packing only needs to be performed once if the contents of the bias and RHS matrices are expected to be
         // constant.
-        kai_run_rhs_quant_pack_kxn_bf16pbiasf32_f32_neon(
+        kai_run_rhs_quant_pack_kxn_bf16p12x4biasf32_f32_neon(
             1, N, K, nr, kr, sr,  // Packing arguments
             rhs_stride,           // RHS stride
             rhs,                  // RHS
@@ -295,12 +312,12 @@ int main() {
         for (size_t m_idx = 0; m_idx < M; m_idx += m_step) {
             const size_t height = KAI_MIN(m_step, M - m_idx);
 
-            size_t lhs_packed_size = kai_get_lhs_packed_size_lhs_quant_pack_bf16p_f32_neon(height, K, mr, kr, sr);
+            size_t lhs_packed_size = get_lhs_packed_size(height, K, mr, kr, sr);
 
             uint8_t* lhs_packed = new uint8_t[lhs_packed_size];
             memset(lhs_packed, 0, lhs_packed_size);
 
-            kai_run_lhs_quant_pack_bf16p_f32_neon(
+            lhs_pack_ukernel(
                 height, K, mr, kr, sr, 0 /* m_idx_start */, reinterpret_cast<uint8_t*>(lhs) + m_idx * lhs_stride,
                 lhs_stride, lhs_packed);
 
