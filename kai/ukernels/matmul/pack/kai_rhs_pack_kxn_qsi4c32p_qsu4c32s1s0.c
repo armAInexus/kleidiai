@@ -192,8 +192,6 @@ void kai_run_rhs_pack_kxn_qsi4c32p_qsu4c32s1s0(
                 // Clamp the index to avoid out-of-bound reads
                 const size_t n0_valid_idx = KAI_MIN(n0_idx, n - 1);
 
-                float partial_sum = 0.0f;
-
                 float d = 0.0F;
                 switch (scale_dt) {
                     case kai_dt_f32:
@@ -214,6 +212,8 @@ void kai_run_rhs_pack_kxn_qsi4c32p_qsu4c32s1s0(
                     ((super_kr_block_idx * block_length_in_bytes) / k_interleaved_v) * k_interleaved_v;
                 size_t k0_idx = dst_qblock_idx * bl + super_kr_block_idx * block_length_in_bytes + k_adjustment;
                 size_t k1_idx = k0_idx + k_interleaved_v;
+
+                float partial_sum = 0.0f;
 
                 for (size_t block_byte_idx = 0; block_byte_idx < block_length_in_bytes; ++block_byte_idx) {
                     const size_t src_addr_byte0 = (n0_valid_idx / 2) + k0_idx * rhs_stride;
