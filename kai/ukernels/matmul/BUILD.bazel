@@ -212,9 +212,9 @@ kai_c_library(
 )
 
 kai_c_library(
-    name = "rhs_pack_nxk_f32p2vlx1b_f32_f32_sme",
-    srcs = ["pack/kai_rhs_pack_nxk_f32p2vlx1b_f32_f32_sme.c"],
-    hdrs = ["pack/kai_rhs_pack_nxk_f32p2vlx1b_f32_f32_sme.h"],
+    name = "rhs_pack_nxk_f32p2vlx1biasf32_f32_f32_sme",
+    srcs = ["pack/kai_rhs_pack_nxk_f32p2vlx1biasf32_f32_f32_sme.c"],
+    hdrs = ["pack/kai_rhs_pack_nxk_f32p2vlx1biasf32_f32_f32_sme.h"],
     cpu_uarch = kai_cpu_sme(),
 )
 
@@ -375,7 +375,7 @@ kai_c_library(
         ":rhs_pack_kxn_f32pbiasf32_f32_f32_neon",
         ":rhs_pack_kxn_qsi4c32p_qsu4c32s1s0",
         ":rhs_pack_kxn_qsi4cxp_qs4cxs1s0",
-        ":rhs_pack_nxk_f32p2vlx1b_f32_f32_sme",
+        ":rhs_pack_nxk_f32p2vlx1biasf32_f32_f32_sme",
         ":rhs_pack_nxk_qsi4c32p_qsu4c32s1s0",
         ":rhs_pack_nxk_qsi4c32pscalef16_qsu4c32s16s0",
         ":rhs_pack_nxk_qsi4cxp_qs4cxs1s0",
