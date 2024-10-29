@@ -24,37 +24,37 @@ static size_t get_block_height(void) {
     return block_height;
 }
 
-size_t kai_get_n_step_rhs_pack_nxk_f32p2vlx1b_f32_f32_sme(void) {
+size_t kai_get_n_step_rhs_pack_nxk_f32p2vlx1biasf32_f32_f32_sme(void) {
     return get_block_height();
 }
 
-size_t kai_get_rhs_offset_rhs_pack_nxk_f32p2vlx1b_f32_f32_sme(size_t n_idx, size_t rhs_stride) {
+size_t kai_get_rhs_offset_rhs_pack_nxk_f32p2vlx1biasf32_f32_f32_sme(size_t n_idx, size_t rhs_stride) {
     KAI_ASSUME(n_idx % get_block_height() == 0);
 
     return n_idx * rhs_stride;
 }
 
-size_t kai_get_bias_offset_rhs_pack_nxk_f32p2vlx1b_f32_f32_sme(size_t n_idx) {
+size_t kai_get_bias_offset_rhs_pack_nxk_f32p2vlx1biasf32_f32_f32_sme(size_t n_idx) {
     KAI_ASSUME(n_idx % get_block_height() == 0);
 
     return n_idx * kai_num_bytes_bias;
 }
 
-size_t kai_get_rhs_packed_stride_rhs_pack_nxk_f32p2vlx1b_f32_f32_sme(size_t k) {
+size_t kai_get_rhs_packed_stride_rhs_pack_nxk_f32p2vlx1biasf32_f32_f32_sme(size_t k) {
     return kai_num_bytes_bias + kai_roundup(k, kai_kr) * kai_num_bytes_data;
 }
 
-size_t kai_get_rhs_packed_offset_rhs_pack_nxk_f32p2vlx1b_f32_f32_sme(size_t n_idx, size_t k) {
+size_t kai_get_rhs_packed_offset_rhs_pack_nxk_f32p2vlx1biasf32_f32_f32_sme(size_t n_idx, size_t k) {
     KAI_ASSUME(n_idx % get_block_height() == 0);
 
-    return n_idx * kai_get_rhs_packed_stride_rhs_pack_nxk_f32p2vlx1b_f32_f32_sme(k);
+    return n_idx * kai_get_rhs_packed_stride_rhs_pack_nxk_f32p2vlx1biasf32_f32_f32_sme(k);
 }
 
-size_t kai_get_rhs_packed_size_rhs_pack_nxk_f32p2vlx1b_f32_f32_sme(size_t n, size_t k) {
-    return kai_roundup(n, get_block_height()) * kai_get_rhs_packed_stride_rhs_pack_nxk_f32p2vlx1b_f32_f32_sme(k);
+size_t kai_get_rhs_packed_size_rhs_pack_nxk_f32p2vlx1biasf32_f32_f32_sme(size_t n, size_t k) {
+    return kai_roundup(n, get_block_height()) * kai_get_rhs_packed_stride_rhs_pack_nxk_f32p2vlx1biasf32_f32_f32_sme(k);
 }
 
-void kai_run_rhs_pack_nxk_f32p2vlx1b_f32_f32_sme(
+void kai_run_rhs_pack_nxk_f32p2vlx1biasf32_f32_f32_sme(
     size_t num_groups, size_t n, size_t k, size_t nr, size_t kr, size_t sr, size_t rhs_stride, const void* rhs,
     const void* bias, const void* scale, void* rhs_packed, size_t extra_bytes, const void* params) {
     KAI_ASSUME(num_groups == 1);
