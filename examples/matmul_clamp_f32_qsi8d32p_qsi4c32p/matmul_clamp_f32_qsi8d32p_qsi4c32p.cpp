@@ -8,6 +8,7 @@
 #else
 #include <cassert>
 #include <cfloat>
+#include <chrono>
 #include <cmath>
 #include <cstdint>
 #include <iostream>
@@ -268,8 +269,8 @@ static bool is_output_correct(size_t num_rows, size_t num_cols, float tolerance,
 
 int main(int argc, char** argv) {
     const size_t bl = 32;  // Block length. It must be 32
-    const size_t m = 13;
-    const size_t n = 64;
+    const size_t m = 71;
+    const size_t n = 63;
     const size_t k = 128;
     const size_t seed_lhs = 4568;
     const size_t seed_rhs = seed_lhs + 4;
@@ -361,6 +362,8 @@ int main(int argc, char** argv) {
             rhs_packed_mtx_qs4c32,                    // RHS packed
             0, &params);
 
+        const auto time_s = std::chrono::high_resolution_clock::now();
+
         // LHS packing
         kai_run_lhs_quant_pack_qsi8d32p_f32(
             m, k, bl,                          // Dimensions
@@ -391,11 +394,16 @@ int main(int argc, char** argv) {
             );
         }
 
+        const auto time_e = std::chrono::high_resolution_clock::now();
+
+        const auto elap = std::chrono::duration_cast<std::chrono::microseconds>(time_e - time_s);
+
         const bool is_valid =
             is_output_correct(m, n, 0.0001f, (const float*)dst_ref_mtx_f32, (const float*)dst_act_mtx_f32);
 
         if (is_valid) {
             printf("TEST[%ld] = PASSED\n", idx_variant);
+            std::cout << "- Performance: " << elap.count() << " us" << std::endl;
         } else {
             printf("TEST[%ld] = FAILED\n", idx_variant);
         }
