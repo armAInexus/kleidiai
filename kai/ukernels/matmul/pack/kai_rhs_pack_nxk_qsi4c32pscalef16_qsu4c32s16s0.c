@@ -121,11 +121,6 @@ void kai_run_rhs_pack_nxk_qsi4c32pscalef16_qsu4c32s16s0(
             }
             src_row += kai_num_bytes_multiplier;
 
-            for (size_t i = 0; i < nr; ++i) {
-                const float d = kai_cast_f32_f16(((uint16_t*)scales)[i]);
-                ((uint16_t*)scales)[i] = kai_cast_f16_f32(d);
-            }
-
             dst_row += (kai_num_bytes_multiplier * nr);
 
             // Store the segments
