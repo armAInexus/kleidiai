@@ -389,6 +389,7 @@ kai_c_library(
         ":clamp_f32_qsi8d32p_qsi4c32p_i8mm",
         ":clamp_f32_qsi8d32p_qsi4c32p_interface",
         ":lhs_pack_f32p2vlx1_f32_sme",
+        ":lhs_quant_pack_bf16p1x4_f32_neon",
         ":lhs_quant_pack_bf16p8x4_f32_neon",
         ":lhs_quant_pack_qai8dxp_f32",
         ":lhs_quant_pack_qsi8d32p_f32",
