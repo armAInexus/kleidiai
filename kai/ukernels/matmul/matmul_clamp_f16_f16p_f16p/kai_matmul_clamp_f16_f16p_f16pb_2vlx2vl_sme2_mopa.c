@@ -15,9 +15,8 @@
 
 static const size_t kai_mr = 2;
 static const size_t kai_nr = 2;
-static const size_t kai_kr = 1;
+static const size_t kai_kr = 2;
 static const size_t kai_sr = 1;
-
 size_t kai_get_m_step_matmul_clamp_f16_f16p_f16pb_2vlx2vl_sme2_mopa(void) {
     return kai_mr * kai_get_sme_vector_length_u16();
 }
