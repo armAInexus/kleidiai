@@ -47,9 +47,6 @@ const std::array matmul_methods = {
         .n0 = 12,
         .k0 = 4,
 
-        .lhs_transposed = false,
-        .rhs_transposed = false,
-
         .dst_format = DataFormat(DataType::FP32),
         .lhs_format = DataFormat(DataType::FP32),
         .packed_lhs_format =
@@ -94,9 +91,6 @@ const std::array matmul_methods = {
         .m0 = 8,
         .n0 = 12,
         .k0 = 4,
-
-        .lhs_transposed = false,
-        .rhs_transposed = false,
 
         .dst_format = DataFormat(DataType::FP32),
         .lhs_format = DataFormat(DataType::FP32),
@@ -173,8 +167,8 @@ protected:
         const auto has_rhs_pack = method.packed_rhs_format.data_type() != DataType::UNKNOWN;
         const auto has_bias = method.bias_format.data_type() != DataType::UNKNOWN;
 
-        const auto lhs_h = method.lhs_transposed ? info.k : info.m;
-        const auto lhs_w = method.lhs_transposed ? info.m : info.k;
+        const auto lhs_h = info.m;
+        const auto lhs_w = info.k;
         auto lhs = fill_matrix_random(lhs_h, lhs_w, method.lhs_format, 0);
         std::vector<uint8_t> ref_packed_lhs;
 
@@ -183,8 +177,8 @@ protected:
                 pack(method.packed_lhs_format, lhs.data(), nullptr, nullptr, method.lhs_format, lhs_h, lhs_w);
         }
 
-        const auto rhs_h = method.rhs_transposed ? info.n : info.k;
-        const auto rhs_w = method.rhs_transposed ? info.k : info.n;
+        const auto rhs_h = info.k;
+        const auto rhs_w = info.n;
         auto rhs = fill_matrix_random(rhs_h, rhs_w, method.rhs_format, 1);
 
         std::vector<uint8_t> rhs_scales;
@@ -223,7 +217,7 @@ protected:
             rhs.data(), rhs_scales.data(), nullptr, method.rhs_format.data_type(),               //
             has_bias ? bias.data() : nullptr, nullptr, nullptr, method.bias_format.data_type(),  //
             method.dst_format.data_type(),                                                       //
-            info.m, info.n, info.k, method.lhs_transposed, method.rhs_transposed);
+            info.m, info.n, info.k, false, false);
 
         const auto& data = _data[data_id] = {
             .lhs = std::move(lhs),
@@ -279,7 +273,7 @@ TEST_P(MatMulTestBf16, Output) {
     const size_t dst_w = info.n;
     const bool has_bias = (data.bias.size() > 0);
 
-    const auto lhs_start_row = method.lhs_transposed ? 0 : rect.start_row();
+    const auto lhs_start_row = rect.start_row();
     const auto lhs_stride = method.lhs_format.default_row_stride(lhs_w);
 
     std::vector<uint8_t> lhs_data;
