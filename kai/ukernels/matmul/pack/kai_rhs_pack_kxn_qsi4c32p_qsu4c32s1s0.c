@@ -182,35 +182,17 @@ void kai_run_rhs_pack_kxn_qsi4c32p_qsu4c32s1s0(
                     num_bytes_multiplier_rhs);  //
             }
 
-            for (size_t dst_byte_idx = 0; dst_byte_idx < nr * num_bytes_per_block_k; ++dst_byte_idx) {
-                const size_t block_idx = dst_byte_idx / block_length_in_bytes;
-                const size_t block_byte_idx = dst_byte_idx % block_length_in_bytes;
-                const size_t super_block_idx = block_idx / nr;
-                const size_t nr_idx = block_idx % nr;
-
-                const size_t k_adjustment =
-                    ((block_byte_idx + super_block_idx * block_length_in_bytes) / k_interleaved_v) * k_interleaved_v;
-                const size_t k0_idx =
-                    dst_qblock_idx * bl + block_byte_idx + super_block_idx * block_length_in_bytes + k_adjustment;
-                const size_t k1_idx = k0_idx + k_interleaved_v;
+            size_t kr_block_idx = 0;
+            for (size_t dst_byte_idx = 0; dst_byte_idx < nr * num_bytes_per_block_k;
+                 dst_byte_idx += block_length_in_bytes) {
+                const size_t super_kr_block_idx = kr_block_idx / nr;
+                const size_t nr_idx = kr_block_idx % nr;
                 const size_t n0_idx = dst_row_idx * nr + nr_idx;
 
                 // Clamp the index to avoid out-of-bound reads
                 const size_t n0_valid_idx = KAI_MIN(n0_idx, n - 1);
 
-                const size_t src_addr_byte0 = (n0_valid_idx / 2) + k0_idx * rhs_stride;
-                const size_t src_addr_byte1 = (n0_valid_idx / 2) + k1_idx * rhs_stride;
-
-                uint8_t byte0 = rhs_zero_point | rhs_zero_point << 4;
-                uint8_t byte1 = rhs_zero_point | rhs_zero_point << 4;
-
-                if (k0_idx < k) {
-                    byte0 = rhs[src_addr_byte0];
-                }
-
-                if (k1_idx < k) {
-                    byte1 = rhs[src_addr_byte1];
-                }
+                float partial_sum = 0.0f;
 
                 float d = 0.0F;
                 switch (scale_dt) {
@@ -228,27 +210,52 @@ void kai_run_rhs_pack_kxn_qsi4c32p_qsu4c32s1s0(
                         break;
                 }
 
-                if ((n0_idx % 2) == 0) {
-                    const uint8_t src_x0_lo = (byte0 & 0x0F);
-                    const uint8_t src_x0_hi = (byte1 & 0x0F);
+                const size_t k_adjustment =
+                    ((super_kr_block_idx * block_length_in_bytes) / k_interleaved_v) * k_interleaved_v;
+                size_t k0_idx = dst_qblock_idx * bl + super_kr_block_idx * block_length_in_bytes + k_adjustment;
+                size_t k1_idx = k0_idx + k_interleaved_v;
 
-                    sums[nr_idx] += (float)((int32_t)src_x0_lo - rhs_zero_point) * d;
-                    sums[nr_idx] += (float)((int32_t)src_x0_hi - rhs_zero_point) * d;
+                for (size_t block_byte_idx = 0; block_byte_idx < block_length_in_bytes; ++block_byte_idx) {
+                    const size_t src_addr_byte0 = (n0_valid_idx / 2) + k0_idx * rhs_stride;
+                    const size_t src_addr_byte1 = (n0_valid_idx / 2) + k1_idx * rhs_stride;
 
-                    const uint8_t dst_qs0 = src_x0_lo | (src_x0_hi << 4);
+                    uint8_t byte0 = rhs_zero_point | rhs_zero_point << 4;
+                    uint8_t byte1 = rhs_zero_point | rhs_zero_point << 4;
 
-                    dst_row[dst_byte_idx] = dst_qs0 ^ 0x88;
-                } else {
-                    const uint8_t src_x1_lo = (byte0 >> 4);
-                    const uint8_t src_x1_hi = (byte1 >> 4);
+                    if (k0_idx < k) {
+                        byte0 = rhs[src_addr_byte0];
+                    }
 
-                    sums[nr_idx] += (float)((int32_t)src_x1_lo - rhs_zero_point) * d;
-                    sums[nr_idx] += (float)((int32_t)src_x1_hi - rhs_zero_point) * d;
+                    if (k1_idx < k) {
+                        byte1 = rhs[src_addr_byte1];
+                    }
 
-                    const uint8_t dst_qs1 = src_x1_lo | (src_x1_hi << 4);
+                    if ((n0_idx % 2) == 0) {
+                        const uint8_t src_x0_lo = (byte0 & 0x0F);
+                        const uint8_t src_x0_hi = (byte1 & 0x0F);
 
-                    dst_row[dst_byte_idx] = dst_qs1 ^ 0x88;
+                        partial_sum += ((int32_t)src_x0_lo + (int32_t)src_x0_hi - 2 * rhs_zero_point) * d;
+
+                        const uint8_t dst_qs0 = src_x0_lo | (src_x0_hi << 4);
+
+                        dst_row[dst_byte_idx + block_byte_idx] = dst_qs0 ^ 0x88;
+                    } else {
+                        const uint8_t src_x1_lo = (byte0 >> 4);
+                        const uint8_t src_x1_hi = (byte1 >> 4);
+
+                        partial_sum += ((int32_t)src_x1_lo + (int32_t)src_x1_hi - 2 * rhs_zero_point) * d;
+
+                        const uint8_t dst_qs1 = src_x1_lo | (src_x1_hi << 4);
+
+                        dst_row[dst_byte_idx + block_byte_idx] = dst_qs1 ^ 0x88;
+                    }
+                    k0_idx++;
+                    k1_idx++;
                 }
+                sums[nr_idx] += partial_sum;
+
+                // Increment the Kr block index
+                kr_block_idx++;
             }
             // Move the pointer after K values
             dst_row += num_bytes_per_block * nr;
