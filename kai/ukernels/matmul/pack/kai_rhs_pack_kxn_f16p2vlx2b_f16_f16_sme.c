@@ -72,7 +72,7 @@ void kai_run_rhs_pack_kxn_f16p2vlx2b_f16_f16_sme(
     void* out = rhs_packed;
     const size_t in_stride = rhs_stride;
     // Padding with potentially non-zero values
-    uint16_t* pad_row = rhs;
+    const uint16_t* pad_row = rhs;
 
     size_t out_stride = kai_get_rhs_packed_stride_rhs_pack_kxn_f16p2vlx2b_f16_f16_sme(height);
 

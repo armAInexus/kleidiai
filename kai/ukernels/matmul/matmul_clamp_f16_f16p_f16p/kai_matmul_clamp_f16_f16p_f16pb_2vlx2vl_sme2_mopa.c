@@ -72,8 +72,8 @@ void kai_run_matmul_clamp_f16_f16p_f16pb_2vlx2vl_sme2_mopa(
         const void* B;
 
         void* C;
-        long ldcb;
-        long M, N, K;
+        uint64_t ldcb;
+        uint64_t M, N, K;
         __fp16 min;
         __fp16 max;
 
