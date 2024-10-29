@@ -243,6 +243,56 @@ std::vector<uint8_t> pack_data_scales(
     return dst;
 }
 
+template <typename ZeroPoint, typename Data, typename Scale>
+std::vector<uint8_t> pack_zero_points_data_scales_per_block(
+    const void* zero_points, const void* data, const void* scales, size_t num_blocks, size_t block_num_zero_points,
+    size_t block_num_data, size_t block_num_scales) {
+    // Only data is allowed to be sub-byte.
+    KAI_ASSUME(size_in_bits<ZeroPoint> % 8 == 0);
+    KAI_ASSUME(size_in_bits<Scale> % 8 == 0);
+
+    // Checks for memory alignment.
+    KAI_ASSUME(size_in_bits<ZeroPoint> % size_in_bits<Data> == 0);
+    KAI_ASSUME(
+        (block_num_zero_points * size_in_bits<ZeroPoint> + block_num_data * size_in_bits<Data>) % size_in_bits<Scale> ==
+        0);
+    KAI_ASSUME(
+        (block_num_data * size_in_bits<Data> + block_num_scales * size_in_bits<Scale>) % size_in_bits<ZeroPoint> == 0);
+
+    std::vector<uint8_t> dst(round_up_division(
+        num_blocks *
+            (block_num_zero_points * size_in_bits<ZeroPoint> + block_num_data * size_in_bits<Data> +
+             block_num_scales * size_in_bits<Scale>),
+        8));
+    auto* dst_ptr = dst.data();
+
+    for (size_t block_no = 0; block_no < num_blocks; ++block_no) {
+        for (size_t i = 0; i < block_num_zero_points; ++i) {
+            write_array<ZeroPoint>(
+                dst_ptr, i, read_array<ZeroPoint>(zero_points, block_no * block_num_zero_points + i));
+        }
+        dst_ptr += block_num_zero_points * sizeof(ZeroPoint);
+
+        for (size_t i = 0; i < block_num_data; ++i) {
+            write_array<Data>(dst_ptr, i, read_array<Data>(data, block_no * block_num_data + i));
+        }
+        dst_ptr += round_up_division(block_num_data * size_in_bits<Data>, 8);
+
+        for (size_t i = 0; i < block_num_scales; ++i) {
+            write_array<Scale>(dst_ptr, i, read_array<Scale>(scales, block_no * block_num_scales + i));
+        }
+        dst_ptr += block_num_scales * sizeof(Scale);
+    }
+
+    KAI_ASSERT(dst_ptr == &*dst.end());
+
+    return dst;
+}
+
+template std::vector<uint8_t> pack_zero_points_data_scales_per_block<int32_t, int8_t, float>(
+    const void* zero_points, const void* data, const void* scales, size_t num_blocks, size_t block_num_zero_points,
+    size_t block_num_data, size_t block_num_scales);
+
 template <typename Data, typename Scale>
 std::vector<uint8_t> pack_data_scales_interleave_block(
     const void* data, const void* scales, size_t height, size_t width, size_t quant_width) {

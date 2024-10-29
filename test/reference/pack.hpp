@@ -79,6 +79,70 @@ template <typename Data, typename Scale>
 std::vector<uint8_t> pack_data_scales(
     const void* data, const void* scales, size_t height, size_t width, size_t quant_width);
 
+/// Packs the zero point, data and scale into a single buffer.
+///
+/// ```
+/// Data matrix:
+///
+/// +-----------------+
+/// | q00 q01 q02 q03 |
+/// | q10 q11 q12 q13 |
+/// | q20 q21 q22 q23 |
+/// | q30 q31 q32 q33 |
+/// | ............... |
+/// : ............... :
+///
+/// Scales for each row:
+///
+/// +----+
+/// | s0 |
+/// | s1 |
+/// | s2 |
+/// | s3 |
+/// | .. |
+/// : .. :
+///
+/// Zero points for each row:
+///
+/// +----+
+/// | z0 |
+/// | z1 |
+/// | z2 |
+/// | z3 |
+/// | .. |
+/// : .. :
+/// ```
+///
+/// The packed data has each zero point followed by the data row followed by the scale.
+///
+/// ```
+/// Packed data:
+///
+/// +----+-----------------+----+
+/// | z0 | q00 q01 q02 q03 | s0 |
+/// | z1 | q10 q11 q12 q13 | s1 |
+/// | z2 | q20 q21 q22 q23 | s2 |
+/// | z3 | q30 q31 q32 q33 | s3 |
+/// | .. | ............... | .. |
+/// : .. : ............... : .. :
+/// ```
+///
+/// @tparam Data The data type of the data.
+/// @tparam Scale The data type of the scale.
+/// @tparam ZeroPoint The data type of the zero point.
+///
+/// @param[in] data The data buffer.
+/// @param[in] scales The scales buffer.
+/// @param[in] zero_points The zero points buffer.
+/// @param[in] height The number of rows.
+/// @param[in] width The number of columns.
+///
+/// @return The packed data buffer.
+template <typename ZeroPoint, typename Data, typename Scale>
+std::vector<uint8_t> pack_zero_points_data_scales_per_block(
+    const void* zero_points, const void* data, const void* scales, size_t num_blocks, size_t block_num_zero_points,
+    size_t block_num_data, size_t block_num_scales);
+
 /// Packs the quantized data and the quantization scale into a single buffer.
 ///
 /// ```

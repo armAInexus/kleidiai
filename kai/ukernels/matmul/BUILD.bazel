@@ -70,6 +70,13 @@ kai_c_library(
     cpu_uarch = kai_cpu_sme(),
 )
 
+kai_c_library(
+    name = "clamp_qai8_qai8p_qsi8cpsb_2vlx2vl_sme2_mopa",
+    srcs = ["matmul_clamp_qai8_qai8p_qsi8cp/kai_matmul_clamp_qai8_qai8p_qsi8cpsb_2vlx2vl_sme2_mopa.c"],
+    hdrs = ["matmul_clamp_qai8_qai8p_qsi8cp/kai_matmul_clamp_qai8_qai8p_qsi8cpsb_2vlx2vl_sme2_mopa.h"],
+    cpu_uarch = kai_cpu_sme(),
+)
+
 cc_library(
     name = "clamp_f32_qai8dxp_qsi4cxp_interface",
     hdrs = ["matmul_clamp_f32_qai8dxp_qsi4cxp/kai_matmul_clamp_f32_qai8dxp_qsi4cxp_interface.h"],
@@ -177,6 +184,13 @@ kai_c_library(
 )
 
 kai_c_library(
+    name = "lhs_pack_x8p2vlx4_x8_sme",
+    srcs = ["pack/kai_lhs_pack_x8p2vlx4_x8_sme.c"],
+    hdrs = ["pack/kai_lhs_pack_x8p2vlx4_x8_sme.h"],
+    cpu_uarch = kai_cpu_sme(),
+)
+
+kai_c_library(
     name = "lhs_quant_pack_bf16p_f32_neon",
     srcs = ["pack/kai_lhs_quant_pack_bf16p_f32_neon.c"],
     hdrs = ["pack/kai_lhs_quant_pack_bf16p_f32_neon.h"],
@@ -215,6 +229,13 @@ kai_c_library(
     name = "rhs_pack_kxn_f32pb_f32_f32_16vlx1_sme",
     srcs = ["pack/kai_rhs_pack_kxn_f32pb_f32_f32_16vlx1_sme.c"],
     hdrs = ["pack/kai_rhs_pack_kxn_f32pb_f32_f32_16vlx1_sme.h"],
+    cpu_uarch = kai_cpu_sme(),
+)
+
+kai_c_library(
+    name = "rhs_pack_kxn_qsi8cp2vlx4sb_qsi8_f32_i32_sme",
+    srcs = ["pack/kai_rhs_pack_kxn_qsi8cp2vlx4sb_qsi8_f32_i32_sme.c"],
+    hdrs = ["pack/kai_rhs_pack_kxn_qsi8cp2vlx4sb_qsi8_f32_i32_sme.h"],
     cpu_uarch = kai_cpu_sme(),
 )
 
@@ -358,7 +379,9 @@ kai_c_library(
         ":clamp_f32_qsi8d32p_qsi4c32p_dotprod",
         ":clamp_f32_qsi8d32p_qsi4c32p_i8mm",
         ":clamp_f32_qsi8d32p_qsi4c32p_interface",
+        ":clamp_qai8_qai8p_qsi8cpsb_2vlx2vl_sme2_mopa",
         ":lhs_pack_f32p2vlx1_f32_sme",
+        ":lhs_pack_x8p2vlx4_x8_sme",
         ":lhs_quant_pack_bf16p_f32_neon",
         ":lhs_quant_pack_qai8dxp_f32",
         ":lhs_quant_pack_qsi8d32p_f32",
@@ -368,6 +391,7 @@ kai_c_library(
         ":rhs_pack_kxn_f32pbiasf32_f32_f32_neon",
         ":rhs_pack_kxn_qsi4c32p_qsu4c32s1s0",
         ":rhs_pack_kxn_qsi4cxp_qs4cxs1s0",
+        ":rhs_pack_kxn_qsi8cp2vlx4sb_qsi8_f32_i32_sme",
         ":rhs_pack_nxk_qsi4c32p_qsu4c32s1s0",
         ":rhs_pack_nxk_qsi4c32pscalef16_qsu4c32s16s0",
         ":rhs_pack_nxk_qsi4cxp_qs4cxs1s0",
