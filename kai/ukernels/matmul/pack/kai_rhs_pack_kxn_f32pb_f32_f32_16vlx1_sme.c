@@ -62,7 +62,7 @@ void kai_run_rhs_pack_kxn_f32pb_f32_f32_16vlx1_sme(
     const void* in = rhs;
     void* out = rhs_packed;
     const size_t in_stride = rhs_stride;
-    size_t out_stride = kai_nr * kai_get_sme_vector_length_u8() * (height + sizeof(uint32_t) / sizeof(uint32_t));
+    size_t out_stride = kai_nr * kai_get_sme_vector_length_u8() * (height + 1);
 
     __asm__ __volatile__(
         ".inst 0xd503477f  // SMSTART ZA\n"

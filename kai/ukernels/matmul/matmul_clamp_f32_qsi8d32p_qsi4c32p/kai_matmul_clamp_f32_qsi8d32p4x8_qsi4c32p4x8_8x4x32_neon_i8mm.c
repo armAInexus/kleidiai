@@ -10,6 +10,7 @@
 #include "kai_matmul_clamp_f32_qsi8d32p4x8_qsi4c32p4x8_8x4x32_neon_i8mm.h"
 
 #include <arm_neon.h>
+#include <stddef.h>
 #include <stdint.h>
 
 #include "kai/kai_common.h"
@@ -125,7 +126,7 @@ void kai_run_matmul_clamp_f32_qsi8d32p4x8_qsi4c32p4x8_8x4x32_neon_i8mm(
     const size_t num_cols = n;
     const size_t num_rows = m;
 
-    const int8x16_t nibble_mask = vdupq_n_s8(0xF0);
+    const int8x16_t nibble_mask = vreinterpretq_s8_u8(vdupq_n_u8(0xF0));
 
     const uint8_t* lhs_ptr_start = lhs_packed;
 

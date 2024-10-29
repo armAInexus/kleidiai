@@ -98,8 +98,9 @@ size_t kai_get_dst_size_matmul_clamp_f32_qai8dxp4x8_qsi4cxp4x8_8x4x32_neon_i8mm(
 }
 
 void kai_run_matmul_clamp_f32_qai8dxp4x8_qsi4cxp4x8_8x4x32_neon_i8mm(
-    size_t m, size_t n, size_t k, const void* lhs_packed, const void* rhs_packed, float* dst, size_t dst_stride_row,
-    size_t dst_stride_col, float scalar_min, float scalar_max) {
+    size_t m, size_t n, size_t k, const void* lhs_packed, const void* rhs_packed,
+    float* dst,  // NOLINT(readability-non-const-parameter)
+    size_t dst_stride_row, size_t dst_stride_col, float scalar_min, float scalar_max) {
     KAI_ASSERT(dst_stride_col == sizeof(float));
 
     if (m == 0) {
