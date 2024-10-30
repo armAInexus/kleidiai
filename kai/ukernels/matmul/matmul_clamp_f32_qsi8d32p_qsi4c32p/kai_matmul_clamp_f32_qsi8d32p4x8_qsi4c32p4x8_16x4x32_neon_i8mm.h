@@ -107,7 +107,7 @@ size_t kai_get_dst_size_matmul_clamp_f32_qsi8d32p4x8_qsi4c32p4x8_16x4x32_neon_i8
 ///
 /// LHS matrix: Signed 8-bit quantized symmetric per-block (qsi8d32) and packed
 /// RHS matrix: Signed 4-bit quantized symmetric per-block (qsi4c32) and packed.
-/// Output tile: (rows x cols) = 8 x 4
+/// Output tile: (rows x cols) = 16 x 4
 /// Accumulation performed in a single for loop: 32
 /// Extension used: i8mm
 ///
