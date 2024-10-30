@@ -4,8 +4,8 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-#if !defined(__aarch64__)
-#error This file must be compiled for AArch64.
+#if !defined(__aarch64__) || !defined(__ARM_FEATURE_BF16_VECTOR_ARITHMETIC)
+#error This file must be compiled for AArch64, FEAT_BF16.
 #else  // Architectural features check.
 
 #define MAX_NR 12

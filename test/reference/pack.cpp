@@ -6,6 +6,8 @@
 
 #include "test/reference/pack.hpp"
 
+#include <arm_neon.h>
+
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
@@ -24,8 +26,16 @@ namespace kai::test {
 namespace {
 
 uint16_t convert(const uint8_t* src_ptr_elm, DataType src_dtype, DataType dst_dtype) {
-    KAI_ASSUME(src_dtype == DataType::FP32 && dst_dtype == DataType::BF16);
-    return BFloat16(*reinterpret_cast<const float*>(src_ptr_elm)).data();
+    KAI_ASSUME((src_dtype == DataType::FP32 || src_dtype == DataType::FP16) && dst_dtype == DataType::BF16);
+
+    switch (src_dtype) {
+        case DataType::FP32:
+            return BFloat16(*reinterpret_cast<const float*>(src_ptr_elm)).data();
+        case DataType::FP16:
+            return BFloat16(static_cast<float>(*reinterpret_cast<const float16_t*>(src_ptr_elm))).data();
+        default:
+            KAI_ERROR("Unsupported Data Type");
+    }
 }
 
 std::vector<uint8_t> pack_block(
@@ -68,7 +78,7 @@ std::vector<uint8_t> pack_block(
                                              x_element) *
                                                 src_esize;
 
-                                        uint16_t src_value = convert(src_ptr_elm, src_dtype, dst_dtype);
+                                        const uint16_t src_value = convert(src_ptr_elm, src_dtype, dst_dtype);
                                         memcpy(dst_ptr, &src_value, dst_esize);
                                     }
                                 }
@@ -175,7 +185,9 @@ std::vector<uint8_t> pack(
     const auto subblock_width = dst_format.actual_subblock_width(width);
 
     if (src_qf == DataFormat::PackFormat::NONE && dst_qf == DataFormat::PackFormat::BIAS_PER_ROW) {
-        KAI_ASSUME((src_dt == dst_dt) || (src_dt == DataType::FP32 && dst_dt == DataType::BF16));
+        KAI_ASSUME(
+            (src_dt == dst_dt) || (src_dt == DataType::FP32 && dst_dt == DataType::BF16) ||
+            (src_dt == DataType::FP16 && dst_dt == DataType::BF16));
 
         const auto src_esize = data_type_size_in_bits(src_dt);
         const auto dst_esize = data_type_size_in_bits(dst_dt);
@@ -190,7 +202,9 @@ std::vector<uint8_t> pack(
     }
 
     if (src_qf == DataFormat::PackFormat::NONE && dst_qf == DataFormat::PackFormat::NONE) {
-        KAI_ASSUME((src_dt == dst_dt) || (src_dt == DataType::FP32 && dst_dt == DataType::BF16));
+        KAI_ASSUME(
+            (src_dt == dst_dt) || (src_dt == DataType::FP32 && dst_dt == DataType::BF16) ||
+            (src_dt == DataType::FP16 && dst_dt == DataType::BF16));
 
         const auto dst_esize = data_type_size_in_bits(dst_dt);
         const auto src_esize = data_type_size_in_bits(src_dt);
