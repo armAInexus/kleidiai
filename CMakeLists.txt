@@ -94,6 +94,13 @@ set(KLEIDIAI_FILES_NEON_BF16
     kai/ukernels/matmul/matmul_clamp_f32_bf16p_bf16p/kai_matmul_clamp_f32_bf16p_bf16p12x4b_8x12x4_neon_mmla.c
 )
 
+set(KLEIDIAI_FILES_NEON_FP16_BF16
+    kai/ukernels/matmul/pack/kai_lhs_quant_pack_bf16p8x4_f16_neon.c
+    kai/ukernels/matmul/pack/kai_rhs_quant_pack_kxn_bf16p12x4biasf16_f16_neon.c
+    kai/ukernels/matmul/pack/kai_rhs_quant_pack_kxn_bf16p12x4biasf32_f16_neon.c
+    kai/ukernels/matmul/matmul_clamp_f16_bf16p_bf16p/kai_matmul_clamp_f16_bf16p8x4_bf16p12x4b_8x12_neon_mmla.c
+)
+
 set(KLEIDIAI_FILES_NEON
     kai/ukernels/matmul/pack/kai_rhs_pack_kxn_f32p8x1biasf32_f32_f32_neon.c
     kai/ukernels/matmul/matmul_clamp_f32_f32_f32p/kai_matmul_clamp_f32_f32_f32p8x1biasf32_6x8x4_neon_mla.c
@@ -145,19 +152,21 @@ if((CMAKE_SYSTEM_PROCESSOR STREQUAL "aarch64" OR CMAKE_SYSTEM_PROCESSOR STREQUAL
     target_sources(kleidiai PRIVATE ${KLEIDIAI_FILES_NEON})
     target_sources(kleidiai PRIVATE ${KLEIDIAI_FILES_NEON_FP16})
     target_sources(kleidiai PRIVATE ${KLEIDIAI_FILES_NEON_BF16})
+    target_sources(kleidiai PRIVATE ${KLEIDIAI_FILES_NEON_FP16_BF16})
     target_sources(kleidiai PRIVATE ${KLEIDIAI_FILES_NEON_DOTPROD})
     target_sources(kleidiai PRIVATE ${KLEIDIAI_FILES_NEON_I8MM})
     target_sources(kleidiai PRIVATE ${KLEIDIAI_FILES_SME})
     target_sources(kleidiai PRIVATE ${KLEIDIAI_FILES_SME2})
 
-    set_source_files_properties(${KLEIDIAI_FILES_SCALAR}       PROPERTIES COMPILE_OPTIONS -march=armv8-a${KLEIDIAI_INTERNAL_EXTRA_ARCH})
-    set_source_files_properties(${KLEIDIAI_FILES_NEON}         PROPERTIES COMPILE_OPTIONS -march=armv8-a${KLEIDIAI_INTERNAL_EXTRA_ARCH})
-    set_source_files_properties(${KLEIDIAI_FILES_NEON_FP16}    PROPERTIES COMPILE_OPTIONS -march=armv8.2-a+fp16${KLEIDIAI_INTERNAL_EXTRA_ARCH})
-    set_source_files_properties(${KLEIDIAI_FILES_NEON_BF16}    PROPERTIES COMPILE_OPTIONS -march=armv8.2-a+bf16${KLEIDIAI_INTERNAL_EXTRA_ARCH})
-    set_source_files_properties(${KLEIDIAI_FILES_NEON_DOTPROD} PROPERTIES COMPILE_OPTIONS -march=armv8.2-a+dotprod${KLEIDIAI_INTERNAL_EXTRA_ARCH})
-    set_source_files_properties(${KLEIDIAI_FILES_NEON_I8MM}    PROPERTIES COMPILE_OPTIONS -march=armv8.2-a+i8mm${KLEIDIAI_INTERNAL_EXTRA_ARCH})
-    set_source_files_properties(${KLEIDIAI_FILES_SME}          PROPERTIES COMPILE_OPTIONS -march=armv8.2-a+sve+sve2${KLEIDIAI_INTERNAL_EXTRA_ARCH})
-    set_source_files_properties(${KLEIDIAI_FILES_SME2}         PROPERTIES COMPILE_OPTIONS -march=armv8.2-a+sve+sve2${KLEIDIAI_INTERNAL_EXTRA_ARCH})
+    set_source_files_properties(${KLEIDIAI_FILES_SCALAR}         PROPERTIES COMPILE_OPTIONS -march=armv8-a${KLEIDIAI_INTERNAL_EXTRA_ARCH})
+    set_source_files_properties(${KLEIDIAI_FILES_NEON}           PROPERTIES COMPILE_OPTIONS -march=armv8-a${KLEIDIAI_INTERNAL_EXTRA_ARCH})
+    set_source_files_properties(${KLEIDIAI_FILES_NEON_FP16}      PROPERTIES COMPILE_OPTIONS -march=armv8.2-a+fp16${KLEIDIAI_INTERNAL_EXTRA_ARCH})
+    set_source_files_properties(${KLEIDIAI_FILES_NEON_BF16}      PROPERTIES COMPILE_OPTIONS -march=armv8.2-a+bf16${KLEIDIAI_INTERNAL_EXTRA_ARCH})
+    set_source_files_properties(${KLEIDIAI_FILES_NEON_FP16_BF16} PROPERTIES COMPILE_OPTIONS -march=armv8.2-a+bf16+fp16${KLEIDIAI_INTERNAL_EXTRA_ARCH})
+    set_source_files_properties(${KLEIDIAI_FILES_NEON_DOTPROD}   PROPERTIES COMPILE_OPTIONS -march=armv8.2-a+dotprod${KLEIDIAI_INTERNAL_EXTRA_ARCH})
+    set_source_files_properties(${KLEIDIAI_FILES_NEON_I8MM}      PROPERTIES COMPILE_OPTIONS -march=armv8.2-a+i8mm${KLEIDIAI_INTERNAL_EXTRA_ARCH})
+    set_source_files_properties(${KLEIDIAI_FILES_SME}            PROPERTIES COMPILE_OPTIONS -march=armv8.2-a+sve+sve2${KLEIDIAI_INTERNAL_EXTRA_ARCH})
+    set_source_files_properties(${KLEIDIAI_FILES_SME2}           PROPERTIES COMPILE_OPTIONS -march=armv8.2-a+sve+sve2${KLEIDIAI_INTERNAL_EXTRA_ARCH})
 endif()
 
 target_include_directories(kleidiai
@@ -215,6 +224,7 @@ if(KLEIDIAI_BUILD_TESTS)
         test/tests/matmul_clamp_f32_qai8dxp_qsi4cxp_test.cpp
         test/tests/matmul_clamp_f32_qsi8d32p_qsi4c32p_test.cpp
         test/tests/matmul_clamp_f32_qai8dxp_qsi4c32p_test.cpp
+        test/tests/matmul_clamp_f16_bf16p_bf16p_test.cpp
         test/tests/matmul_clamp_f32_bf16p_bf16p_test.cpp
     )
 

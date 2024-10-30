@@ -36,6 +36,8 @@ std::vector<uint8_t> cast(const void* src, kai::test::DataType src_dt, DataType 
 
     if (src_dt == DataType::BF16 && dst_dt == DataType::FP32) {
         return cast<float, BFloat16>(src, length);
+    } else if (src_dt == DataType::FP16 && dst_dt == DataType::FP32) {
+        return cast<float, Float16>(src, length);
     }
 
     KAI_ERROR("Unsupported cast data type!");
