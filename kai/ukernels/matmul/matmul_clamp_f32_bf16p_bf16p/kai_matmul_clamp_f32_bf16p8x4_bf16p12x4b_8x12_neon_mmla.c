@@ -8,7 +8,7 @@
 #error This file must be compiled for AArch64, FEAT_BF16.
 #else  // Architectural features check.
 
-#include "kai_matmul_clamp_f32_bf16p_bf16p12x4b_8x12x4_neon_mmla.h"
+#include "kai_matmul_clamp_f32_bf16p8x4_bf16p12x4b_8x12_neon_mmla.h"
 
 #include <arm_bf16.h>
 #include <arm_neon.h>
@@ -22,43 +22,43 @@ static const size_t kai_nr = 12;
 static const size_t kai_kr = 4;
 static const size_t kai_sr = 1;
 
-size_t kai_get_m_step_matmul_clamp_f32_bf16p_bf16p12x4b_8x12x4_neon_mmla(void) {
+size_t kai_get_m_step_matmul_clamp_f32_bf16p8x4_bf16p12x4b_8x12_neon_mmla(void) {
     return kai_mr;
 }
 
-size_t kai_get_n_step_matmul_clamp_f32_bf16p_bf16p12x4b_8x12x4_neon_mmla(void) {
+size_t kai_get_n_step_matmul_clamp_f32_bf16p8x4_bf16p12x4b_8x12_neon_mmla(void) {
     return kai_nr;
 }
 
-size_t kai_get_mr_matmul_clamp_f32_bf16p_bf16p12x4b_8x12x4_neon_mmla(void) {
+size_t kai_get_mr_matmul_clamp_f32_bf16p8x4_bf16p12x4b_8x12_neon_mmla(void) {
     return kai_mr;
 }
 
-size_t kai_get_nr_matmul_clamp_f32_bf16p_bf16p12x4b_8x12x4_neon_mmla(void) {
+size_t kai_get_nr_matmul_clamp_f32_bf16p8x4_bf16p12x4b_8x12_neon_mmla(void) {
     return kai_nr;
 }
 
-size_t kai_get_kr_matmul_clamp_f32_bf16p_bf16p12x4b_8x12x4_neon_mmla(void) {
+size_t kai_get_kr_matmul_clamp_f32_bf16p8x4_bf16p12x4b_8x12_neon_mmla(void) {
     return kai_kr;
 }
 
-size_t kai_get_sr_matmul_clamp_f32_bf16p_bf16p12x4b_8x12x4_neon_mmla(void) {
+size_t kai_get_sr_matmul_clamp_f32_bf16p8x4_bf16p12x4b_8x12_neon_mmla(void) {
     return kai_sr;
 }
 
-size_t kai_get_lhs_packed_offset_matmul_clamp_f32_bf16p_bf16p12x4b_8x12x4_neon_mmla(size_t m_idx, size_t k) {
+size_t kai_get_lhs_packed_offset_matmul_clamp_f32_bf16p8x4_bf16p12x4b_8x12_neon_mmla(size_t m_idx, size_t k) {
     KAI_ASSUME(m_idx % kai_mr == 0);
 
     return m_idx * kai_roundup(k, kai_kr) * sizeof(uint16_t);
 }
 
-size_t kai_get_rhs_packed_offset_matmul_clamp_f32_bf16p_bf16p12x4b_8x12x4_neon_mmla(size_t n_idx, size_t k) {
+size_t kai_get_rhs_packed_offset_matmul_clamp_f32_bf16p8x4_bf16p12x4b_8x12_neon_mmla(size_t n_idx, size_t k) {
     KAI_ASSUME(n_idx % kai_nr == 0);
 
     return n_idx * (sizeof(float) + kai_roundup(k, kai_kr) * sizeof(uint16_t));
 }
 
-size_t kai_get_dst_offset_matmul_clamp_f32_bf16p_bf16p12x4b_8x12x4_neon_mmla(
+size_t kai_get_dst_offset_matmul_clamp_f32_bf16p8x4_bf16p12x4b_8x12_neon_mmla(
     size_t m_idx, size_t n_idx, size_t stride) {
     KAI_ASSUME(m_idx % kai_mr == 0);
     KAI_ASSUME(n_idx % kai_nr == 0);
@@ -66,11 +66,11 @@ size_t kai_get_dst_offset_matmul_clamp_f32_bf16p_bf16p12x4b_8x12x4_neon_mmla(
     return m_idx * stride + n_idx * sizeof(float);
 }
 
-size_t kai_get_dst_size_matmul_clamp_f32_bf16p_bf16p12x4b_8x12x4_neon_mmla(size_t m, size_t n) {
+size_t kai_get_dst_size_matmul_clamp_f32_bf16p8x4_bf16p12x4b_8x12_neon_mmla(size_t m, size_t n) {
     return m * n * sizeof(float);
 }
 
-void kai_run_matmul_clamp_f32_bf16p_bf16p12x4b_8x12x4_neon_mmla(
+void kai_run_matmul_clamp_f32_bf16p8x4_bf16p12x4b_8x12_neon_mmla(
     size_t m, size_t n, size_t k,                             //
     const void* lhs_packed,                                   //
     const void* rhs_packed,                                   //
