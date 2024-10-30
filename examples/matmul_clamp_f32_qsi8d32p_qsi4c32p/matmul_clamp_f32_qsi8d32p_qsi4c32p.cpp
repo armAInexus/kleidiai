@@ -17,6 +17,7 @@
 // Include micro-kernel variants
 #include "kai_lhs_quant_pack_qsi8d32p_f32.h"
 #include "kai_matmul_clamp_f32_qsi8d32p1x8_qsi4c32p4x8_1x4x32_neon_dotprod.h"
+#include "kai_matmul_clamp_f32_qsi8d32p4x8_qsi4c32p4x8_16x4x32_neon_i8mm.h"
 #include "kai_matmul_clamp_f32_qsi8d32p4x8_qsi4c32p4x8_8x4x32_neon_i8mm.h"
 #include "kai_matmul_clamp_f32_qsi8d32p_qsi4c32p_interface.h"
 #include "kai_rhs_pack_nxk_qsi4c32pscalef16_qsu4c32s16s0.h"
@@ -55,6 +56,18 @@ kai_matmul_ukernel_f32_qa8d32p_qs4c32p ukernel_variants[] = {
      kai_get_dst_size_matmul_clamp_f32_qsi8d32p4x8_qsi4c32p4x8_8x4x32_neon_i8mm,
      kai_run_matmul_clamp_f32_qsi8d32p4x8_qsi4c32p4x8_8x4x32_neon_i8mm,
      "matmul_clamp_f32_qsi8d32p4x8_qsi4c32p4x8_8x4x32_neon_i8mm"},
+    {kai_get_m_step_matmul_clamp_f32_qsi8d32p4x8_qsi4c32p4x8_16x4x32_neon_i8mm,
+     kai_get_n_step_matmul_clamp_f32_qsi8d32p4x8_qsi4c32p4x8_16x4x32_neon_i8mm,
+     kai_get_mr_matmul_clamp_f32_qsi8d32p4x8_qsi4c32p4x8_16x4x32_neon_i8mm,
+     kai_get_nr_matmul_clamp_f32_qsi8d32p4x8_qsi4c32p4x8_16x4x32_neon_i8mm,
+     kai_get_kr_matmul_clamp_f32_qsi8d32p4x8_qsi4c32p4x8_16x4x32_neon_i8mm,
+     kai_get_sr_matmul_clamp_f32_qsi8d32p4x8_qsi4c32p4x8_16x4x32_neon_i8mm,
+     kai_get_lhs_packed_offset_matmul_clamp_f32_qsi8d32p4x8_qsi4c32p4x8_16x4x32_neon_i8mm,
+     kai_get_rhs_packed_offset_matmul_clamp_f32_qsi8d32p4x8_qsi4c32p4x8_16x4x32_neon_i8mm,
+     kai_get_dst_offset_matmul_clamp_f32_qsi8d32p4x8_qsi4c32p4x8_16x4x32_neon_i8mm,
+     kai_get_dst_size_matmul_clamp_f32_qsi8d32p4x8_qsi4c32p4x8_16x4x32_neon_i8mm,
+     kai_run_matmul_clamp_f32_qsi8d32p4x8_qsi4c32p4x8_16x4x32_neon_i8mm,
+     "matmul_clamp_f32_qsi8d32p4x8_qsi4c32p4x8_16x4x32_neon_i8mm"},
 };
 
 // Number of micro-kernel variants stored in the array

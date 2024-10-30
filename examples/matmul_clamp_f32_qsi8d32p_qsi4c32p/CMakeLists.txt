@@ -24,7 +24,8 @@ add_executable(matmul_clamp_f32_qsi8d32p_qsi4c32p
     ${MATMUL_PACK_PATH}/kai_rhs_pack_nxk_qsi4c32pscalef16_qsu4c32s16s0.c
     ${MATMUL_PACK_PATH}/kai_lhs_quant_pack_qsi8d32p_f32.c
     ${MATMUL_PATH}/kai_matmul_clamp_f32_qsi8d32p1x8_qsi4c32p4x8_1x4x32_neon_dotprod.c
-    ${MATMUL_PATH}/kai_matmul_clamp_f32_qsi8d32p4x8_qsi4c32p4x8_8x4x32_neon_i8mm.c)
+    ${MATMUL_PATH}/kai_matmul_clamp_f32_qsi8d32p4x8_qsi4c32p4x8_8x4x32_neon_i8mm.c
+    ${MATMUL_PATH}/kai_matmul_clamp_f32_qsi8d32p4x8_qsi4c32p4x8_16x4x32_neon_i8mm.c)
 
 target_compile_options(matmul_clamp_f32_qsi8d32p_qsi4c32p
     PRIVATE -march=armv8.2-a+dotprod+i8mm
