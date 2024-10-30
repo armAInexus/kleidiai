@@ -40,8 +40,12 @@ size_t kai_get_rhs_offset_rhs_pack_nxk_qsi4cxpo_qsu4cxs1s0(size_t n_idx, size_t 
     return n_idx * rhs_stride;
 }
 
-size_t kai_get_rhs_packed_offset_rhs_pack_nxk_qsi4cxpo_qsu4cxs1s0(
-    size_t n_idx, size_t k, size_t nr, size_t kr) {
+size_t kai_get_rhs_packed_stride_rhs_pack_nxk_qsi4cxpo_qsu4cxs1s0(size_t k, size_t nr, size_t kr, size_t sr) {
+    KAI_UNUSED(sr);
+    return kai_rhs_packed_stride(k, kr, nr);
+}
+
+size_t kai_get_rhs_packed_offset_rhs_pack_nxk_qsi4cxpo_qsu4cxs1s0(size_t n_idx, size_t k, size_t nr, size_t kr) {
     KAI_ASSERT((n_idx % nr) == 0);
 
     return (n_idx / nr) * kai_rhs_packed_stride(k, kr, nr);
@@ -80,19 +84,19 @@ void kai_run_rhs_pack_nxk_qsi4cxpo_qsu4cxs1s0(
 
     // Iterate over n src rows in blocks of nr rows
     for (size_t row_idx = 0; row_idx < n; row_idx += nr) {
-        int8_t * const dst_row = (int8_t*)rhs_packed + (row_idx / nr) * rhs_packed_stride;
+        int8_t* const dst_row = (int8_t*)rhs_packed + (row_idx / nr) * rhs_packed_stride;
 
-        int32_t * const sums = (int32_t*)(dst_row + nr * (k_internal / 2));
-        float32_t * const scaling_factors = (float32_t*)((uint8_t *) sums + nr * sizeof(int32_t));
+        int32_t* const sums = (int32_t*)(dst_row + nr * (k_internal / 2));
+        float32_t* const scaling_factors = (float32_t*)((uint8_t*)sums + nr * sizeof(int32_t));
 
         // Initialize to zero the RHS reduction sums and scaling factors (sum accumulate and padding)
         memset(sums, 0, nr * (sizeof(int32_t) + sizeof(float32_t)));
 
         // Iterate over rows in the nr row block
         for (size_t nr_block_idx = 0; nr_block_idx < nr; ++nr_block_idx) {
-            const uint8_t * const src_row = rhs + (row_idx + nr_block_idx) * rhs_stride;
+            const uint8_t* const src_row = rhs + (row_idx + nr_block_idx) * rhs_stride;
             // Go to the first kr block for this row in the nr block
-            int8_t *dst_kr_block = dst_row + nr_block_idx * kr / 2 ;
+            int8_t* dst_kr_block = dst_row + nr_block_idx * kr / 2;
 
             int32_t sum = 0;
 
@@ -101,15 +105,13 @@ void kai_run_rhs_pack_nxk_qsi4cxpo_qsu4cxs1s0(
 
             // Iterate over k src columns in blocks of kr columns
             for (size_t col_idx = 0; col_idx < k_internal; col_idx += kr) {
-
                 // Iterate over columns in the kr block
                 // Kr checked to be multiple of 2 (because 2 values per byte)
                 for (size_t kr_block_idx = 0; kr_block_idx < kr; kr_block_idx += 2) {
-
                     // We pad dst with 0s if the rounded k or n values have been exceeded
                     if (row_idx + nr_block_idx >= n || col_idx + kr_block_idx >= k) {
-                      dst_kr_block[kr_block_idx / 2] = 0;
-                      continue;
+                        dst_kr_block[kr_block_idx / 2] = 0;
+                        continue;
                     }
 
                     // Load the 2 u4 values from source
