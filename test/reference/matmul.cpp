@@ -199,6 +199,7 @@ std::vector<uint8_t> matmul_clamp_nt_t(
 
     std::vector<uint8_t> dst(m * n * sizeof(DstData));
 
+    const auto rhs_stride = round_up_multiple(k, 2);
     const auto* lhs_scales_ptr = reinterpret_cast<const LhsScale*>(lhs_scales);
     const auto* rhs_scales_ptr = reinterpret_cast<const RhsScale*>(rhs_scales);
     const auto* lhs_zero_points_ptr = reinterpret_cast<const LhsZeroPoint*>(lhs_zero_points);
@@ -217,7 +218,7 @@ std::vector<uint8_t> matmul_clamp_nt_t(
                     ? lhs_zero_points_ptr[y * lhs_num_quant_per_row + i / lhs_quant_width]
                     : 0;
 
-                const auto rhs_value = read_array<RhsData>(rhs_data, x * k + i);
+                const auto rhs_value = read_array<RhsData>(rhs_data, x * rhs_stride + i);
                 const auto rhs_scale = rhs_scales_ptr[x * rhs_num_quant_per_row + i / rhs_quant_width];
                 const auto rhs_zero_point = rhs_zero_points_ptr != nullptr
                     ? rhs_zero_points_ptr[y * rhs_num_quant_per_row + i / rhs_quant_width]
@@ -277,6 +278,7 @@ std::vector<uint8_t> matmul_clamp_nt_nt(
 
     std::vector<uint8_t> dst(m * n * sizeof(DstData));
 
+    const size_t rhs_stride = round_up_multiple(n, 2);
     const auto* lhs_scales_ptr = reinterpret_cast<const LhsScale*>(lhs_scales);
     const auto* rhs_scales_ptr = reinterpret_cast<const RhsScale*>(rhs_scales);
     const auto* lhs_zero_points_ptr = reinterpret_cast<const LhsZeroPoint*>(lhs_zero_points);
@@ -295,7 +297,7 @@ std::vector<uint8_t> matmul_clamp_nt_nt(
                     ? lhs_zero_points_ptr[y * lhs_num_quant_per_row + i / lhs_quant_width]
                     : 0;
 
-                const auto rhs_value = read_array<RhsData>(rhs_data, x + i * n);
+                const auto rhs_value = read_array<RhsData>(rhs_data, x + i * rhs_stride);
                 const auto rhs_scale = rhs_scales_ptr[x * rhs_num_quant_per_row + i / rhs_quant_width];
                 const auto rhs_zero_point = rhs_zero_points_ptr != nullptr
                     ? rhs_zero_points_ptr[y * rhs_num_quant_per_row + i / rhs_quant_width]

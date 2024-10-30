@@ -13,6 +13,7 @@
 
 #include "kai/kai_common.h"
 #include "test/common/data_type.hpp"
+#include "test/common/memory.hpp"
 
 namespace kai::test {
 
@@ -36,4 +37,23 @@ std::vector<uint8_t> transpose(const void* data, DataType data_type, size_t heig
     return output;
 }
 
+template <typename T>
+std::vector<uint8_t> transpose(
+    const void* data, const size_t height, const size_t width, const size_t src_stride, const size_t dst_stride,
+    const size_t dst_size) {
+    std::vector<uint8_t> output(dst_size);
+
+    for (size_t y = 0; y < width; ++y) {
+        for (size_t x = 0; x < height; ++x) {
+            auto element = read_array<T>(data, (x * src_stride) + y);
+            write_array<T>(output.data(), (y * dst_stride) + x, element);
+        }
+    }
+
+    return output;
+}
+
+template std::vector<uint8_t> transpose<Int4>(
+    const void* data, const size_t height, const size_t width, const size_t src_stride, const size_t dst_stride,
+    const size_t dst_size);
 }  // namespace kai::test

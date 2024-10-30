@@ -24,4 +24,20 @@ namespace kai::test {
 /// @return The transposed matrix.
 std::vector<uint8_t> transpose(const void* data, DataType data_type, size_t height, size_t width);
 
+/// Transposes the matrix.
+/// Works for non-packed and packed using provided strides.
+///
+/// @param[in] data Data buffer.
+/// @param[in] height Number of rows.
+/// @param[in] width Number of columns.
+/// @param[in] src_stride Stride of source buffer.
+/// @param[in] dst_stride Stride for destination buffer.
+/// @param[in] dst_size Size of destination buffer.
+///
+/// @return The transposed matrix.
+///
+template <typename T>
+std::vector<uint8_t> transpose(
+    const void* data, size_t height, size_t width, size_t src_stride, size_t dst_stride, size_t dst_size);
+
 }  // namespace kai::test
