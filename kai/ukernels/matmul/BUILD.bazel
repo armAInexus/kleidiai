@@ -59,7 +59,7 @@ kai_c_library(
     name = "clamp_f16_bf16p8x4_bf16p12x4b_8x12_neon_mmla",
     srcs = ["matmul_clamp_f16_bf16p_bf16p/kai_matmul_clamp_f16_bf16p8x4_bf16p12x4b_8x12_neon_mmla.c"],
     hdrs = ["matmul_clamp_f16_bf16p_bf16p/kai_matmul_clamp_f16_bf16p8x4_bf16p12x4b_8x12_neon_mmla.h"],
-    cpu_uarch = kai_cpu_bf16(),
+    cpu_uarch = kai_cpu_bf16() + kai_cpu_fp16(),
     deps = [
         ":clamp_f16_bf16p_bf16p_interface",
     ],
