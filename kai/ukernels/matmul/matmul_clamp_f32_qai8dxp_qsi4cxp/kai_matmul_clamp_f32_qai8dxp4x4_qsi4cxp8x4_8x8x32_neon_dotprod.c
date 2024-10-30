@@ -7,7 +7,7 @@
 #if !defined(__ARM_FEATURE_DOTPROD)
 #error "Dotprod extension required to compile this micro-kernel"
 #else  // Architectural features check.
-#include "kai_matmul_clamp_f32_qai8dxp4x8_qsi4cxp8x4_8x8x32_neon_dotprod.h"
+#include "kai_matmul_clamp_f32_qai8dxp4x4_qsi4cxp8x4_8x8x32_neon_dotprod.h"
 
 #include <arm_neon.h>
 #include <stddef.h>
@@ -49,43 +49,43 @@ inline static size_t kai_rhs_packed_stride(size_t k) {
     return kai_nr * ((k_internal / 2) + kai_num_bytes_multiplier_rhs + kai_num_bytes_sum_rhs + kai_num_bytes_bias);
 }
 
-size_t kai_get_m_step_matmul_clamp_f32_qai8dxp4x8_qsi4cxp8x4_8x8x32_neon_dotprod(void) {
+size_t kai_get_m_step_matmul_clamp_f32_qai8dxp4x4_qsi4cxp8x4_8x8x32_neon_dotprod(void) {
     return kai_m_step;
 }
 
-size_t kai_get_n_step_matmul_clamp_f32_qai8dxp4x8_qsi4cxp8x4_8x8x32_neon_dotprod(void) {
+size_t kai_get_n_step_matmul_clamp_f32_qai8dxp4x4_qsi4cxp8x4_8x8x32_neon_dotprod(void) {
     return kai_n_step;
 }
 
-size_t kai_get_mr_matmul_clamp_f32_qai8dxp4x8_qsi4cxp8x4_8x8x32_neon_dotprod(void) {
+size_t kai_get_mr_matmul_clamp_f32_qai8dxp4x4_qsi4cxp8x4_8x8x32_neon_dotprod(void) {
     return kai_mr;
 }
 
-size_t kai_get_nr_matmul_clamp_f32_qai8dxp4x8_qsi4cxp8x4_8x8x32_neon_dotprod(void) {
+size_t kai_get_nr_matmul_clamp_f32_qai8dxp4x4_qsi4cxp8x4_8x8x32_neon_dotprod(void) {
     return kai_nr;
 }
 
-size_t kai_get_kr_matmul_clamp_f32_qai8dxp4x8_qsi4cxp8x4_8x8x32_neon_dotprod(void) {
+size_t kai_get_kr_matmul_clamp_f32_qai8dxp4x4_qsi4cxp8x4_8x8x32_neon_dotprod(void) {
     return kai_kr;
 }
 
-size_t kai_get_sr_matmul_clamp_f32_qai8dxp4x8_qsi4cxp8x4_8x8x32_neon_dotprod(void) {
+size_t kai_get_sr_matmul_clamp_f32_qai8dxp4x4_qsi4cxp8x4_8x8x32_neon_dotprod(void) {
     return kai_sr;
 }
 
-size_t kai_get_lhs_packed_offset_matmul_clamp_f32_qai8dxp4x8_qsi4cxp8x4_8x8x32_neon_dotprod(size_t m_idx, size_t k) {
+size_t kai_get_lhs_packed_offset_matmul_clamp_f32_qai8dxp4x4_qsi4cxp8x4_8x8x32_neon_dotprod(size_t m_idx, size_t k) {
     KAI_ASSERT((m_idx % kai_m_step) == 0);
 
     return (m_idx / kai_m_step) * kai_lhs_packed_stride(k);
 }
 
-size_t kai_get_rhs_packed_offset_matmul_clamp_f32_qai8dxp4x8_qsi4cxp8x4_8x8x32_neon_dotprod(size_t n_idx, size_t k) {
+size_t kai_get_rhs_packed_offset_matmul_clamp_f32_qai8dxp4x4_qsi4cxp8x4_8x8x32_neon_dotprod(size_t n_idx, size_t k) {
     KAI_ASSERT((n_idx % kai_n_step) == 0);
 
     return (n_idx / kai_n_step) * kai_rhs_packed_stride(k);
 }
 
-size_t kai_get_dst_offset_matmul_clamp_f32_qai8dxp4x8_qsi4cxp8x4_8x8x32_neon_dotprod(
+size_t kai_get_dst_offset_matmul_clamp_f32_qai8dxp4x4_qsi4cxp8x4_8x8x32_neon_dotprod(
     size_t m_idx, size_t n_idx, size_t dst_stride) {
     KAI_ASSERT((m_idx % kai_m_step) == 0);
     KAI_ASSERT((n_idx % kai_n_step) == 0);
@@ -93,11 +93,11 @@ size_t kai_get_dst_offset_matmul_clamp_f32_qai8dxp4x8_qsi4cxp8x4_8x8x32_neon_dot
     return (n_idx * sizeof(float)) + m_idx * dst_stride;
 }
 
-size_t kai_get_dst_size_matmul_clamp_f32_qai8dxp4x8_qsi4cxp8x4_8x8x32_neon_dotprod(size_t m, size_t n) {
+size_t kai_get_dst_size_matmul_clamp_f32_qai8dxp4x4_qsi4cxp8x4_8x8x32_neon_dotprod(size_t m, size_t n) {
     return m * n * sizeof(float);
 }
 
-void kai_run_matmul_clamp_f32_qai8dxp4x8_qsi4cxp8x4_8x8x32_neon_dotprod(
+void kai_run_matmul_clamp_f32_qai8dxp4x4_qsi4cxp8x4_8x8x32_neon_dotprod(
     size_t m, size_t n, size_t k, const void* restrict lhs_packed, const void* restrict rhs_packed,
     float* restrict dst,  // NOLINT(readability-non-const-parameter)
     size_t dst_stride_row, size_t dst_stride_col, float scalar_min, float scalar_max) {
