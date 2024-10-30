@@ -31,7 +31,7 @@
 #include "kai_lhs_quant_pack_bf16p1x4_f32_neon.h"
 #include "kai_lhs_quant_pack_bf16p8x4_f32_neon.h"
 #include "kai_matmul_clamp_f32_bf16p1x4_bf16p12x4b_1x36_neon_dot.h"
-#include "kai_matmul_clamp_f32_bf16p_bf16p12x4b_8x12x4_neon_mmla.h"
+#include "kai_matmul_clamp_f32_bf16p8x4_bf16p12x4b_8x12_neon_mmla.h"
 #include "kai_matmul_clamp_f32_bf16p_bf16p_interface.h"
 #include "kai_rhs_quant_pack_kxn_bf16p12x4biasf32_f32_neon.h"
 
@@ -72,20 +72,20 @@ const kai_matmul_clamp_f32_bf16p_bf16p ukernel_variants[] = {
      kai_run_lhs_quant_pack_bf16p1x4_f32_neon,
      kai_get_lhs_packed_size_lhs_quant_pack_bf16p1x4_f32_neon,
      "matmul_clamp_f32_bf16p1x4_bf16p12x4b_1x36_neon_dot"},
-    {{kai_get_m_step_matmul_clamp_f32_bf16p_bf16p12x4b_8x12x4_neon_mmla,
-      kai_get_n_step_matmul_clamp_f32_bf16p_bf16p12x4b_8x12x4_neon_mmla,
-      kai_get_mr_matmul_clamp_f32_bf16p_bf16p12x4b_8x12x4_neon_mmla,
-      kai_get_nr_matmul_clamp_f32_bf16p_bf16p12x4b_8x12x4_neon_mmla,
-      kai_get_kr_matmul_clamp_f32_bf16p_bf16p12x4b_8x12x4_neon_mmla,
-      kai_get_sr_matmul_clamp_f32_bf16p_bf16p12x4b_8x12x4_neon_mmla,
-      kai_get_lhs_packed_offset_matmul_clamp_f32_bf16p_bf16p12x4b_8x12x4_neon_mmla,
-      kai_get_rhs_packed_offset_matmul_clamp_f32_bf16p_bf16p12x4b_8x12x4_neon_mmla,
-      kai_get_dst_offset_matmul_clamp_f32_bf16p_bf16p12x4b_8x12x4_neon_mmla,
-      kai_get_dst_size_matmul_clamp_f32_bf16p_bf16p12x4b_8x12x4_neon_mmla,
-      kai_run_matmul_clamp_f32_bf16p_bf16p12x4b_8x12x4_neon_mmla},
+    {{kai_get_m_step_matmul_clamp_f32_bf16p8x4_bf16p12x4b_8x12_neon_mmla,
+      kai_get_n_step_matmul_clamp_f32_bf16p8x4_bf16p12x4b_8x12_neon_mmla,
+      kai_get_mr_matmul_clamp_f32_bf16p8x4_bf16p12x4b_8x12_neon_mmla,
+      kai_get_nr_matmul_clamp_f32_bf16p8x4_bf16p12x4b_8x12_neon_mmla,
+      kai_get_kr_matmul_clamp_f32_bf16p8x4_bf16p12x4b_8x12_neon_mmla,
+      kai_get_sr_matmul_clamp_f32_bf16p8x4_bf16p12x4b_8x12_neon_mmla,
+      kai_get_lhs_packed_offset_matmul_clamp_f32_bf16p8x4_bf16p12x4b_8x12_neon_mmla,
+      kai_get_rhs_packed_offset_matmul_clamp_f32_bf16p8x4_bf16p12x4b_8x12_neon_mmla,
+      kai_get_dst_offset_matmul_clamp_f32_bf16p8x4_bf16p12x4b_8x12_neon_mmla,
+      kai_get_dst_size_matmul_clamp_f32_bf16p8x4_bf16p12x4b_8x12_neon_mmla,
+      kai_run_matmul_clamp_f32_bf16p8x4_bf16p12x4b_8x12_neon_mmla},
      kai_run_lhs_quant_pack_bf16p8x4_f32_neon,
      kai_get_lhs_packed_size_lhs_quant_pack_bf16p8x4_f32_neon,
-     "matmul_clamp_f32_bf16p_bf16p12x4b_8x12x4_neon_mmla"}};
+     "matmul_clamp_f32_bf16p8x4_bf16p12x4b_8x12_neon_mmla"}};
 
 // Number of micro-kernel variants stored in the array
 constexpr size_t num_ukernel_variants = sizeof(ukernel_variants) / sizeof(ukernel_variants[0]);
