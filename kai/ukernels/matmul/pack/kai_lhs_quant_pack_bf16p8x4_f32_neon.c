@@ -16,31 +16,45 @@
 
 #include "kai/kai_common.h"
 
-size_t kai_get_m_step_lhs_quant_pack_bf16p_f32_neon(size_t mr) {
-    return mr;
+static const size_t kai_mr = 8;
+static const size_t kai_kr = 4;
+static const size_t kai_sr = 1;
+
+size_t kai_get_m_step_lhs_quant_pack_bf16p8x4_f32_neon(size_t mr) {
+    KAI_ASSUME(mr == kai_mr);
+    return kai_mr;
 }
 
-size_t kai_get_lhs_offset_lhs_quant_pack_bf16p_f32_neon(size_t m_idx, size_t lhs_stride) {
+size_t kai_get_lhs_offset_lhs_quant_pack_bf16p8x4_f32_neon(size_t m_idx, size_t lhs_stride) {
     return m_idx * lhs_stride;
 }
 
-size_t kai_get_lhs_packed_offset_lhs_quant_pack_bf16p_f32_neon(
+size_t kai_get_lhs_packed_offset_lhs_quant_pack_bf16p8x4_f32_neon(
     size_t m_idx, size_t k, size_t mr, size_t kr, size_t sr) {
     KAI_UNUSED(sr);
+    KAI_ASSUME(mr == kai_mr);
+    KAI_ASSUME(kr == kai_kr);
+    KAI_ASSUME(sr == kai_sr);
     KAI_ASSUME(m_idx % mr == 0);
 
     return m_idx * kai_roundup(k, kr) * sizeof(uint16_t);
 }
 
-size_t kai_get_lhs_packed_size_lhs_quant_pack_bf16p_f32_neon(size_t m, size_t k, size_t mr, size_t kr, size_t sr) {
+size_t kai_get_lhs_packed_size_lhs_quant_pack_bf16p8x4_f32_neon(size_t m, size_t k, size_t mr, size_t kr, size_t sr) {
     KAI_UNUSED(sr);
+    KAI_ASSUME(mr == kai_mr);
+    KAI_ASSUME(kr == kai_kr);
+    KAI_ASSUME(sr == kai_sr);
 
     return kai_roundup(m, mr) * kai_roundup(k, kr) * sizeof(uint16_t);
 }
 
-void kai_run_lhs_quant_pack_bf16p_f32_neon(
+void kai_run_lhs_quant_pack_bf16p8x4_f32_neon(
     size_t m, size_t k, size_t mr, size_t kr, size_t sr, size_t m_idx_start, const float* lhs, size_t lhs_stride,
     uint16_t* lhs_packed) {
+    KAI_ASSUME(mr == kai_mr);
+    KAI_ASSUME(sr == kai_sr);
+    KAI_ASSUME(kr == kai_kr);
     KAI_UNUSED(sr);
     KAI_ASSUME(lhs != NULL);
     KAI_ASSUME(lhs_packed != NULL);
