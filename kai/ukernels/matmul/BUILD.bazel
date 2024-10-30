@@ -65,11 +65,19 @@ kai_c_library(
     ],
 )
 
+cc_library(
+    name = "clamp_f32_f32_f32p_interface",
+    hdrs = ["matmul_clamp_f32_f32_f32p/kai_matmul_clamp_f32_f32_f32p_interface.h"],
+)
+
 kai_c_library(
     name = "clamp_f32_f32_f32p",
     srcs = ["matmul_clamp_f32_f32_f32p/kai_matmul_clamp_f32_f32_f32p8x1biasf32_6x8x4_neon_mla.c"],
     hdrs = ["matmul_clamp_f32_f32_f32p/kai_matmul_clamp_f32_f32_f32p8x1biasf32_6x8x4_neon_mla.h"],
     cpu_uarch = kai_cpu_neon(),
+    deps = [
+        ":clamp_f32_f32_f32p_interface",
+    ],
 )
 
 kai_c_library(
@@ -84,6 +92,19 @@ kai_c_library(
     srcs = ["matmul_clamp_f32_f32_f32p/kai_matmul_clamp_f32_f32_f32pb_1x16vl_sme2_mla.c"],
     hdrs = ["matmul_clamp_f32_f32_f32p/kai_matmul_clamp_f32_f32_f32pb_1x16vl_sme2_mla.h"],
     cpu_uarch = kai_cpu_sme(),
+    deps = [
+        ":clamp_f32_f32_f32p_interface",
+    ],
+)
+
+kai_c_library(
+    name = "clamp_f32_f32_f32p2vlx1b_1x16vl_sme2_mla",
+    srcs = ["matmul_clamp_f32_f32_f32p/kai_matmul_clamp_f32_f32_f32p2vlx1b_1x16vl_sme2_mla.c"],
+    hdrs = ["matmul_clamp_f32_f32_f32p/kai_matmul_clamp_f32_f32_f32p2vlx1b_1x16vl_sme2_mla.h"],
+    cpu_uarch = kai_cpu_sme(),
+    deps = [
+        ":clamp_f32_f32_f32p_interface",
+    ],
 )
 
 cc_library(
@@ -369,6 +390,7 @@ kai_c_library(
         ":clamp_f16_f16_f16p16x1biasf16_6x16x8_neon_mla",
         ":clamp_f32_bf16p_bf16p_neon_mmla",
         ":clamp_f32_f32_f32p",
+        ":clamp_f32_f32_f32p2vlx1b_1x16vl_sme2_mla",
         ":clamp_f32_f32_f32pb_1x16vl_sme2_mla",
         ":clamp_f32_f32p_f32p",
         ":clamp_f32_qai8dxp1x8_qsi4c32p4x8_1x4x32_neon_dotprod",
