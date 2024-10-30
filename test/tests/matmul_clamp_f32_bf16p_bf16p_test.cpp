@@ -143,9 +143,6 @@ const std::array gemv_methods = {
         .n0 = 12,
         .k0 = 4,
 
-        .lhs_transposed = false,
-        .rhs_transposed = false,
-
         .dst_format = DataFormat(DataType::FP32),
         .lhs_format = DataFormat(DataType::FP32),
         .packed_lhs_format =
@@ -191,9 +188,6 @@ const std::array gemv_methods = {
         .m0 = 1,
         .n0 = 12,
         .k0 = 4,
-
-        .lhs_transposed = false,
-        .rhs_transposed = false,
 
         .dst_format = DataFormat(DataType::FP32),
         .lhs_format = DataFormat(DataType::FP32),
