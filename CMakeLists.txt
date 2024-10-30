@@ -3,7 +3,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 #
-cmake_minimum_required(VERSION 3.18)
+cmake_minimum_required(VERSION 3.16)
 
 project(KleidiAI
     VERSION 0.3.0
@@ -225,8 +225,13 @@ if(KLEIDIAI_BUILD_TESTS)
         PRIVATE GTest::gtest_main
     )
 
+
     # Cross-compiling is a common use case which creates a conflict if DISCOVERY_MODE is set to POST_BUILD (by default)
-    # since the host platform does not match the target. Setting the mode to PRE_TEST avoids this conflict.
+    # since the host platform does not match the target. Setting the mode to PRE_TEST avoids this conflict. This feature
+    # was added in CMake 3.18
+    if(CMAKE_CROSSCOMPILING)
+        cmake_minimum_required(VERSION 3.18)
+    endif()
     gtest_discover_tests(kleidiai_test DISCOVERY_MODE PRE_TEST)
 endif()
 
