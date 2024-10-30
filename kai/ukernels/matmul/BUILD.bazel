@@ -66,12 +66,12 @@ kai_c_library(
 kai_c_library(
     name = "matmul_f16_f16p_f16p",
     srcs = [
-        "matmul_clamp_f16_f16p_f16p/kai_matmul_clamp_f16_f16p_f16pb_2vlx2vl_sme2_mopa.c",
+        "matmul_clamp_f16_f16p_f16p/kai_matmul_clamp_f16_f16p2vlx1_f16p2vlx1b_2vlx2vl_sme2_mopa.c",
         "pack/kai_lhs_pack_f16p2vlx2_f16_sme.c",
         "pack/kai_rhs_pack_kxn_f16p2vlx2b_f16_f16_sme.c",
     ],
     hdrs = [
-        "matmul_clamp_f16_f16p_f16p/kai_matmul_clamp_f16_f16p_f16pb_2vlx2vl_sme2_mopa.h",
+        "matmul_clamp_f16_f16p_f16p/kai_matmul_clamp_f16_f16p2vlx1_f16p2vlx1b_2vlx2vl_sme2_mopa.h",
         "pack/kai_lhs_pack_f16p2vlx2_f16_sme.c",
         "pack/kai_rhs_pack_kxn_f16p2vlx2b_f16_f16_sme.h",
     ],
